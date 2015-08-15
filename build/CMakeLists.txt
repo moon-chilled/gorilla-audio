@@ -6,7 +6,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_COMPILER_IS_GNUCC)
   set(LINUX "1")
 endif()
 
-if(MSVC)
+if(MSVC OR CYGWIN)
   SET(PLATFORM_NAME "win32")
 endif()
 if(APPLE)
@@ -35,7 +35,7 @@ if(APPLE)
   set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CXX_FLAGS} -mmacosx-version-min=10.5")
 endif()
 
-if(MSVC)
+if(MSVC OR CYGWIN)
   set_target_properties(PROPERTIES PREFIX "../") # The Prefix Hack!
 endif()
 
@@ -51,7 +51,7 @@ if(MSVC)
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi /Gm")
 endif()
 
-if(MSVC)
+if(MSVC OR CYGWIN)
   set(ENABLE_DIRECTSOUND "0" CACHE STRING "Enable DirectSound device")
   set(ENABLE_XAUDIO2 "0" CACHE STRING "Enable XAudio2 device")
   set(ENABLE_OPENAL "1" CACHE STRING "Enable OpenAL device")
@@ -63,7 +63,7 @@ if(ENABLE_OPENAL)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DENABLE_OPENAL")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_OPENAL")
   # NOTE: Linux/Mac OpenAL support not yet implemented!
-  if(MSVC)
+  if(MSVC OR CYGWIN)
     include_directories(../ext/OpenAL/include)
   else()
     find_package(OpenAL)
@@ -217,7 +217,7 @@ add_library(gorilla STATIC
 
 if(ENABLE_OPENAL)
   # NOTE: Linux/Mac OpenAL support not yet implemented!
-  if(MSVC)
+  if(MSVC OR CYGWIN)
     target_link_libraries(gorilla ${CMAKE_CURRENT_SOURCE_DIR}/../ext/OpenAL/libs/Win32/OpenAL32.lib)
   else()
     target_link_libraries(gorilla ${OPENAL_LIBRARY})
