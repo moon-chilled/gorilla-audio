@@ -8,9 +8,10 @@
 
 /* Thread Functions */
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined (__CYGWIN__)
 
 #define WIN32_LEAN_AND_MEAN
+
 #include <windows.h>
 
 static gc_int32 priorityLut[] = {
@@ -132,9 +133,10 @@ void gc_thread_destroy(gc_Thread* in_thread)
 
 /* Mutex Functions */
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__CYGWIN__)
 
 #define WIN32_LEAN_AND_MEAN
+
 #include <windows.h>
 
 gc_Mutex* gc_mutex_create()
@@ -187,4 +189,4 @@ void gc_mutex_unlock(gc_Mutex* in_mutex)
 
 #else
 #error Mutex class not yet defined for this platform
-#endif /* _WIN32 */
+#endif /*  defined(_WIN32) || defined(__CYGWIN__) */

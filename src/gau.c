@@ -1117,11 +1117,11 @@ ga_SampleSource* gau_sample_source_create_sound(ga_Sound* in_sound)
 }
 
 /* Helper functions */
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__CYGWIN__)
 #define stricmp strcasecmp
 #elif defined(_WIN32)
 #define stricmp _stricmp
-#endif /* __APPLE__ */
+#endif /* __APPLE__ || __CYGWIN__ */
 ga_Memory* gau_load_memory_file(const char* in_filename)
 {
   ga_Memory* ret;
