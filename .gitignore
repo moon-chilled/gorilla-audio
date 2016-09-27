@@ -1,0 +1,23 @@
+syntax: glob
+*.obj
+CMakeFiles/*
+*.idb
+build/*.dir
+*.pdb
+*.user
+*.ncb
+CMakeCache.txt
+BuildLog.htm
+cmake_install.cmake
+*.ilk
+*.exe
+*.wav
+*.ogg
+*.vcproj
+*.sln
+*.suo
+gorilla.lib
+gorillaD.lib
+docs/output/*
+bin/
+Makefile
