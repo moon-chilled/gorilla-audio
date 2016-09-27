@@ -1,6 +1,15 @@
 CHANGE LOG
 ---
 
+0.3.TBD
+- Enabled Cygwin builds.
+- Fixed Win64 builds.
+- Updated libvorbis and libogg dependencies and replaced vendored sources with
+  git submodules (this fixes Win64 builds).
+
+0.3.1
+- Fixed various memory leaks.
+
 0.3.0
 - All documentation written, at least in provisional form (GAU still needs more
   detail).
