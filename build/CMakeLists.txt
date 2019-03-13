@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 
 project(Gorilla)
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_COMPILER_IS_GNUCC)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(LINUX "1")
 endif()
 
@@ -17,9 +17,10 @@ if(LINUX)
 endif()
 
 if(NOT CMAKE_BUILD_TYPE)
-  message(STATUS "No build type selected (defaulting to Release)")
   set(CMAKE_BUILD_TYPE "Release")
 endif()
+
+message(STATUS "Making a ${CMAKE_BUILD_TYPE} build of Gorilla")
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../bin/${PLATFORM_NAME}/Debug)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../bin/${PLATFORM_NAME}/Debug)
@@ -45,10 +46,8 @@ set(DEBUG_CONFIGURATIONS "Debug")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUNICODE -D_UNICODE")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUNICODE -D_UNICODE")
 if(MSVC)
-  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Gm")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Gm")
-  set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Zi /Gm")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi /Gm")
+  set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Zi")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
 endif()
 
 if(MSVC OR CYGWIN)
@@ -124,7 +123,7 @@ set(GORILLA_INCLUDE
   ${INCLUDE_DIR}/gorilla/gau.h
   ${INCLUDE_DIR}/gorilla/ga_internal.h
   )
-  
+
 set(GORILLA_SRC
   ${SRC_DIR}/ga.c
   ${SRC_DIR}/gau.c
@@ -136,12 +135,12 @@ set(GORILLA_COMMON_INCLUDE
   ${INCLUDE_DIR}/gorilla/common/gc_thread.h
   ${INCLUDE_DIR}/gorilla/common/gc_types.h
   )
-  
+
 set(GORILLA_COMMON_SRC
   ${SRC_DIR}/common/gc_common.c
   ${SRC_DIR}/common/gc_thread.c
   )
-  
+
 # OGG/Vorbis
 set(LIBOGGDIR ../ext/libogg)
 set(LIBVORBISDIR ../ext/libvorbis)
@@ -158,7 +157,7 @@ set(OGGVORBIS_INCLUDE
   ${LIBVORBISDIR}/include/vorbis/vorbisenc.h
   ${LIBVORBISDIR}/include/vorbis/vorbisfile.h
   )
-  
+
 set(OGGVORBIS_SRC
   ${LIBOGGDIR}/src/bitwise.c
   ${LIBOGGDIR}/src/framing.c

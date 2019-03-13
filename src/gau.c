@@ -600,12 +600,11 @@ typedef struct gau_OggDataSourceCallbackData
   ga_DataSource* dataSrc;
 } gau_OggDataSourceCallbackData;
 
-size_t gauX_sample_source_ogg_callback_read(void *ptr, size_t size, size_t nmemb, void *datasource)
+gc_int32 gauX_sample_source_ogg_callback_read(void *ptr, gc_int32 size, gc_int32 nmemb, void *datasource)
 {
   gau_OggDataSourceCallbackData* stream = (gau_OggDataSourceCallbackData*)datasource;
   ga_DataSource* ds = stream->dataSrc;
-  size_t ret = (size_t)ga_data_source_read(ds, ptr, size, nmemb);
-  return ret;
+  return ga_data_source_read(ds, ptr, size, nmemb);
 }
 int gauX_sample_source_ogg_callback_seek(void *datasource, ogg_int64_t offset, int whence)
 {
@@ -676,7 +675,7 @@ FILE* gauX_openWavFile(const char* in_fn, size_t* out_dataSizeOff)
   fwrite(&size, 4, 1, f); /* data size */
   return f;
 }
-void gauX_closeWavFile(FILE* in_f, size_t in_dataSizeOff)
+void gauX_closeWavFile(FILE* in_f, long in_dataSizeOff)
 {
   size_t totalSize = ftell(in_f);
   size_t size = totalSize - 8;

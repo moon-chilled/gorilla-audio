@@ -15,9 +15,9 @@ code in the repository is denoted by COPYING files.
 
 # About this repo
 
-This is unofficial fork/mirror. Original project was hosted on Google Code that
-is now dead. It is maintained mainly to provide backend for
-[pyrilla](https://github.com/swistakm/pyrilla) project.
+This is my own personal fork of gorilla audio, for use in my game engine.  It
+is based on github user swistakm's own fork of gorilla audio.
 
-For differences from original code see `CHANGELOG.txt`. Anything after 0.3.1
-was added/changed after project was forked.
+Please see CHANGELOG.txt for more information.  All modifications prior to and
+including 0.3.1 were made by the original gorilla audio developers.  0.3.2 was
+made by swistakm.  Further modifications were made by me.

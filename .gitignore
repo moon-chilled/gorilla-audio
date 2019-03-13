@@ -1,23 +1,39 @@
 syntax: glob
+
+# Vim turds
+.*.swp
+.*.swo
+.*.swn
+.*.swm
+.*.swl
+
+# Test turds
+*.exe
+*.wav
+*.ogg
+
+# CMake turds
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.vcproj
+*.vcxproj
+Makefile
+*.sln
+*.suo
+
+# Like, the actual library
 *.obj
-CMakeFiles/*
 *.idb
 build/*.dir
 *.pdb
 *.user
 *.ncb
-CMakeCache.txt
 BuildLog.htm
-cmake_install.cmake
-*.ilk
-*.exe
-*.wav
-*.ogg
-*.vcproj
-*.sln
-*.suo
 gorilla.lib
 gorillaD.lib
 docs/output/*
 bin/
-Makefile
+*.ilk
+*.a
+*.so
