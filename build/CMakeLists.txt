@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 2.6)
-
 project(Gorilla)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -52,8 +51,8 @@ endif()
 
 if(MSVC OR CYGWIN)
   set(ENABLE_DIRECTSOUND "0" CACHE STRING "Enable DirectSound device")
-  set(ENABLE_XAUDIO2 "0" CACHE STRING "Enable XAudio2 device")
-  set(ENABLE_OPENAL "1" CACHE STRING "Enable OpenAL device")
+  set(ENABLE_XAUDIO2 "1" CACHE STRING "Enable XAudio2 device")
+  set(ENABLE_OPENAL "0" CACHE STRING "Enable OpenAL device")
 else()
   set(ENABLE_OPENAL "1" CACHE STRING "Enable OpenAL device")
 endif()

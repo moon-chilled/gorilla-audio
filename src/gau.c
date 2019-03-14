@@ -8,13 +8,19 @@
 #include <assert.h>
 
 #ifdef _WIN32
-#pragma warning(disable:4996)
+# pragma warning(disable:4996)
 #endif /* _WIN32 */
 
 #ifdef __linux__
-#include <strings.h>
-#define stricmp strcasecmp
-#endif /* __linux__ */
+# include <strings.h>
+#endif
+
+#if defined(__APPLE__) || defined(__CYGWIN__) || defined(__linux__)
+# define stricmp strcasecmp
+#elif defined(_WIN32)
+//# define stricmp _stricmp
+#define stricmp strcmp
+#endif
 
 /* High-Level Manager */
 typedef struct gau_Manager {
@@ -1115,12 +1121,6 @@ ga_SampleSource* gau_sample_source_create_sound(ga_Sound* in_sound)
   return (ga_SampleSource*)ret;
 }
 
-/* Helper functions */
-#if defined(__APPLE__) || defined(__CYGWIN__)
-#define stricmp strcasecmp
-#elif defined(_WIN32)
-#define stricmp _stricmp
-#endif /* __APPLE__ || __CYGWIN__ */
 ga_Memory* gau_load_memory_file(const char* in_filename)
 {
   ga_Memory* ret;

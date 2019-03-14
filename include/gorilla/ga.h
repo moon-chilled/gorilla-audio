@@ -35,7 +35,7 @@ extern "C"
 
 /** Major version number.
  *
- *  Major version changes indicate a massive rewrite or refactor, and/or changes 
+ *  Major version changes indicate a massive rewrite or refactor, and/or changes
  *  where API backwards-compatibility is greatly compromised. \ingroup version
  *
  *  \ingroup version
@@ -102,7 +102,7 @@ gc_int32 ga_version_check(gc_int32 in_major, gc_int32 in_minor, gc_int32 in_rev)
 #define SINGLE_CLIENT /**< The object has a single client (owner). The object should be
                            created/opened by its client, and then destroyed/closed when the
                            client is done with it. The object itself should never be copied.
-                           Instead, a pointer to the object should be copied. The client 
+                           Instead, a pointer to the object should be copied. The client
                            must never use the object after destroying it. \ingroup memManagement */
 #define MULTI_CLIENT /**< The object has multiple clients (owners), and is reference-counted.
                           The object should be created by its first client. Additional 
