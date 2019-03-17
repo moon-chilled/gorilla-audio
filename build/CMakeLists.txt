@@ -47,6 +47,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUNICODE -D_UNICODE")
 if(MSVC)
   set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Zi")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Zi")
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+
+  # link the c runtime statically under windows.  Broadly reduces friction and eliminates spurious linker warnings
+  # can't just add /MT(d) to it, because cmake adds /MD(d) to CMAKE_C_FLAGS_RELEASE/DEBUG for us.  Thanks...cmake?
+  string(REPLACE "/MD" "/MT" CMAKE_C_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
+  string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
+  string(REPLACE "/MDd" "/MTd" CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
+  string(REPLACE "/MDd" "/MTd" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
 endif()
 
 if(MSVC OR CYGWIN)
