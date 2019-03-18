@@ -21,10 +21,10 @@ endif()
 
 message(STATUS "Making a ${CMAKE_BUILD_TYPE} build of Gorilla")
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../bin/${PLATFORM_NAME}/Debug)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/../bin/${PLATFORM_NAME}/Debug)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/../bin/${PLATFORM_NAME}/Release)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/../bin/${PLATFORM_NAME}/Release)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/bin/${PLATFORM_NAME}/Debug)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/bin/${PLATFORM_NAME}/Debug)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/bin/${PLATFORM_NAME}/Release)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/bin/${PLATFORM_NAME}/Release)
 
 set(CMAKE_DEBUG_POSTFIX D)
 
@@ -33,10 +33,6 @@ if(APPLE)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.5")
   set(CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS} -mmacosx-version-min=10.5")
   set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CXX_FLAGS} -mmacosx-version-min=10.5")
-endif()
-
-if(MSVC OR CYGWIN)
-  set_target_properties(PROPERTIES PREFIX "../") # The Prefix Hack!
 endif()
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
@@ -70,7 +66,7 @@ if(ENABLE_OPENAL)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_OPENAL")
   # NOTE: Linux/Mac OpenAL support not yet implemented!
   if(MSVC OR CYGWIN)
-    include_directories(../ext/OpenAL/include)
+    include_directories(ext/OpenAL/include)
   else()
     find_package(OpenAL)
     include_directories(${OPENAL_INCLUDE_DIR})
@@ -88,7 +84,7 @@ if(ENABLE_DIRECTSOUND)
 endif()
 
 if(ENABLE_DIRECTSOUND OR ENABLE_XAUDIO2)
-  set(DIRECTXSDK_PATH "${PROJECT_BINARY_DIR}/../../DirectXSdk" CACHE FILEPATH "DirectX SDK install path")
+  set(DIRECTXSDK_PATH "${PROJECT_BINARY_DIR}/../DirectXSdk" CACHE FILEPATH "DirectX SDK install path")
   if(NOT EXISTS ${DIRECTXSDK_PATH})
     message(FATAL ERROR " Could not locate DIRECTXSDK_PATH - please confirm this value is correct")
   else()
@@ -119,8 +115,8 @@ if(ENABLE_DIRECTSOUND OR ENABLE_XAUDIO2)
   endif()
 endif()
 
-set(INCLUDE_DIR ../include)
-set(SRC_DIR ../src)
+set(INCLUDE_DIR include)
+set(SRC_DIR src)
 set(GORILLA_INCLUDE_DIR ${INCLUDE_DIR})
 
 include_directories(${INCLUDE_DIR})
@@ -149,8 +145,8 @@ set(GORILLA_COMMON_SRC
   )
 
 # OGG/Vorbis
-set(LIBOGGDIR ../ext/libogg)
-set(LIBVORBISDIR ../ext/libvorbis)
+set(LIBOGGDIR ext/libogg)
+set(LIBVORBISDIR ext/libvorbis)
 
 include_directories(${LIBOGGDIR}/include)
 include_directories(${LIBVORBISDIR}/include)
@@ -224,7 +220,7 @@ add_library(gorilla STATIC
 if(ENABLE_OPENAL)
   # NOTE: Linux/Mac OpenAL support not yet implemented!
   if(MSVC OR CYGWIN)
-    target_link_libraries(gorilla ${CMAKE_CURRENT_SOURCE_DIR}/../ext/OpenAL/libs/Win32/OpenAL32.lib)
+    target_link_libraries(gorilla ${CMAKE_CURRENT_SOURCE_DIR}/ext/OpenAL/libs/Win32/OpenAL32.lib)
   else()
     target_link_libraries(gorilla ${OPENAL_LIBRARY})
   endif()
