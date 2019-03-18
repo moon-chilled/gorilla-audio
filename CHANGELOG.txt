@@ -1,6 +1,11 @@
 CHANGE LOG
 ---
 
+0.3.3
+- Made XAudio2 the default on windows again
+- Made MSVCRT be linked statically
+- Audio loading functions now take an enum rather than a string for format
+
 
 SWISTAKM MODIFICATIONS START HERE:
 
@@ -43,7 +48,7 @@ ORIGINAL GORILLA AUDIO MODIFICATIONS START HERE:
 - Implemented ga_Memory data structure for refcounting shared memory.
 - Stubbed in XAudio2 support.
 - Added gau_sample_source_loop_count() function to count how many times something
-  has looped. This is a stop-gap feature, to be deprecated after planned looping 
+  has looped. This is a stop-gap feature, to be deprecated after planned looping
   improvements.
 
 0.2.5
@@ -57,7 +62,7 @@ ORIGINAL GORILLA AUDIO MODIFICATIONS START HERE:
 - Cleaned up the examples.
 
 0.2.3
-- WAV loader rewrite: WAV loader is cleaner, clearer, and far more robust at 
+- WAV loader rewrite: WAV loader is cleaner, clearer, and far more robust at
   handling WAV files with extension chunks.
 
 0.2.2
