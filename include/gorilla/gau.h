@@ -30,7 +30,7 @@ extern "C"
  *  \ingroup utility
  *  \defgroup gau_Manager Manager
  */
-  
+
 /** High-level audio manager.
  *
  *  \ingroup gau_Manager
@@ -222,11 +222,19 @@ void gau_on_finish_destroy(ga_Handle* in_finishedHandle, void* in_context);
  */
 ga_Memory* gau_load_memory_file(const char* in_filename);
 
+
+typedef enum {
+  GAU_AUDIO_TYPE_UNKNOWN = 1,
+  GAU_AUDIO_TYPE_AUTODETECT = 2, // TODO: support this
+  GAU_AUDIO_TYPE_OGG = 3,
+  GAU_AUDIO_TYPE_WAV = 4,
+} gau_AudioType;
+
 /** Load a file's PCM data into a sound object.
  *
  *  \ingroup loadHelper
  */
-ga_Sound* gau_load_sound_file(const char* in_filename, const char* in_format);
+ga_Sound* gau_load_sound_file(const char* in_filename, const gau_AudioType in_format);
 
 
 /**********************/
@@ -242,7 +250,7 @@ ga_Sound* gau_load_sound_file(const char* in_filename, const char* in_format);
  *
  *  \ingroup createHelper
  */
-ga_Handle* gau_create_handle_memory(ga_Mixer* in_mixer, ga_Memory* in_memory, const char* in_format,
+ga_Handle* gau_create_handle_memory(ga_Mixer* in_mixer, ga_Memory* in_memory, const gau_AudioType in_format,
                                     ga_FinishCallback in_callback, void* in_context,
                                     gau_SampleSourceLoop** out_loopSrc);
 
@@ -259,7 +267,7 @@ ga_Handle* gau_create_handle_sound(ga_Mixer* in_mixer, ga_Sound* in_sound,
  *  \ingroup createHelper
  */
 ga_Handle* gau_create_handle_buffered_data(ga_Mixer* in_mixer, ga_StreamManager* in_streamMgr,
-                                           ga_DataSource* in_dataSrc, const char* in_format,
+                                           ga_DataSource* in_dataSrc, const gau_AudioType in_format,
                                            ga_FinishCallback in_callback, void* in_context,
                                            gau_SampleSourceLoop** out_loopSrc);
 
@@ -268,7 +276,7 @@ ga_Handle* gau_create_handle_buffered_data(ga_Mixer* in_mixer, ga_StreamManager*
  *  \ingroup createHelper
  */
 ga_Handle* gau_create_handle_buffered_file(ga_Mixer* in_mixer, ga_StreamManager* in_streamMgr,
-                                           const char* in_filename, const char* in_format,
+                                           const char* in_filename, const gau_AudioType in_format,
                                            ga_FinishCallback in_callback, void* in_context,
                                            gau_SampleSourceLoop** out_loopSrc);
 

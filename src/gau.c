@@ -7,21 +7,6 @@
 
 #include <assert.h>
 
-#ifdef _WIN32
-# pragma warning(disable:4996)
-#endif /* _WIN32 */
-
-#ifdef __linux__
-# include <strings.h>
-#endif
-
-#if defined(__APPLE__) || defined(__CYGWIN__) || defined(__linux__)
-# define stricmp strcasecmp
-#elif defined(_WIN32)
-//# define stricmp _stricmp
-#define stricmp strcmp
-#endif
-
 /* High-Level Manager */
 typedef struct gau_Manager {
   gc_int32 threadPolicy;
@@ -606,7 +591,7 @@ typedef struct gau_OggDataSourceCallbackData
   ga_DataSource* dataSrc;
 } gau_OggDataSourceCallbackData;
 
-gc_int32 gauX_sample_source_ogg_callback_read(void *ptr, gc_int32 size, gc_int32 nmemb, void *datasource)
+size_t gauX_sample_source_ogg_callback_read(void *ptr, size_t size, size_t nmemb, void *datasource)
 {
   gau_OggDataSourceCallbackData* stream = (gau_OggDataSourceCallbackData*)datasource;
   ga_DataSource* ds = stream->dataSrc;
@@ -1130,16 +1115,16 @@ ga_Memory* gau_load_memory_file(const char* in_filename)
   return ret;
 }
 
-ga_Sound* gau_load_sound_file(const char* in_filename, const char* in_format)
+ga_Sound* gau_load_sound_file(const char* in_filename, const gau_AudioType in_format)
 {
   ga_Sound* ret = 0;
   ga_DataSource* dataSrc = gau_data_source_create_file(in_filename);
   if(dataSrc)
   {
     ga_SampleSource* sampleSrc = 0;
-    if(stricmp(in_format, "ogg") == 0)
+    if(in_format == GAU_AUDIO_TYPE_OGG)
       sampleSrc = gau_sample_source_create_ogg(dataSrc);
-    else if(stricmp(in_format, "wav") == 0)
+    else if(in_format == GAU_AUDIO_TYPE_WAV)
       sampleSrc = gau_sample_source_create_wav(dataSrc);
     ga_data_source_release(dataSrc);
     if(sampleSrc)
@@ -1178,7 +1163,7 @@ ga_Handle* gau_create_handle_sound(ga_Mixer* in_mixer, ga_Sound* in_sound,
   return ret;
 }
 
-ga_Handle* gau_create_handle_memory(ga_Mixer* in_mixer, ga_Memory* in_memory, const char* in_format,
+ga_Handle* gau_create_handle_memory(ga_Mixer* in_mixer, ga_Memory* in_memory, const gau_AudioType in_format,
                                     ga_FinishCallback in_callback, void* in_context,
                                     gau_SampleSourceLoop** out_loopSrc)
 {
@@ -1187,9 +1172,9 @@ ga_Handle* gau_create_handle_memory(ga_Mixer* in_mixer, ga_Memory* in_memory, co
   if(dataSrc)
   {
     ga_SampleSource* sampleSrc = 0;
-    if(stricmp(in_format, "ogg") == 0)
+    if(in_format == GAU_AUDIO_TYPE_OGG)
       sampleSrc = gau_sample_source_create_ogg(dataSrc);
-    else if(stricmp(in_format, "wav") == 0)
+    else if(in_format == GAU_AUDIO_TYPE_WAV)
       sampleSrc = gau_sample_source_create_wav(dataSrc);
     if(sampleSrc)
     {
@@ -1214,7 +1199,7 @@ ga_Handle* gau_create_handle_memory(ga_Mixer* in_mixer, ga_Memory* in_memory, co
   return ret;
 }
 ga_Handle* gau_create_handle_buffered_data(ga_Mixer* in_mixer, ga_StreamManager* in_streamMgr,
-                                           ga_DataSource* in_dataSrc, const char* in_format,
+                                           ga_DataSource* in_dataSrc, const gau_AudioType in_format,
                                            ga_FinishCallback in_callback, void* in_context,
                                            gau_SampleSourceLoop** out_loopSrc)
 {
@@ -1223,9 +1208,9 @@ ga_Handle* gau_create_handle_buffered_data(ga_Mixer* in_mixer, ga_StreamManager*
   if(in_dataSrc)
   {
     ga_SampleSource* sampleSrc = 0;
-    if(stricmp(in_format, "ogg") == 0)
+    if(in_format == GAU_AUDIO_TYPE_OGG)
       sampleSrc = gau_sample_source_create_ogg(dataSrc);
-    else if(stricmp(in_format, "wav") == 0)
+    else if(in_format == GAU_AUDIO_TYPE_WAV)
       sampleSrc = gau_sample_source_create_wav(dataSrc);
     if(sampleSrc)
     {
@@ -1257,7 +1242,7 @@ ga_Handle* gau_create_handle_buffered_data(ga_Mixer* in_mixer, ga_StreamManager*
   return ret;
 }
 ga_Handle* gau_create_handle_buffered_file(ga_Mixer* in_mixer, ga_StreamManager* in_streamMgr,
-                                           const char* in_filename, const char* in_format,
+                                           const char* in_filename, const gau_AudioType in_format,
                                            ga_FinishCallback in_callback, void* in_context,
                                            gau_SampleSourceLoop** out_loopSrc)
 {
@@ -1266,9 +1251,9 @@ ga_Handle* gau_create_handle_buffered_file(ga_Mixer* in_mixer, ga_StreamManager*
   if(dataSrc)
   {
     ga_SampleSource* sampleSrc = 0;
-    if(stricmp(in_format, "ogg") == 0)
+    if(in_format == GAU_AUDIO_TYPE_OGG)
       sampleSrc = gau_sample_source_create_ogg(dataSrc);
-    else if(stricmp(in_format, "wav") == 0)
+    else if(in_format == GAU_AUDIO_TYPE_WAV)
       sampleSrc = gau_sample_source_create_wav(dataSrc);
     ga_data_source_release(dataSrc);
     if(sampleSrc)

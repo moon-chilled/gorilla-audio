@@ -105,11 +105,11 @@ gc_int32 ga_version_check(gc_int32 in_major, gc_int32 in_minor, gc_int32 in_rev)
                            Instead, a pointer to the object should be copied. The client
                            must never use the object after destroying it. \ingroup memManagement */
 #define MULTI_CLIENT /**< The object has multiple clients (owners), and is reference-counted.
-                          The object should be created by its first client. Additional 
+                          The object should be created by its first client. Additional
                           clients should call *_acquire() to add new references. Whenever a
                           client is done using the object, it should call *_release() to
-                          remove its reference. When the last reference is removed, the 
-                          object will be freed. A client must never use the object after 
+                          remove its reference. When the last reference is removed, the
+                          object will be freed. A client must never use the object after
                           releasing its reference. The object itself should never be copied.
                           Instead, a pointer to the object should be copied. \ingroup memManagement*/
 
@@ -145,7 +145,7 @@ typedef struct ga_Format {
  */
 gc_int32 ga_format_sampleSize(ga_Format* in_format);
 
-/** Converts a discrete number of PCM samples into the duration (in seconds) it 
+/** Converts a discrete number of PCM samples into the duration (in seconds) it
  *  will take to play back.
  *
  *  \ingroup ga_Format
@@ -155,7 +155,7 @@ gc_int32 ga_format_sampleSize(ga_Format* in_format);
  */
 gc_float32 ga_format_toSeconds(ga_Format* in_format, gc_int32 in_samples);
 
-/** Converts a duration (in seconds) into the discrete number of PCM samples it 
+/** Converts a duration (in seconds) into the discrete number of PCM samples it
  *  will take to play for that long.
  *
  *  \ingroup ga_Format
@@ -229,7 +229,7 @@ gc_int32 ga_device_check(ga_Device* in_device);
  *  \param in_device Device in which to queue the buffer.
  *  \param in_buffer Buffer to add to the presentation queue.
  *  \return GC_SUCCESS if the buffer was queued successfully. GC_ERROR_GENERIC if not.
- *  \warning You should always call ga_device_check() prior to queueing a buffer! If 
+ *  \warning You should always call ga_device_check() prior to queueing a buffer! If
  *           there isn't a free (unqueued) buffer, the operation will fail.
  */
 gc_result ga_device_queue(ga_Device* in_device,
@@ -258,8 +258,8 @@ gc_result ga_device_close(ga_Device* in_device);
 
 /** Abstract data source data structure [\ref MULTI_CLIENT].
  *
- *  A data source is a source of binary data, such as a file or socket, that 
- *  generates bytes of binary data. This data is usually piped through a sample 
+ *  A data source is a source of binary data, such as a file or socket, that
+ *  generates bytes of binary data. This data is usually piped through a sample
  *  source to generate actual PCM audio data.
  *
  *  This object may only be used on the main thread.
@@ -351,7 +351,7 @@ void ga_data_source_release(ga_DataSource* in_dataSrc);
 
 /** Abstract sample source data structure [\ref MULTI_CLIENT].
  *
- *  A sample source is a source of PCM audio samples. These samples are usually 
+ *  A sample source is a source of PCM audio samples. These samples are usually
  *  generated from a compatible data source or sample source, which is transformed
  *  or decoded into the resulting PCM audio data.
  *
@@ -364,7 +364,7 @@ typedef struct ga_SampleSource ga_SampleSource;
 /** On-seek callback function.
  *
  *  A callback that gets called while reading a sample source, if the sample source
- *  seeks as part of the read. This callback is used to implement gapless looping 
+ *  seeks as part of the read. This callback is used to implement gapless looping
  *  features within the sample source pipeline.
  *
  *  \ingroup ga_SampleSource
@@ -427,7 +427,7 @@ gc_int32 ga_sample_source_seek(ga_SampleSource* in_sampleSrc, gc_int32 in_sample
  *
  *  \ingroup ga_SampleSource
  *  \param in_sampleSrc Sample source to tell the current sample number of.
- *  \param out_totalSamples If set, this value will be set to the total number of 
+ *  \param out_totalSamples If set, this value will be set to the total number of
  *                          samples in the sample source. Output parameter.
  *  \return The current sample source sample number.
  */
@@ -445,7 +445,7 @@ gc_int32 ga_sample_source_flags(ga_SampleSource* in_sampleSrc);
  *
  *  \ingroup ga_SampleSource
  *  \param in_sampleSrc Sample source whose format should should be retrieved.
- *  \param out_format This value will be set to the same sample format 
+ *  \param out_format This value will be set to the same sample format
  *                    as samples in the sample source. Output parameter.
  *  \todo Either return a copy of the format, or make it a const* return value.
  */
@@ -454,7 +454,7 @@ void ga_sample_source_format(ga_SampleSource* in_sampleSrc, ga_Format* out_forma
 /** Acquires a reference for a sample source.
  *
  *  Increments the sample source's reference count by 1.
- *  
+ *
  *  \ingroup ga_SampleSource
  *  \param in_sampleSrc Sample source whose reference count should be incremented.
  */
@@ -483,13 +483,13 @@ void ga_sample_source_release(ga_SampleSource* in_sampleSrc);
 
 /** Shared memory object data structure [\ref MULTI_CLIENT].
  *
- *  As a way of sharing data between multiple client across multiple threads, 
+ *  As a way of sharing data between multiple client across multiple threads,
  *  this data structure allows for a safe internal copy of the data. This is
- *  used in the internal implementation of ga_Sound, and can also be used to 
- *  play compressed audio directly from memory without having to read the data 
+ *  used in the internal implementation of ga_Sound, and can also be used to
+ *  play compressed audio directly from memory without having to read the data
  *  source from a high-latency I/O interface or needlessly duplicate the data.
  *
- *  This object may be created on a secondary thread, but may otherwise only 
+ *  This object may be created on a secondary thread, but may otherwise only
  *  be used on the main thread.
  *
  *  \ingroup ga_Memory
@@ -498,8 +498,8 @@ typedef struct ga_Memory ga_Memory;
 
 /** Create a shared memory object.
  *
- *  The buffer specified by in_data is copied into a newly-allocated internal 
- *  storage buffer. As such, you may safely free the data buffer passed into 
+ *  The buffer specified by in_data is copied into a newly-allocated internal
+ *  storage buffer. As such, you may safely free the data buffer passed into
  *  ga_memory_create() as soon as the function returns.
  *  The returned memory object has an initial reference count of 1.
  *
@@ -513,7 +513,7 @@ ga_Memory* ga_memory_create(void* in_data, gc_int32 in_size);
 
 /** Create a shared memory object from the full contents of a data source.
  *
- *  The full contents of the data source specified by in_dataSource are copied 
+ *  The full contents of the data source specified by in_dataSource are copied
  *  into a newly-allocated internal storage buffer.
  *  The returned object has an initial reference count of 1.
  *
@@ -554,7 +554,7 @@ void ga_memory_acquire(ga_Memory* in_mem);
  *
  *  Decrements the memory object's reference count by 1. When the last reference is
  *  released, the memory object's resources will be deallocated.
- *  
+ *
  *  \ingroup ga_Memory
  *  \param in_mem Memory object whose reference count should be decremented.
  *  \warning A client must never use a memory object after releasing its reference.
@@ -566,21 +566,21 @@ void ga_memory_release(ga_Memory* in_mem);
 /*  Sound  */
 /***********/
 /** Shared (reference-counted) sound data structure and associated functions.
- *  
+ *
  *  \ingroup external
  *  \defgroup ga_Sound Sound
  */
 
 /** Shared sound object data structure [\ref MULTI_CLIENT].
  *
- *  As a way of sharing sounds between multiple client across multiple threads, 
- *  this data structure allows for a safe internal copy of the PCM data. The 
- *  data buffer must contain only raw PCM data, not formatted or compressed 
+ *  As a way of sharing sounds between multiple client across multiple threads,
+ *  this data structure allows for a safe internal copy of the PCM data. The
+ *  data buffer must contain only raw PCM data, not formatted or compressed
  *  in any other way. To cache or share any other data, use a ga_Memory.
  *
- *  This object may be created on a secondary thread, but may otherwise only 
+ *  This object may be created on a secondary thread, but may otherwise only
  *  be used on the main thread.
- * 
+ *
  *  \ingroup ga_Sound
  */
 typedef struct ga_Sound ga_Sound;
@@ -592,7 +592,7 @@ typedef struct ga_Sound ga_Sound;
  *  reference from the provided memory object.
  *
  *  \ingroup ga_Sound
- *  \param in_memory Shared memory object containing raw PCM data. This 
+ *  \param in_memory Shared memory object containing raw PCM data. This
  *  function acquires a reference from the provided memory object.
  *  \param in_format Format of the raw PCM data contained by in_memory.
  *  \return Newly-allocated sound object.
@@ -601,7 +601,7 @@ ga_Sound* ga_sound_create(ga_Memory* in_memory, ga_Format* in_format);
 
 /** Create a shared memory object from the full contents of a sample source.
  *
- *  The full contents of the sample source specified by in_sampleSource are 
+ *  The full contents of the sample source specified by in_sampleSource are
  *  streamed into a newly-allocated internal memory object.
  *  The returned sound object has an initial reference count of 1.
  *
@@ -641,7 +641,7 @@ gc_int32 ga_sound_numSamples(ga_Sound* in_sound);
  *
  *  \ingroup ga_Sound
  *  \param in_sound Sound whose format should should be retrieved.
- *  \param out_format This value will be set to the same sample format 
+ *  \param out_format This value will be set to the same sample format
  *                    as samples in the sound. Output parameter.
  *  \todo Either return a copy of the format, or make it a const* return value.
  */
@@ -661,7 +661,7 @@ void ga_sound_acquire(ga_Sound* in_sound);
  *
  *  Decrements the sound object's reference count by 1. When the last reference is
  *  released, the sound object's resources will be deallocated.
- *  
+ *
  *  \ingroup ga_Sound
  *  \param in_sound Sound object whose reference count should be decremented.
  *  \warning A client must never use a sound object after releasing its reference.
@@ -681,8 +681,8 @@ void ga_sound_release(ga_Sound* in_sound);
 /** Audio mixer data structure [\ref SINGLE_CLIENT].
  *
  *  The mixer mixes PCM samples from multiple audio handles into a single buffer
- *  of PCM samples. The mixer is responsible for applying handle parameters 
- *  such as gain, pan, and pitch. The mixer has a fixed sample size and format 
+ *  of PCM samples. The mixer is responsible for applying handle parameters
+ *  such as gain, pan, and pitch. The mixer has a fixed sample size and format
  *  that must be specified upon creation. Buffers passed in must be large enough
  *  to hold the specified number of samples of the specified format.
  *
@@ -728,10 +728,10 @@ gc_int32 ga_mixer_numSamples(ga_Mixer* in_mixer);
  *
  *  \ingroup ga_Mixer
  *  \param in_mixer Mixer object whose handles' samples should be mixed.
- *  \param out_buffer An empty buffer into which the mixed samples should be 
- *                    copied. The buffer must be large enough to hold the 
+ *  \param out_buffer An empty buffer into which the mixed samples should be
+ *                    copied. The buffer must be large enough to hold the
  *                    mixer's number of samples in the mixer's sample format.
- *  \return Whether the mixer successfully mixed the data. GA_SUCCESS if the 
+ *  \return Whether the mixer successfully mixed the data. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
 gc_result ga_mixer_mix(ga_Mixer* in_mixer, void* out_buffer);
@@ -739,12 +739,12 @@ gc_result ga_mixer_mix(ga_Mixer* in_mixer, void* out_buffer);
 /** Dispatches all pending finish callbacks.
  *
  *  This function should be called regularly. This function (like all other functions
- *  associated with this object) must be called from the main thread. All callbacks 
+ *  associated with this object) must be called from the main thread. All callbacks
  *  will be called on the main thread.
  *
  *  \ingroup ga_Mixer
  *  \param in_mixer Mixer object whose handles' finish callbacks should be dispatched.
- *  \return Whether the mixer successfully dispatched the callbacks. GA_SUCCESS if the 
+ *  \return Whether the mixer successfully dispatched the callbacks. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
 gc_result ga_mixer_dispatch(ga_Mixer* in_mixer);
@@ -774,7 +774,7 @@ gc_result ga_mixer_destroy(ga_Mixer* in_mixer);
 
 /** Audio playback control handle data structure [\ref SINGLE_CLIENT].
  *
- *  A handle is a set of controls for manipulating the playback and mix 
+ *  A handle is a set of controls for manipulating the playback and mix
  *  parameters of a sample source.
  *
  *  Handles track playback parameters such as pan, pitch, and gain (volume)
@@ -802,7 +802,7 @@ typedef struct ga_Handle ga_Handle;
 
 /** Enumerated parameter values for ga_handle_tell().
  *
- *  Used in ga_handle_tell() to specify which value to return. 
+ *  Used in ga_handle_tell() to specify which value to return.
  *
  *  \ingroup ga_Handle
  *  \defgroup tellParams Tell Parameters
@@ -819,7 +819,7 @@ typedef struct ga_Handle ga_Handle;
  *  \ingroup ga_Handle
  *  \param in_finishedHandle The handle that has finished playback.
  *  \param in_context The user-specified callback context.
- *  \warning This callback is thrown once the handle has finished playback, 
+ *  \warning This callback is thrown once the handle has finished playback,
  *           after which the handle can no longer be used except to destroy it.
  *  \todo Allow handles with GA_FLAG_SEEKABLE to be rewound/reused once finished.
  */
@@ -851,7 +851,7 @@ gc_result ga_handle_destroy(ga_Handle* in_handle);
 /** Starts playback on an audio playback handle.
  *
  *  It is valid to call ga_handle_play() on a handle that is already playing.
- *  
+ *
  *  \ingroup ga_Handle
  *  \param in_handle Handle object to play.
  *  \return Whether the handle played successfully. GA_SUCCESS if the
@@ -864,7 +864,7 @@ gc_result ga_handle_play(ga_Handle* in_handle);
 /** Stops playback of a playing audio playback handle.
  *
  *  It is valid to call ga_handle_stop() on a handle that is already stopped.
- *  
+ *
  *  \ingroup ga_Handle
  *  \param in_handle Handle object to stop.
  *  \return Whether the handle was stopped successfully. GA_SUCCESS if the
@@ -1000,7 +1000,7 @@ gc_result ga_handle_seek(ga_Handle* in_handle, gc_int32 in_sampleOffset);
  *  \ingroup ga_Handle
  *  \param in_handle Handle to query.
  *  \param in_param Tell value to retrieve (see \ref tellParams).
- *  \return The current handle playback sample number if in_param is set to 
+ *  \return The current handle playback sample number if in_param is set to
  *          GA_TELL_PARAM_CURRENT. The total number of samples in the handle
  *          if in_param is set to GA_TELL_PARAM_TOTAL.
  */
@@ -1023,7 +1023,7 @@ gc_int32 ga_handle_ready(ga_Handle* in_handle, gc_int32 in_numSamples);
  *
  *  \ingroup ga_Handle
  *  \param in_handle Handle whose format should should be retrieved.
- *  \param out_format This value will be set to the same sample format 
+ *  \param out_format This value will be set to the same sample format
  *                    as samples streamed by the handle. Output parameter.
  *  \todo Either return a copy of the format, or make it a const* return value.
  */
@@ -1083,7 +1083,7 @@ void ga_stream_manager_destroy(ga_StreamManager* in_mgr);
 
 /** Buffered stream data structure [\ref MULTI_CLIENT].
  *
- *  Buffered streams read samples from a sample source into a buffer. They 
+ *  Buffered streams read samples from a sample source into a buffer. They
  *  support seeking, reading, and all other sample source functionality,
  *  albeit through a different interface. This is done to decouple the
  *  background-streaming logic from the audio-processing pipeline logic.
@@ -1145,7 +1145,7 @@ gc_int32 ga_stream_end(ga_BufferedStream* in_stream);
  *
  *  \ingroup ga_BufferedStream
  *  \param in_stream Buffered stream to check.
- *  \param in_numSamples The minimum number of samples required for the 
+ *  \param in_numSamples The minimum number of samples required for the
  *                       buffered stream to be considered ready.
  *  \return Whether the buffered stream has at least a given number of available
  *          samples.
@@ -1169,7 +1169,7 @@ gc_int32 ga_stream_seek(ga_BufferedStream* in_stream, gc_int32 in_sampleOffset);
  *
  *  \ingroup ga_BufferedStream
  *  \param in_stream Buffered stream to tell the current sample number of.
- *  \param out_totalSamples If set, this value will be set to the total number of 
+ *  \param out_totalSamples If set, this value will be set to the total number of
  *                          samples in the contained sample source. Output parameter.
  *  \return The current sample source sample number.
  */
@@ -1197,7 +1197,7 @@ void ga_stream_acquire(ga_BufferedStream* in_stream);
  *
  *  Decrements the buffered stream's reference count by 1. When the last reference is
  *  released, the buffered stream's resources will be deallocated.
- *  
+ *
  *  \ingroup ga_BufferedStream
  *  \param in_stream Buffered stream whose reference count should be decremented.
  *  \warning A client must never use a buffered stream after releasing its reference.

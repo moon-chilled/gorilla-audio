@@ -57,7 +57,7 @@ extern "C"
 #include <stddef.h>
 #else
 #error Types not yet specified for this platform
-  
+
 /** 8-bit  unsigned integer. \ingroup dataTypes */
 typedef unsigned char           gc_uint8;
 /** 16-bit unsigned integer. \ingroup dataTypes */

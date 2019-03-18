@@ -93,7 +93,7 @@ void gc_thread_sleep(gc_uint32 in_ms);
 /** Destroys a thread object.
  *
  *  \ingroup gc_Thread
- *  \warning This should usually only be called once the the thread has 
+ *  \warning This should usually only be called once the the thread has
  *           successfully joined with another thread.
  *  \warning Never use a thread after it has been destroyed.
  */

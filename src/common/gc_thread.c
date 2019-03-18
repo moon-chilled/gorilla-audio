@@ -84,25 +84,25 @@ gc_Thread* gc_thread_create(gc_ThreadFunc in_threadFunc, void* in_context,
   LinuxThreadData* threadData = (LinuxThreadData*)gcX_ops->allocFunc(sizeof(LinuxThreadData));
   threadData->threadFunc = in_threadFunc;
   threadData->context = in_context;
-  
+
   ret->threadObj = threadData;
   ret->threadFunc = in_threadFunc;
   ret->context = in_context;
   ret->priority = in_priority;
   ret->stackSize = in_stackSize;
-  
+
   pthread_mutex_init(&threadData->suspendMutex, NULL);
   pthread_mutex_lock(&threadData->suspendMutex);
-  
+
   result = pthread_attr_init(&threadData->attr);
-  #if defined(__APPLE__) || defined(__ANDROID__)
+#if defined(__APPLE__) || defined(__ANDROID__)
   param.sched_priority = priorityLut[in_priority];
-  #elif defined(__linux__)
+#elif defined(__linux__)
   param.__sched_priority = priorityLut[in_priority];
-  #endif /* __APPLE__ */
+#endif /* __APPLE__ */
   pthread_attr_setschedparam(&threadData->attr, &param);
   pthread_create(&threadData->thread, &threadData->attr, StaticThreadWrapper, threadData);
-  
+
   return ret;
 }
 void gc_thread_run(gc_Thread* in_thread)

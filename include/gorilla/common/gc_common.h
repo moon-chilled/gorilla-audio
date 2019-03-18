@@ -79,7 +79,7 @@ gc_result gc_shutdown();
  *
  *  A circular buffer object that is thread-safe for single producer/single
  *  consumer use cases. It assumes a single thread producing (writing)
- *  data, and a single thread consuming (reading) data. The producer and 
+ *  data, and a single thread consuming (reading) data. The producer and
  *  consumer threads may be the same thread.
  *
  *  \ingroup gc_CircBuffer

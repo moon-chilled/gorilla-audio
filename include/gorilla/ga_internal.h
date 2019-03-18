@@ -29,7 +29,7 @@ extern "C"
  */
 
 /** Header of shared-data for all concrete device implementations.
- *  
+ *
  *  Stores the device type, number of buffers, number of samples, and device PCM format.
  *
  *  \ingroup intDevice
@@ -59,7 +59,7 @@ struct ga_Device {
  */
 
 /** Data source read callback prototype.
- *  
+ *
  *  \ingroup intDataSource
  *  \param in_context User context (pointer to the first byte after the data source).
  *  \param in_dst Destination buffer into which bytes should be read. Guaranteed to
@@ -71,7 +71,7 @@ struct ga_Device {
 typedef gc_int32 (*tDataSourceFunc_Read)(void* in_context, void* in_dst, gc_int32 in_size, gc_int32 in_count);
 
 /** Data source seek callback prototype.
- *  
+ *
  *  \ingroup intDataSource
  *  \param in_context User context (pointer to the first byte after the data source).
  *  \param in_offset Offset (in bytes) from the specified seek origin.
@@ -101,8 +101,8 @@ typedef void (*tDataSourceFunc_Close)(void* in_context);
 
 /** Abstract data source data structure [\ref MULTI_CLIENT].
  *
- *  A data source is a source of binary data, such as a file or socket, that 
- *  generates bytes of binary data. This data is usually piped through a sample 
+ *  A data source is a source of binary data, such as a file or socket, that
+ *  generates bytes of binary data. This data is usually piped through a sample
  *  source to generate actual PCM audio data.
  *
  *  \ingroup intDataSource
@@ -120,7 +120,7 @@ struct ga_DataSource {
 
 /** Initializes the reference count and other default values.
  *
- *  Because ga_DataSource is an abstract data type, this function should not be 
+ *  Because ga_DataSource is an abstract data type, this function should not be
  *  called except when implement a concrete data source implementation.
  *
  *  \ingroup intDataSource

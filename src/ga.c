@@ -197,7 +197,7 @@ void ga_data_source_init(ga_DataSource* in_dataSrc)
 {
   in_dataSrc->refCount = 1;
   in_dataSrc->readFunc = 0;
-  in_dataSrc->seekFunc = 0; 
+  in_dataSrc->seekFunc = 0;
   in_dataSrc->tellFunc = 0;
   in_dataSrc->closeFunc = 0;
   in_dataSrc->flags = 0;
@@ -265,7 +265,7 @@ void ga_sample_source_init(ga_SampleSource* in_sampleSrc)
   in_sampleSrc->readFunc = 0;
   in_sampleSrc->endFunc = 0;
   in_sampleSrc->readyFunc = 0;
-  in_sampleSrc->seekFunc = 0; 
+  in_sampleSrc->seekFunc = 0;
   in_sampleSrc->tellFunc = 0;
   in_sampleSrc->closeFunc = 0;
   in_sampleSrc->flags = 0;
