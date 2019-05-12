@@ -29,7 +29,17 @@ extern "C"
  *  \defgroup dataTypes Data Types
  */
 
-#ifdef _WIN32
+#if __STDC_VERSION__ >= 199901L
+# include <stdint.h>
+  typedef uint8_t   gc_uint8;
+  typedef uint16_t  gc_uint16;
+  typedef uint32_t  gc_uint32;
+  typedef uint64_t  gc_uint64;
+  typedef int8_t    gc_int8;
+  typedef int16_t   gc_int16;
+  typedef int32_t   gc_int32;
+  typedef int64_t   gc_int64;
+#elif defined(_WIN32)
   typedef unsigned char     gc_uint8;
   typedef unsigned short    gc_uint16;
   typedef unsigned int      gc_uint32;
@@ -38,10 +48,7 @@ extern "C"
   typedef signed short      gc_int16;
   typedef signed int        gc_int32;
   typedef signed __int64    gc_int64;
-  typedef float             gc_float32;
-  typedef double            gc_float64;
-
-#elif __GNUC__ /* GCC */
+#elif defined(__GNUC__)
   typedef unsigned char          gc_uint8;
   typedef unsigned short         gc_uint16;
   typedef unsigned int           gc_uint32;
@@ -50,35 +57,21 @@ extern "C"
   typedef signed short           gc_int16;
   typedef signed int             gc_int32;
   typedef signed long long int   gc_int64;
-  typedef float                  gc_float32;
-  typedef double                 gc_float64;
-
-#include <stdint.h>
-#include <stddef.h>
+# include <stdint.h>
+# include <stddef.h>
 #else
-#error Types not yet specified for this platform
+# error Types not yet specified for this platform
+#endif
 
-/** 8-bit  unsigned integer. \ingroup dataTypes */
-typedef unsigned char           gc_uint8;
-/** 16-bit unsigned integer. \ingroup dataTypes */
-typedef unsigned short          gc_uint16;
-/** 32-bit unsigned integer. \ingroup dataTypes */
-typedef unsigned int            gc_uint32;
-/** 64-bit unsigned integer. \ingroup dataTypes */
-typedef unsigned long long int  gc_uint64;
-/** 8-bit  signed integer.   \ingroup dataTypes */
-typedef signed char             gc_int8;
-/** 16-bit signed integer.   \ingroup dataTypes */
-typedef signed short            gc_int16;
-/** 32-bit signed integer.   \ingroup dataTypes */
-typedef signed int              gc_int32;
-/** 64-bit signed integer.   \ingroup dataTypes */
-typedef signed long long int    gc_int64;
-/** 32-bit floating-point. \ingroup dataTypes */
-typedef float                   gc_float32;
-/** 64-bit floating-point. \ingroup dataTypes */
-typedef double                  gc_float64;
+typedef float    gc_float32;
+typedef double   gc_float64;
+typedef size_t   gc_size;
 
+#ifdef _MSC_VER
+# include <BaseTsd.h>
+typedef SSIZE_T gc_ssize;
+#else
+typedef ssize_t  gc_ssize;
 #endif
 
 /*********************/

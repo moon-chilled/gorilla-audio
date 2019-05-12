@@ -198,7 +198,7 @@ endif()
 
 if(ENABLE_XAUDIO2)
   list(APPEND GORILLA_INCLUDE ${INCLUDE_DIR}/gorilla/devices/ga_xaudio2.h)
-  list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_xaudio2.c)
+  list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_xaudio2.cc)
 endif()
 
 source_group("include" FILES ${GORILLA_INCLUDE})

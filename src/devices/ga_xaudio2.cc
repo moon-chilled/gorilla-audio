@@ -10,9 +10,10 @@
 #include <stdio.h>
 #include <assert.h>
 
+extern "C" {
 ga_DeviceImpl_XAudio2* gaX_device_open_xaudio2(gc_int32 in_numBuffers, gc_int32 in_numSamples, ga_Format* in_format)
 {
-  ga_DeviceImpl_XAudio2* ret = gcX_ops->allocFunc(sizeof(ga_DeviceImpl_XAudio2));
+  ga_DeviceImpl_XAudio2* ret = (ga_DeviceImpl_XAudio2*)gcX_ops->allocFunc(sizeof(ga_DeviceImpl_XAudio2));
   HRESULT result;
   WAVEFORMATEX fmt;
   gc_int32 i;
@@ -30,7 +31,7 @@ ga_DeviceImpl_XAudio2* gaX_device_open_xaudio2(gc_int32 in_numBuffers, gc_int32 
   if(FAILED(result))
     goto cleanup;
 
-  result = IXAudio2_CreateMasteringVoice(ret->xa, &ret->master, 2, 44100, 0, 0, 0);
+  result = ret->xa->CreateMasteringVoice(&ret->master, 2, 44100, 0, 0, 0);
   if(FAILED(result))
     goto cleanup;
 
@@ -44,19 +45,19 @@ ga_DeviceImpl_XAudio2* gaX_device_open_xaudio2(gc_int32 in_numBuffers, gc_int32 
   fmt.nBlockAlign = fmt.nChannels * (fmt.wBitsPerSample / 8);
   fmt.nAvgBytesPerSec = fmt.nSamplesPerSec * fmt.nBlockAlign;
 
-  result = IXAudio2_CreateSourceVoice(ret->xa, &ret->source, &fmt, XAUDIO2_VOICE_NOPITCH, XAUDIO2_DEFAULT_FREQ_RATIO, 0, 0, 0);
+  result = ret->xa->CreateSourceVoice(&ret->source, &fmt, XAUDIO2_VOICE_NOPITCH, XAUDIO2_DEFAULT_FREQ_RATIO, 0, 0, 0);
   if(FAILED(result))
     goto cleanup;
 
-  result =IXAudio2_StartEngine(ret->xa);
+  result = ret->xa->StartEngine();
   if(FAILED(result))
     goto cleanup;
 
-  result = IXAudio2SourceVoice_Start(ret->source, 0, XAUDIO2_COMMIT_NOW);
+  result = ret->source->Start(0, XAUDIO2_COMMIT_NOW);
   if(FAILED(result))
     goto cleanup;
 
-  ret->buffers = gcX_ops->allocFunc(ret->numBuffers * sizeof(void*));
+  ret->buffers = (void**)gcX_ops->allocFunc(ret->numBuffers * sizeof(void*));
   for(i = 0; i < ret->numBuffers; ++i)
     ret->buffers[i] = gcX_ops->allocFunc(ret->numSamples * ret->sampleSize);
 
@@ -65,16 +66,16 @@ ga_DeviceImpl_XAudio2* gaX_device_open_xaudio2(gc_int32 in_numBuffers, gc_int32 
 cleanup:
   if(ret->source)
   {
-    IXAudio2SourceVoice_Stop(ret->source, 0, XAUDIO2_COMMIT_NOW);
-    IXAudio2SourceVoice_FlushSourceBuffers(ret->source);
-    IXAudio2SourceVoice_DestroyVoice(ret->source);
+    ret->source->Stop(0, XAUDIO2_COMMIT_NOW);
+    ret->source->FlushSourceBuffers();
+    ret->source->DestroyVoice();
   }
   if(ret->xa)
-    IXAudio2_StopEngine(ret->xa);
+    ret->xa->StopEngine();
   if(ret->master)
-    IXAudio2MasteringVoice_DestroyVoice(ret->master);
+    ret->master->DestroyVoice();
   if(ret->xa)
-    IXAudio2_Release(ret->xa);
+    ret->xa->Release();
   CoUninitialize();
   gcX_ops->freeFunc(ret);
   return 0;
@@ -84,16 +85,16 @@ gc_result gaX_device_close_xaudio2(ga_DeviceImpl_XAudio2* in_device)
   gc_int32 i;
   if(in_device->source)
   {
-    IXAudio2SourceVoice_Stop(in_device->source, 0, XAUDIO2_COMMIT_NOW);
-    IXAudio2SourceVoice_FlushSourceBuffers(in_device->source);
-    IXAudio2SourceVoice_DestroyVoice(in_device->source);
+    in_device->source->Stop(0, XAUDIO2_COMMIT_NOW);
+    in_device->source->FlushSourceBuffers();
+    in_device->source->DestroyVoice();
   }
   if(in_device->xa)
-    IXAudio2_StopEngine(in_device->xa);
+    in_device->xa->StopEngine();
   if(in_device->master)
-    IXAudio2MasteringVoice_DestroyVoice(in_device->master);
+    in_device->master->DestroyVoice();
   if(in_device->xa)
-    IXAudio2_Release(in_device->xa);
+    in_device->xa->Release();
   CoUninitialize();
 
   for(i = 0; i < in_device->numBuffers; ++i)
@@ -110,7 +111,7 @@ gc_int32 gaX_device_check_xaudio2(ga_DeviceImpl_XAudio2* in_device)
 {
   gc_int32 ret = 0;
   XAUDIO2_VOICE_STATE state = { 0 };
-  IXAudio2SourceVoice_GetState(in_device->source, &state);
+  in_device->source->GetState(&state);
   ret = in_device->numBuffers - state.BuffersQueued;
   return ret;
 }
@@ -124,7 +125,8 @@ gc_result gaX_device_queue_xaudio2(ga_DeviceImpl_XAudio2* in_device,
   data = in_device->buffers[in_device->nextBuffer++];
   in_device->nextBuffer %= in_device->numBuffers;
   memcpy(data, in_buffer, buf.AudioBytes);
-  buf.pAudioData = data;
-  IXAudio2SourceVoice_SubmitSourceBuffer(in_device->source, &buf, 0);
+  buf.pAudioData = (const BYTE*)data;
+  in_device->source->SubmitSourceBuffer(&buf, 0);
   return GC_SUCCESS;
 }
+} // extern "C"
