@@ -25,7 +25,7 @@ Makefile
 # Like, the actual library
 *.obj
 *.idb
-build/*.dir
+build/
 *.pdb
 *.user
 *.ncb
@@ -37,3 +37,5 @@ bin/
 *.ilk
 *.a
 *.so
+
+#ext/libogg/include/config.h

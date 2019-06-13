@@ -57,20 +57,20 @@ extern "C"
   typedef signed short           gc_int16;
   typedef signed int             gc_int32;
   typedef signed long long int   gc_int64;
-# include <stdint.h>
-# include <stddef.h>
 #else
 # error Types not yet specified for this platform
 #endif
 
+#include <stddef.h>
+typedef size_t   gc_size;
 typedef float    gc_float32;
 typedef double   gc_float64;
-typedef size_t   gc_size;
 
 #ifdef _MSC_VER
 # include <BaseTsd.h>
 typedef SSIZE_T gc_ssize;
 #else
+# include <sys/types.h>
 typedef ssize_t  gc_ssize;
 #endif
 
