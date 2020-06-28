@@ -1,6 +1,6 @@
 [submodule "ext/libvorbis"]
 	path = ext/libvorbis
-	url = https://git.xiph.org/vorbis.git
+	url = https://gitlab.xiph.org/xiph/vorbis.git
 [submodule "ext/libogg"]
 	path = ext/libogg
-	url = https://git.xiph.org/ogg.git
+	url = https://gitlab.xiph.org/xiph/ogg.git

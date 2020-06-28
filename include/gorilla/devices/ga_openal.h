@@ -16,8 +16,8 @@ extern "C"
 typedef struct ga_DeviceImpl_OpenAl
 {
   GA_DEVICE_HEADER
-  struct ALCdevice_struct* dev;
-  struct ALCcontext_struct* context;
+  struct ALCdevice* dev;
+  struct ALCcontext* context;
   gc_uint32* hwBuffers;
   gc_uint32 hwSource;
   gc_uint32 nextBuffer;

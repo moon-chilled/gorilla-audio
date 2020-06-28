@@ -38,6 +38,7 @@ ga_DeviceImpl_OpenAl* gaX_device_open_openAl(gc_int32 in_numBuffers,
   ga_DeviceImpl_OpenAl* ret = gcX_ops->allocFunc(sizeof(ga_DeviceImpl_OpenAl));
   ALCboolean ctxRet;
 
+  memset(ret, 0, sizeof(*ret));
   ret->devType = GA_DEVICE_TYPE_OPENAL;
   ret->numBuffers = in_numBuffers;
   ret->numSamples = in_numSamples;

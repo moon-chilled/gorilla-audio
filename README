@@ -1,24 +1,25 @@
-# About this repo
+About this repo
 
-This is my own personal fork of gorilla audio, for use in my game engine.  It
-is based on github user swistakm's own fork of gorilla audio.  The documentation
-is not up-to-date, and the interface *has* changed!  Use with caution.
+This is my personal fork of gorilla audio, for use in my game engine.  It is
+based on github user swistakm's own fork of gorilla audio.  The documentation
+is not up-to-date, and the interface has changed; use with caution.
 
-Please see CHANGELOG.txt for more information.  All modifications prior to and
-including 0.3.1 were made by the original gorilla audio developers.  0.3.2 was
-made by swistakm.  Further modifications were made by me.
+See CHANGELOG.txt for more information.  All modifications prior to and
+including 0.3.1 were made by the original gorilla audio developers.  0.3.2
+was made by swistakm.  Further modifications were by me.
 
 
-# Gorilla Audio
+Gorilla Audio
 
 Gorilla Audio is an attempt to make a free, straightforward, cross-platform,
 high-level software audio mixer that supports playback of both static and
 streaming sounds. It is intended for video game development, but should
 easily support many other real-time audio software applications.
 
-The library is written in ANSI C, and is licensed under the MIT license.
+The library is written in ANSI C (with a small amount of C++ glue code
+necessary only on Windows), and is licensed under the MIT license.
 It was written by Tim Ambrogi, engine programmer at Final Form Games.
 
 Gorilla Audio code includes some other libraries that are licensed under terms
-other than MIT. This includes code under the Xiph and LGPL licenses. Non-MIT
-code in the repository is denoted by COPYING files.
+other than MIT. This includes code under the Xiph license. Non-MIT code in the
+repository is denoted by COPYING files.
