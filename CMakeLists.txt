@@ -184,6 +184,18 @@ if(ENABLE_XAUDIO2)
   list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_xaudio2.cc)
 endif()
 
+set(INCLUDE_INTTYPES_H 0)
+set(INCLUDE_STDINT_H 1)
+set(INCLUDE_SYS_TYPES_H 0)
+set(SIZE16 int16_t)
+set(USIZE16 uint16_t)
+set(SIZE32 int32_t)
+set(USIZE32 uint32_t)
+set(SIZE64 int64_t)
+set(USIZE64 uint64_t)
+configure_file(ext/libogg/include/ogg/config_types.h.in ${CMAKE_SOURCE_DIR}/ext/libogg/include/ogg/config_types.h @ONLY)
+
+
 source_group("include" FILES ${GORILLA_INCLUDE})
 source_group("src" FILES ${GORILLA_SRC})
 source_group("include\\common" FILES ${GORILLA_COMMON_INCLUDE})
