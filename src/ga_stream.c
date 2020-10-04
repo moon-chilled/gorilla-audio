@@ -338,7 +338,7 @@ gc_int32 ga_stream_ready(ga_BufferedStream* in_stream, gc_int32 in_numSamples)
 {
   ga_BufferedStream* s = in_stream;
   gc_int32 avail = gc_buffer_bytesAvail(s->buffer);
-  return s->end || avail >= in_numSamples * ga_format_sampleSize(&s->format) && avail > s->bufferSize / 2.0f;
+  return s->end || (avail >= in_numSamples * ga_format_sampleSize(&s->format) && avail > s->bufferSize / 2.0f);
 }
 gc_int32 ga_stream_end(ga_BufferedStream* in_stream)
 {
