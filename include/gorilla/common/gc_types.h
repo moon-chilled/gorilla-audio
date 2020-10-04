@@ -66,14 +66,6 @@ typedef size_t   gc_size;
 typedef float    gc_float32;
 typedef double   gc_float64;
 
-#ifdef _MSC_VER
-# include <BaseTsd.h>
-typedef SSIZE_T gc_ssize;
-#else
-# include <sys/types.h>
-typedef ssize_t  gc_ssize;
-#endif
-
 /*********************/
 /**  Result Values  **/
 /*********************/
