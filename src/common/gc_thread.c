@@ -51,7 +51,7 @@ void gc_thread_destroy(gc_Thread* in_thread)
   gcX_ops->freeFunc(in_thread);
 }
 
-#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 #include <pthread.h>
 #include <sched.h>
 
@@ -96,7 +96,7 @@ gc_Thread* gc_thread_create(gc_ThreadFunc in_threadFunc, void* in_context,
   pthread_mutex_lock(&threadData->suspendMutex);
 
   result = pthread_attr_init(&threadData->attr);
-#if defined(__APPLE__) || defined(__ANDROID__) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__ANDROID__) || defined(__FreeBSD__) || defined(__OpenBSD__)
   param.sched_priority = priorityLut[in_priority];
 #elif defined(__linux__)
   param.__sched_priority = priorityLut[in_priority];
@@ -162,7 +162,7 @@ void gc_mutex_unlock(gc_Mutex* in_mutex)
   LeaveCriticalSection((CRITICAL_SECTION*)in_mutex->mutex);
 }
 
-#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 
 #include <pthread.h>
 
