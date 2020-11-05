@@ -3,8 +3,6 @@ ROAD MAP
 
 COMPATIBILITY:
 - Implement more platforms/devices:
-  - Linux (using OpenAL)
-  - DirectSound device (Windows)
   - WinMM device (Windows)
   - ALSA (Linux)
   - CoreAudio (OSX/iOS)

@@ -5,9 +5,9 @@
 #include "gorilla/devices/ga_openal.h"
 #endif /* ENABLE_OPENAL */
 
-#ifdef ENABLE_DIRECTSOUND
-#include "gorilla/devices/ga_directsound.h"
-#endif /* ENABLE_DIRECTSOUND */
+#ifdef ENABLE_OSS
+#include "gorilla/devices/ga_oss.h"
+#endif /* ENABLE_OSS */
 
 #ifdef ENABLE_XAUDIO2
 #include "gorilla/devices/ga_xaudio2.h"
@@ -19,26 +19,21 @@
 #include <assert.h>
 
 /* Version Functions */
-gc_int32 ga_version_check(gc_int32 in_major, gc_int32 in_minor, gc_int32 in_rev)
-{
-  gc_int32 ret;
-  ret = (in_major == GA_VERSION_MAJOR) ? 0 : (in_major < GA_VERSION_MAJOR) ? -1 : 1;
-  if(ret == 0)
-    ret = (in_minor == GA_VERSION_MINOR) ? 0 : (in_minor < GA_VERSION_MINOR) ? -1 : 1;
-  if(ret == 0)
-    ret = (in_rev == GA_VERSION_REV) ? 0 : (in_rev < GA_VERSION_REV) ? -1 : 1;
-  return ret;
+gc_int32 ga_version_check(gc_int32 major, gc_int32 minor, gc_int32 rev) {
+	gc_int32 res = (major == GA_VERSION_MAJOR) ? major - GA_VERSION_MAJOR :
+	               (minor == GA_VERSION_MINOR) ? minor - GA_VERSION_MINOR :
+	               rev - GA_VERSION_REV;
+	return res < 0 ? -1 :
+	       res > 0 ?  1 : 0;
 }
 
 /* Format Functions */
-gc_int32 ga_format_sampleSize(ga_Format* in_format)
-{
-  ga_Format* fmt = in_format;
-  return (fmt->bitsPerSample >> 3) * fmt->numChannels;
+gc_int32 ga_format_sampleSize(ga_Format *format) {
+	return (format->bitsPerSample >> 3) * format->numChannels;
 }
-gc_float32 ga_format_toSeconds(ga_Format* in_format, gc_int32 in_samples)
-{
-  return in_samples / (gc_float32)in_format->sampleRate;
+
+gc_float32 ga_format_toSeconds(ga_Format *format, gc_int32 samples) {
+	return samples / (gc_float32)format->sampleRate;
 }
 gc_int32 ga_format_toSamples(ga_Format* in_format, gc_float32 in_seconds)
 {
@@ -49,174 +44,101 @@ gc_int32 ga_format_toSamples(ga_Format* in_format, gc_float32 in_seconds)
 ga_Device* ga_device_open(gc_int32 in_type,
                           gc_int32 in_numBuffers,
                           gc_int32 in_numSamples,
-                          ga_Format* in_format)
-{
-  while(in_type == GA_DEVICE_TYPE_DEFAULT)
-  {
+			  ga_Format* in_format) {
+	if (in_type == GA_DEVICE_TYPE_DEFAULT) {
 #ifdef ENABLE_XAUDIO2
-    in_type = GA_DEVICE_TYPE_XAUDIO2; break;
-#endif /* ENABLE_XAUDIO2 */
+		in_type = GA_DEVICE_TYPE_XAUDIO2;
+#elif defined(ENABLE_OSS)
+		in_type = GA_DEVICE_TYPE_OSS;
+#elif defined(ENABLE_OPENAL)
+		in_type = GA_DEVICE_TYPE_OPENAL;    // generic (multiplatform) driver goes last
+#else
+		in_type = GA_DEVICE_TYPE_UNKNOWN;
+#endif
+	}
 
-#ifdef ENABLE_DIRECTSOUND
-    in_type = GA_DEVICE_TYPE_DIRECTSOUND; break;
-#endif /* ENABLE_DIRECTSOUND */
+	switch (in_type) {
+#ifdef ENABLE_XAUDIO2
+		case GA_DEVICE_TYPE_XAUDIO2: return (ga_Device*)gaX_device_open_xaudio2(in_numBuffers, in_numSamples, in_format);
+#endif
+#ifdef ENABLE_OSS
+		case GA_DEVICE_TYPE_OSS: return (ga_Device*)gaX_device_open_OSS(in_numBuffers, in_numSamples, in_format);
+#endif
+#ifdef ENABLE_OPENAL
+		case GA_DEVICE_TYPE_OPENAL: return (ga_Device*)gaX_device_open_openAl(in_numBuffers, in_numSamples, in_format);
+#endif
+		default: return NULL;
+	}
+}
 
+gc_result ga_device_close(ga_Device* in_device) {
+	switch (in_device->devType) {
 #ifdef ENABLE_OPENAL
-    in_type = GA_DEVICE_TYPE_OPENAL; break;
-#endif /* ENABLE_OPENAL */
+		case GA_DEVICE_TYPE_OPENAL: return gaX_device_close_openAl((ga_DeviceImpl_OpenAl*)in_device);
+#endif
+#ifdef ENABLE_OSS
+		case GA_DEVICE_TYPE_OSS: return gaX_device_close_OSS((ga_DeviceImpl_OSS*)in_device);
+#endif
+#ifdef ENABLE_XAUDIO2
+		case GA_DEVICE_TYPE_XAUDIO2: return gaX_device_close_xaudio2((ga_DeviceImpl_XAudio2*)in_device);
+#endif
+		default: return GC_ERROR_GENERIC;
+	}
+}
 
-    in_type = GA_DEVICE_TYPE_UNKNOWN; break;
-  }
-  if(in_type == GA_DEVICE_TYPE_OPENAL)
-  {
+gc_int32 ga_device_check(ga_Device* in_device) {
+	switch (in_device->devType) {
 #ifdef ENABLE_OPENAL
-    return (ga_Device*)gaX_device_open_openAl(in_numBuffers, in_numSamples, in_format);
-#else
-    return 0;
-#endif /* ENABLE_OPENAL */
-  }
-  else if(in_type == GA_DEVICE_TYPE_DIRECTSOUND)
-  {
-#ifdef ENABLE_DIRECTSOUND
-    return (ga_Device*)gaX_device_open_directSound(in_numBuffers, in_numSamples, in_format);
-#else
-    return 0;
-#endif /* ENABLE_DIRECTSOUND */
-  }
-  else if(in_type == GA_DEVICE_TYPE_XAUDIO2)
-  {
+		case GA_DEVICE_TYPE_OPENAL: return gaX_device_check_openAl((ga_DeviceImpl_OpenAl*)in_device);
+#endif
+#ifdef ENABLE_OSS
+		case GA_DEVICE_TYPE_OSS: return gaX_device_check_OSS((ga_DeviceImpl_OSS*)in_device);
+#endif
 #ifdef ENABLE_XAUDIO2
-    return (ga_Device*)gaX_device_open_xaudio2(in_numBuffers, in_numSamples, in_format);
-#else
-    return 0;
-#endif /* ENABLE_XAUDIO2 */
-  }
-  else
-    return 0;
+		case GA_DEVICE_TYPE_XAUDIO2: return gaX_device_check_xaudio2((ga_DeviceImpl_XAudio2*)in_device);
+#endif
+		default: return GC_ERROR_GENERIC;
+	}
 }
-gc_result ga_device_close(ga_Device* in_device)
-{
-  if(in_device->devType == GA_DEVICE_TYPE_OPENAL)
-  {
+
+gc_result ga_device_queue(ga_Device* in_device, void* in_buffer) {
+	switch (in_device->devType) {
 #ifdef ENABLE_OPENAL
-    ga_DeviceImpl_OpenAl* dev = (ga_DeviceImpl_OpenAl*)in_device;
-    gaX_device_close_openAl(dev);
-    return GC_SUCCESS;
-#else
-    return GC_ERROR_GENERIC;
-#endif /* ENABLE_OPENAL */
-  }
-  else if(in_device->devType == GA_DEVICE_TYPE_DIRECTSOUND)
-  {
-#ifdef ENABLE_DIRECTSOUND
-    ga_DeviceImpl_DirectSound* dev = (ga_DeviceImpl_DirectSound*)in_device;
-    gaX_device_close_directSound(dev);
-    return GC_SUCCESS;
-#else
-    return 0;
-#endif /* ENABLE_DIRECTSOUND */
-  }
-  else if(in_device->devType == GA_DEVICE_TYPE_XAUDIO2)
-  {
+		case GA_DEVICE_TYPE_OPENAL: return gaX_device_queue_openAl((ga_DeviceImpl_OpenAl*)in_device, in_buffer);
+#endif
+#ifdef ENABLE_OSS
+		case GA_DEVICE_TYPE_OSS: return gaX_device_queue_OSS((ga_DeviceImpl_OSS*)in_device, in_buffer);
+#endif
 #ifdef ENABLE_XAUDIO2
-    ga_DeviceImpl_XAudio2* dev = (ga_DeviceImpl_XAudio2*)in_device;
-    gaX_device_close_xaudio2(dev);
-    return GC_SUCCESS;
-#else
-    return 0;
-#endif /* ENABLE_XAUDIO2 */
-  }
-  return GC_ERROR_GENERIC;
-}
-gc_int32 ga_device_check(ga_Device* in_device)
-{
-  if(in_device->devType == GA_DEVICE_TYPE_OPENAL)
-  {
-#ifdef ENABLE_OPENAL
-    ga_DeviceImpl_OpenAl* dev = (ga_DeviceImpl_OpenAl*)in_device;
-    return gaX_device_check_openAl(dev);
-#else
-    return GC_ERROR_GENERIC;
-#endif /* ENABLE_OPENAL */
-  }
-  else if(in_device->devType == GA_DEVICE_TYPE_DIRECTSOUND)
-  {
-#ifdef ENABLE_DIRECTSOUND
-    ga_DeviceImpl_DirectSound* dev = (ga_DeviceImpl_DirectSound*)in_device;
-    return gaX_device_check_directSound(dev);
-#else
-    return GC_ERROR_GENERIC;
-#endif /* ENABLE_DIRECTSOUND */
-  }
-  else if(in_device->devType == GA_DEVICE_TYPE_XAUDIO2)
-  {
-#ifdef ENABLE_XAUDIO2
-    ga_DeviceImpl_XAudio2* dev = (ga_DeviceImpl_XAudio2*)in_device;
-    return gaX_device_check_xaudio2(dev);
-#else
-    return GC_ERROR_GENERIC;
-#endif /* ENABLE_XAUDIO2 */
-  }
-  return GC_ERROR_GENERIC;
-}
-gc_result ga_device_queue(ga_Device* in_device,
-                          void* in_buffer)
-{
-  if(in_device->devType == GA_DEVICE_TYPE_OPENAL)
-  {
-#ifdef ENABLE_OPENAL
-    ga_DeviceImpl_OpenAl* dev = (ga_DeviceImpl_OpenAl*)in_device;
-    return gaX_device_queue_openAl(dev, in_buffer);
-#else
-    return GC_ERROR_GENERIC;
-#endif /* ENABLE_OPENAL */
-  }
-  else if(in_device->devType == GA_DEVICE_TYPE_DIRECTSOUND)
-  {
-#ifdef ENABLE_DIRECTSOUND
-    ga_DeviceImpl_DirectSound* dev = (ga_DeviceImpl_DirectSound*)in_device;
-    return gaX_device_queue_directSound(dev, in_buffer);
-#else
-    return GC_ERROR_GENERIC;
-#endif /* ENABLE_DIRECTSOUND */
-  }
-  else if(in_device->devType == GA_DEVICE_TYPE_XAUDIO2)
-  {
-#ifdef ENABLE_XAUDIO2
-    ga_DeviceImpl_XAudio2* dev = (ga_DeviceImpl_XAudio2*)in_device;
-    return gaX_device_queue_xaudio2(dev, in_buffer);
-#else
-    return GC_ERROR_GENERIC;
-#endif /* ENABLE_XAUDIO2 */
-  }
-  return GC_ERROR_GENERIC;
+		case GA_DEVICE_TYPE_XAUDIO2: return gaX_device_queue_xaudio2((ga_DeviceImpl_XAudio2*)in_device, in_buffer);
+#endif
+		default: return GC_ERROR_GENERIC;
+	}
 }
 
 /* Data Source Structure */
-void ga_data_source_init(ga_DataSource* in_dataSrc)
-{
-  in_dataSrc->refCount = 1;
-  in_dataSrc->readFunc = 0;
-  in_dataSrc->seekFunc = 0;
-  in_dataSrc->tellFunc = 0;
-  in_dataSrc->closeFunc = 0;
-  in_dataSrc->flags = 0;
-  in_dataSrc->refMutex = gc_mutex_create();
+void ga_data_source_init(ga_DataSource* in_dataSrc) {
+	in_dataSrc->refCount = 1;
+	in_dataSrc->readFunc = 0;
+	in_dataSrc->seekFunc = 0;
+	in_dataSrc->tellFunc = 0;
+	in_dataSrc->closeFunc = 0;
+	in_dataSrc->flags = 0;
+	in_dataSrc->refMutex = gc_mutex_create();
 }
-gc_int32 ga_data_source_read(ga_DataSource* in_dataSrc, void* in_dst, gc_int32 in_size, gc_int32 in_count)
-{
-  tDataSourceFunc_Read func = in_dataSrc->readFunc;
-  char* context = (char*)in_dataSrc + sizeof(ga_DataSource);
-  assert(func);
-  return func(context, in_dst, in_size, in_count);
+
+gc_int32 ga_data_source_read(ga_DataSource* in_dataSrc, void* in_dst, gc_int32 in_size, gc_int32 in_count) {
+	tDataSourceFunc_Read func = in_dataSrc->readFunc;
+	char* context = (char*)in_dataSrc + sizeof(ga_DataSource);
+	assert(func);
+	return func(context, in_dst, in_size, in_count);
 }
-gc_int32 ga_data_source_seek(ga_DataSource* in_dataSrc, gc_int32 in_offset, gc_int32 in_origin)
-{
-  tDataSourceFunc_Seek func = in_dataSrc->seekFunc;
-  char* context = (char*)in_dataSrc + sizeof(ga_DataSource);
-  if(func)
-    return func(context, in_offset, in_origin);
-  return -1;
+
+gc_result ga_data_source_seek(ga_DataSource* in_dataSrc, gc_int32 in_offset, gc_int32 in_origin) {
+	tDataSourceFunc_Seek func = in_dataSrc->seekFunc;
+	char* context = (char*)in_dataSrc + sizeof(ga_DataSource);
+	if (func) return func(context, in_offset, in_origin);
+	else return GC_ERROR_GENERIC;
 }
 gc_int32 ga_data_source_tell(ga_DataSource* in_dataSrc)
 {
@@ -284,12 +206,12 @@ gc_int32 ga_sample_source_end(ga_SampleSource* in_sampleSrc)
   assert(func);
   return func(in_sampleSrc);
 }
-gc_int32 ga_sample_source_seek(ga_SampleSource* in_sampleSrc, gc_int32 in_sampleOffset)
+gc_result ga_sample_source_seek(ga_SampleSource* in_sampleSrc, gc_int32 in_sampleOffset)
 {
   tSampleSourceFunc_Seek func = in_sampleSrc->seekFunc;
   if(func)
     return func(in_sampleSrc, in_sampleOffset);
-  return -1;
+  return GC_ERROR_GENERIC;
 }
 gc_int32 ga_sample_source_tell(ga_SampleSource* in_sampleSrc, gc_int32* out_totalSamples)
 {

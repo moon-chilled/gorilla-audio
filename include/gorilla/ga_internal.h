@@ -76,13 +76,13 @@ typedef gc_int32 (*tDataSourceFunc_Read)(void* in_context, void* in_dst, gc_int3
  *  \param in_context User context (pointer to the first byte after the data source).
  *  \param in_offset Offset (in bytes) from the specified seek origin.
  *  \param in_origin Seek origin (see [\ref globDefs]).
- *  \return If seek succeeds, the callback should return 0, otherwise it should return -1.
+ *  \return If seek succeeds, the callback should return GC_SUCCESS, otherwise it should return GC_ERROR_GENERIC.
  *  \warning Data sources with GA_FLAG_SEEKABLE should always provide a seek callback.
  *  \warning Data sources with GA_FLAG_SEEKABLE set should only return -1 in the case of
  *           an invalid seek request.
  *  \todo Define a less-confusing contract for extending/defining this function.
  */
-typedef gc_int32 (*tDataSourceFunc_Seek)(void* in_context, gc_int32 in_offset, gc_int32 in_origin);
+typedef gc_result (*tDataSourceFunc_Seek)(void* in_context, gc_int32 in_offset, gc_int32 in_origin);
 
 /** Data source tell callback prototype.
  *

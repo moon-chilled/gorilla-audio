@@ -243,7 +243,7 @@ gc_int32 gauX_data_source_file_arc_read(void* in_context, void* in_dst, gc_int32
   gc_mutex_unlock(ctx->fileMutex);
   return ret;
 }
-gc_int32 gauX_data_source_file_arc_seek(void* in_context, gc_int32 in_offset, gc_int32 in_origin)
+gc_result gauX_data_source_file_arc_seek(void* in_context, gc_int32 in_offset, gc_int32 in_origin)
 {
   /* TODO: What is the best way to resolve the seeking-OOB cases? */
   gau_DataSourceFileArcContext* ctx = (gau_DataSourceFileArcContext*)in_context;
@@ -254,7 +254,7 @@ gc_int32 gauX_data_source_file_arc_seek(void* in_context, gc_int32 in_offset, gc
     if(ctx->size > 0 && in_offset > ctx->size)
     {
       gc_mutex_unlock(ctx->fileMutex);
-      return -1;
+      return GC_ERROR_GENERIC;
     }
     fseek(ctx->f, ctx->offset + in_offset, SEEK_SET);
     break;
@@ -265,7 +265,7 @@ gc_int32 gauX_data_source_file_arc_seek(void* in_context, gc_int32 in_offset, gc
       if(newPos < 0 || (ctx->size > 0 && newPos > ctx->size))
       {
         gc_mutex_unlock(ctx->fileMutex);
-        return -1;
+        return GC_ERROR_GENERIC;
       }
       fseek(ctx->f, in_offset, SEEK_CUR);
     }
@@ -274,13 +274,13 @@ gc_int32 gauX_data_source_file_arc_seek(void* in_context, gc_int32 in_offset, gc
     if(ctx->size <= 0)
     {
       gc_mutex_unlock(ctx->fileMutex);
-      return -1;
+      return GC_ERROR_GENERIC;
     }
     fseek(ctx->f, ctx->offset + ctx->size + in_offset, SEEK_SET);
     break;
   }
   gc_mutex_unlock(ctx->fileMutex);
-  return 0;
+  return GC_SUCCESS;
 }
 gc_int32 gauX_data_source_file_arc_tell(void* in_context)
 {
@@ -356,7 +356,7 @@ gc_int32 gauX_data_source_memory_read(void* in_context, void* in_dst, gc_int32 i
   gc_mutex_unlock(ctx->memMutex);
   return ret;
 }
-gc_int32 gauX_data_source_memory_seek(void* in_context, gc_int32 in_offset, gc_int32 in_origin)
+gc_result gauX_data_source_memory_seek(void* in_context, gc_int32 in_offset, gc_int32 in_origin)
 {
   gau_DataSourceMemoryContext* ctx = (gau_DataSourceMemoryContext*)in_context;
   gc_int32 dataSize = ga_memory_size(ctx->memory);
@@ -369,7 +369,7 @@ gc_int32 gauX_data_source_memory_seek(void* in_context, gc_int32 in_offset, gc_i
   }
   ctx->pos = ctx->pos < 0 ? 0 : ctx->pos > dataSize ? dataSize : ctx->pos;
   gc_mutex_unlock(ctx->memMutex);
-  return 0;
+  return GC_SUCCESS;
 }
 gc_int32 gauX_data_source_memory_tell(void* in_context)
 {
@@ -520,12 +520,11 @@ gc_int32 gauX_sample_source_wav_end(void* in_context)
   gc_int32 totalSamples = ctx->wavHeader.dataSize / ctx->sampleSize;
   return ctx->pos == totalSamples; /* No need to mutex this use */
 }
-gc_int32 gauX_sample_source_wav_seek(void* in_context, gc_int32 in_sampleOffset)
+gc_result gauX_sample_source_wav_seek(void* in_context, gc_int32 in_sampleOffset)
 {
   gau_SampleSourceWavContext* ctx = &((gau_SampleSourceWav*)in_context)->context;
-  gc_int32 ret;
   gc_mutex_lock(ctx->posMutex);
-  ret = ga_data_source_seek(ctx->dataSrc, ctx->wavHeader.dataOffset + in_sampleOffset * ctx->sampleSize, GA_SEEK_ORIGIN_SET);
+  gc_result ret = ga_data_source_seek(ctx->dataSrc, ctx->wavHeader.dataOffset + in_sampleOffset * ctx->sampleSize, GA_SEEK_ORIGIN_SET);
   if(ret >= 0)
     ctx->pos = in_sampleOffset;
   gc_mutex_unlock(ctx->posMutex);
@@ -597,7 +596,7 @@ size_t gauX_sample_source_ogg_callback_read(void *ptr, size_t size, size_t nmemb
   ga_DataSource* ds = stream->dataSrc;
   return ga_data_source_read(ds, ptr, size, nmemb);
 }
-int gauX_sample_source_ogg_callback_seek(void *datasource, ogg_int64_t offset, int whence)
+gc_result gauX_sample_source_ogg_callback_seek(void *datasource, ogg_int64_t offset, int whence)
 {
   gau_OggDataSourceCallbackData* stream = (gau_OggDataSourceCallbackData*)datasource;
   ga_DataSource* ds = stream->dataSrc;
@@ -607,7 +606,7 @@ int gauX_sample_source_ogg_callback_seek(void *datasource, ogg_int64_t offset, i
   case SEEK_CUR: return ga_data_source_seek(ds, (gc_int32)offset, GA_SEEK_ORIGIN_CUR);
   case SEEK_END: return ga_data_source_seek(ds, (gc_int32)offset, GA_SEEK_ORIGIN_END);
   }
-  return -1;
+  return GC_ERROR_GENERIC;
 }
 long gauX_sample_source_ogg_callback_tell(void *datasource)
 {
@@ -724,15 +723,14 @@ gc_int32 gauX_sample_source_ogg_end(void* in_context)
   gau_SampleSourceOggContext* ctx = &((gau_SampleSourceOgg*)in_context)->context;
   return ctx->endOfSamples; /* No need for a mutex here */
 }
-gc_int32 gauX_sample_source_ogg_seek(void* in_context, gc_int32 in_sampleOffset)
+gc_result gauX_sample_source_ogg_seek(void* in_context, gc_int32 in_sampleOffset)
 {
   gau_SampleSourceOggContext* ctx = &((gau_SampleSourceOgg*)in_context)->context;
-  gc_int32 ret;
   gc_mutex_lock(ctx->oggMutex);
-  ret = ov_pcm_seek(&ctx->oggFile, in_sampleOffset);
+  int res = ov_pcm_seek(&ctx->oggFile, in_sampleOffset);
   ctx->endOfSamples = 0;
   gc_mutex_unlock(ctx->oggMutex);
-  return ret;
+  return res==0 ? GC_SUCCESS : GC_ERROR_GENERIC; //ov_pcm_seek returns 0 on success
 }
 gc_int32 gauX_sample_source_ogg_tell(void* in_context, gc_int32* out_totalSamples)
 {
@@ -847,7 +845,7 @@ gc_int32 gauX_sample_source_stream_ready(void* in_context, gc_int32 in_numSample
   gau_SampleSourceStreamContext* ctx = &((gau_SampleSourceStream*)in_context)->context;
   return ga_stream_ready(ctx->stream, in_numSamples);
 }
-gc_int32 gauX_sample_source_stream_seek(void* in_context, gc_int32 in_sampleOffset)
+gc_result gauX_sample_source_stream_seek(void* in_context, gc_int32 in_sampleOffset)
 {
   gau_SampleSourceStreamContext* ctx = &((gau_SampleSourceStream*)in_context)->context;
   return ga_stream_seek(ctx->stream, in_sampleOffset);
@@ -962,7 +960,7 @@ gc_int32 gauX_sample_source_loop_ready(void* in_context, gc_int32 in_numSamples)
   gau_SampleSourceLoopContext* ctx = &((gau_SampleSourceLoop*)in_context)->context;
   return ga_sample_source_ready(ctx->innerSrc, in_numSamples);
 }
-gc_int32 gauX_sample_source_loop_seek(void* in_context, gc_int32 in_sampleOffset)
+gc_result gauX_sample_source_loop_seek(void* in_context, gc_int32 in_sampleOffset)
 {
   gau_SampleSourceLoopContext* ctx = &((gau_SampleSourceLoop*)in_context)->context;
   return ga_sample_source_seek(ctx->innerSrc, in_sampleOffset);
@@ -1061,15 +1059,15 @@ gc_int32 gauX_sample_source_sound_end(void* in_context)
   gau_SampleSourceSoundContext* ctx = &((gau_SampleSourceSound*)in_context)->context;
   return ctx->pos >= ctx->numSamples;
 }
-gc_int32 gauX_sample_source_sound_seek(void* in_context, gc_int32 in_sampleOffset)
+gc_result gauX_sample_source_sound_seek(void* in_context, gc_int32 in_sampleOffset)
 {
   gau_SampleSourceSoundContext* ctx = &((gau_SampleSourceSound*)in_context)->context;
   if(in_sampleOffset > ctx->numSamples)
-    return -1;
+    return GC_ERROR_GENERIC;
   gc_mutex_lock(ctx->posMutex);
   ctx->pos = in_sampleOffset;
   gc_mutex_unlock(ctx->posMutex);
-  return 0;
+  return GC_SUCCESS;
 }
 gc_int32 gauX_sample_source_sound_tell(void* in_context, gc_int32* out_totalSamples)
 {

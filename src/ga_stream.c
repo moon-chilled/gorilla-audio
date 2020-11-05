@@ -347,13 +347,13 @@ gc_int32 ga_stream_end(ga_BufferedStream* in_stream)
   gc_int32 bytesAvail = gc_buffer_bytesAvail(b);
   return s->end && bytesAvail == 0;
 }
-gc_int32 ga_stream_seek(ga_BufferedStream* in_stream, gc_int32 in_sampleOffset)
+gc_result ga_stream_seek(ga_BufferedStream* in_stream, gc_int32 in_sampleOffset)
 {
   ga_BufferedStream* s = in_stream;
   gc_mutex_lock(s->seekMutex);
   s->seek = in_sampleOffset;
   gc_mutex_unlock(s->seekMutex);
-  return 0;
+  return GC_SUCCESS;
 }
 gc_int32 ga_stream_tell(ga_BufferedStream* in_stream, gc_int32* out_totalSamples)
 {

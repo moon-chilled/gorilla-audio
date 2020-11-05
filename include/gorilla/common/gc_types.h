@@ -28,43 +28,23 @@ extern "C"
  *  \ingroup common
  *  \defgroup dataTypes Data Types
  */
+#include <stdint.h>
+typedef uint8_t     gc_uint8;
+typedef uint16_t    gc_uint16;
+typedef uint32_t    gc_uint32;
+typedef uint64_t    gc_uint64;
+typedef int8_t      gc_int8;
+typedef int16_t     gc_int16;
+typedef int32_t     gc_int32;
+typedef int64_t     gc_int64;
 
-#if __STDC_VERSION__ >= 199901L
-# include <stdint.h>
-  typedef uint8_t   gc_uint8;
-  typedef uint16_t  gc_uint16;
-  typedef uint32_t  gc_uint32;
-  typedef uint64_t  gc_uint64;
-  typedef int8_t    gc_int8;
-  typedef int16_t   gc_int16;
-  typedef int32_t   gc_int32;
-  typedef int64_t   gc_int64;
-#elif defined(_WIN32)
-  typedef unsigned char     gc_uint8;
-  typedef unsigned short    gc_uint16;
-  typedef unsigned int      gc_uint32;
-  typedef unsigned __int64  gc_uint64;
-  typedef signed char       gc_int8;
-  typedef signed short      gc_int16;
-  typedef signed int        gc_int32;
-  typedef signed __int64    gc_int64;
-#elif defined(__GNUC__)
-  typedef unsigned char          gc_uint8;
-  typedef unsigned short         gc_uint16;
-  typedef unsigned int           gc_uint32;
-  typedef unsigned long long int gc_uint64;
-  typedef signed char            gc_int8;
-  typedef signed short           gc_int16;
-  typedef signed int             gc_int32;
-  typedef signed long long int   gc_int64;
-#else
-# error Types not yet specified for this platform
-#endif
+typedef _Bool       gc_bool;
 
 #include <stddef.h>
-typedef size_t   gc_size;
-typedef float    gc_float32;
-typedef double   gc_float64;
+typedef size_t      gc_size;
+typedef ptrdiff_t   gc_ssize;
+typedef float       gc_float32;
+typedef double      gc_float64;
 
 /*********************/
 /**  Result Values  **/

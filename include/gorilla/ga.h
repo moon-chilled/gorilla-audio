@@ -68,7 +68,9 @@ extern "C"
  *  \param in_rev Revision version to compare against
  *  \return 0 -> specified == api, 1 -> specified > api, -1 -> specified < api
  */
-gc_int32 ga_version_check(gc_int32 in_major, gc_int32 in_minor, gc_int32 in_rev);
+//TODO it would probably be more useful if this returned true if specified *matched* api
+//(that is, if specified major=api major; specified minor≤api minor)
+gc_int32 ga_version_check(gc_int32 major, gc_int32 minor, gc_int32 rev);
 
 
 /************************/
@@ -177,7 +179,7 @@ gc_int32 ga_format_toSamples(ga_Format* in_format, gc_float32 in_seconds);
 #define GA_DEVICE_TYPE_DEFAULT -1 /**< Default device type (based on hard-coded priorities) \ingroup ga_Device */
 #define GA_DEVICE_TYPE_UNKNOWN 0 /**< Unknown (invalid) device type \ingroup ga_Device */
 #define GA_DEVICE_TYPE_OPENAL 1 /**< OpenAL playback device (Windows, Linux, Mac) \ingroup ga_Device */
-#define GA_DEVICE_TYPE_DIRECTSOUND 2 /**< DirectSound playback device (Windows-only, disabled) \ingroup ga_Device */
+#define GA_DEVICE_TYPE_OSS 2 /**< OSS playback device (FreeBSD) \ingroup ga_Device */
 #define GA_DEVICE_TYPE_XAUDIO2 3 /**< XAudio2 playback device (Windows-only) \ingroup ga_Device */
 
 /** Hardware device abstract data structure [\ref SINGLE_CLIENT].
@@ -297,10 +299,10 @@ gc_int32 ga_data_source_read(ga_DataSource* in_dataSrc, void* in_dst, gc_int32 i
  *  \param in_dataSrc Data source to seek within.
  *  \param in_offset Offset (in bytes) from the specified seek origin.
  *  \param in_origin Seek origin (see [\ref seekOrigins]).
- *  \return If seek succeeds, returns 0, otherwise returns -1 (invalid seek request).
+ *  \return If seek succeeds, returns GC_SUCCESS, otherwise returns GC_ERROR_GENERIC (invalid seek request).
  *  \warning Only data sources with GA_FLAG_SEEKABLE can have ga_data_source_seek() called on them.
 */
-gc_int32 ga_data_source_seek(ga_DataSource* in_dataSrc, gc_int32 in_offset, gc_int32 in_origin);
+gc_result ga_data_source_seek(ga_DataSource* in_dataSrc, gc_int32 in_offset, gc_int32 in_origin);
 
 /** Tells the current read position of a data source.
  *
@@ -417,11 +419,11 @@ gc_int32 ga_sample_source_ready(ga_SampleSource* in_sampleSrc, gc_int32 in_numSa
  *  \ingroup ga_SampleSource
  *  \param in_sampleSrc Sample source to seek within.
  *  \param in_sampleOffset Offset (in samples) from the start of the sample stream.
- *  \return If seek succeeds, returns 0, otherwise returns -1 (invalid seek request).
+ *  \return If seek succeeds, returns GC_SUCCESS, otherwise returns GC_ERROR_GENERIC (invalid seek request).
  *  \warning Only sample sources with GA_FLAG_SEEKABLE can have ga_sample_source_seek()
  *           called on them.
  */
-gc_int32 ga_sample_source_seek(ga_SampleSource* in_sampleSrc, gc_int32 in_sampleOffset);
+gc_result ga_sample_source_seek(ga_SampleSource* in_sampleSrc, gc_int32 in_sampleOffset);
 
 /** Tells the current sample number of a sample source.
  *
@@ -1158,12 +1160,12 @@ gc_int32 ga_stream_ready(ga_BufferedStream* in_stream, gc_int32 in_numSamples);
  *  \param in_stream Buffered stream to seek within.
  *  \param in_sampleOffset Offset (in samples) from the start of the contained
  *                         sample source.
- *  \return If seek succeeds, returns 0, otherwise returns -1 (invalid seek
+ *  \return If seek succeeds, returns GC_SUCCESS, otherwise returns GC_ERROR_GENERIC (invalid seek
  *          request).
  *  \warning Only buffered streams with GA_FLAG_SEEKABLE can have ga_stream_seek()
  *           called on them.
  */
-gc_int32 ga_stream_seek(ga_BufferedStream* in_stream, gc_int32 in_sampleOffset);
+gc_result ga_stream_seek(ga_BufferedStream* in_stream, gc_int32 in_sampleOffset);
 
 /** Tells the current sample number of a buffered stream.
  *
