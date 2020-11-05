@@ -66,7 +66,7 @@ if(MSVC OR CYGWIN)
   set(ENABLE_XAUDIO2 "1" CACHE STRING "Enable XAudio2 device")
   set(ENABLE_OPENAL "0" CACHE STRING "Enable OpenAL device")
 elseif(FREEBSD)
-#set(ENABLE_OSS "1" CACHE STRING "Enable OSS device")
+  set(ENABLE_OSS "1" CACHE STRING "Enable OSS device")
   set(ENABLE_OPENAL "1" CACHE STRING "Enable OpenAL device")
 else()
   set(ENABLE_OPENAL "1" CACHE STRING "Enable OpenAL device")
@@ -185,17 +185,14 @@ set(OGGVORBIS_SRC
   ${LIBVORBISDIR}/lib/window.c)
 
 if(ENABLE_OPENAL)
-  list(APPEND GORILLA_INCLUDE ${INCLUDE_DIR}/gorilla/devices/ga_openal.h)
   list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_openal.c)
 endif()
 
 if(ENABLE_OSS)
-  list(APPEND GORILLA_INCLUDE ${INCLUDE_DIR}/gorilla/devices/ga_oss.h)
   list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_oss.c)
 endif()
 
 if(ENABLE_XAUDIO2)
-  list(APPEND GORILLA_INCLUDE ${INCLUDE_DIR}/gorilla/devices/ga_xaudio2.h)
   list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_xaudio2.cc)
 endif()
 
