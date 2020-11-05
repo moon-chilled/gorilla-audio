@@ -14,8 +14,8 @@
 
 ga_DeviceImpl_OSS* gaX_device_open_OSS(gc_int32 numBuffers, gc_int32 numSamples, ga_Format* format) {
 	ga_DeviceImpl_OSS* ret = (ga_DeviceImpl_OSS*)gcX_ops->allocFunc(sizeof(ga_DeviceImpl_OSS));
+	if (!ret) return NULL;
 
-	ret->devType = GA_DEVICE_TYPE_OSS;
 	ret->numBuffers = numBuffers;
 	ret->numSamples = numSamples;
 	memcpy(&ret->format, format, sizeof(ga_Format));
@@ -50,7 +50,7 @@ ga_DeviceImpl_OSS* gaX_device_open_OSS(gc_int32 numBuffers, gc_int32 numSamples,
 	return ret;
 
 cleanup:
-	if (ret && ret->fd >= 0) close(ret->fd);
+	if (ret->fd >= 0) close(ret->fd);
 	gcX_ops->freeFunc(ret);
 	return NULL;
 }

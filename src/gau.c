@@ -52,7 +52,7 @@ static gc_int32 gauX_streamThreadFunc(void* in_context)
 gau_Manager* gau_manager_create()
 {
   gau_Manager* ret;
-  ret = gau_manager_create_custom(GA_DEVICE_TYPE_DEFAULT, GAU_THREAD_POLICY_SINGLE, 4, 512);
+  ret = gau_manager_create_custom(ga_DeviceType_Default, GAU_THREAD_POLICY_SINGLE, 4, 512);
   return ret;
 }
 gau_Manager* gau_manager_create_custom(gc_int32 in_devType,
@@ -73,7 +73,7 @@ gau_Manager* gau_manager_create_custom(gc_int32 in_devType,
   ret->format.numChannels = 2;
   ret->format.sampleRate = 44100;
   ret->device = ga_device_open(in_devType, in_numBuffers, in_bufferSamples, &ret->format);
-  assert(ret->device);
+  if (!ret->device) return NULL;
 
   /* Initialize mixer */
   ret->mixer = ga_mixer_create(&ret->format, in_bufferSamples);

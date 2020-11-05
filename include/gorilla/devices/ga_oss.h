@@ -17,10 +17,6 @@ typedef struct ga_DeviceImpl_OSS
 {
   GA_DEVICE_HEADER
   int fd;
-  gc_uint32* hwBuffers;
-  gc_uint32 hwSource;
-  gc_uint32 nextBuffer;
-  gc_uint32 emptyBuffers;
 } ga_DeviceImpl_OSS;
 
 ga_DeviceImpl_OSS* gaX_device_open_OSS(gc_int32 in_numBuffers,

@@ -15,8 +15,7 @@
 #include "gorilla/common/gc_common.h"
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif /* __cplusplus */
 
 /************/
@@ -28,25 +27,52 @@ extern "C"
  *  \defgroup intDevice Device
  */
 
-/** Header of shared-data for all concrete device implementations.
- *
- *  Stores the device type, number of buffers, number of samples, and device PCM format.
- *
- *  \ingroup intDevice
+/** Procedure pointers for interacting with a given device
+ *  \warning don't call into these directly.  Call the wrappers (ga_device_*)
+ *           instead
  */
-#define GA_DEVICE_HEADER gc_int32 devType; gc_int32 numBuffers; gc_int32 numSamples; ga_Format format;
+typedef struct {
+	gc_result (*open)(ga_Device *dev);
+	gc_int32 (*check)(ga_Device *dev);
+	gc_result (*queue)(ga_Device *dev, void* in_buffer);
+	gc_result (*close)(ga_Device* in_device);
+} gaX_DeviceProcs;
+
+#ifdef ENABLE_OSS
+extern gaX_DeviceProcs gaX_deviceprocs_OSS;
+#endif
+
+#ifdef ENABLE_XAUDIO2
+extern gaX_DeviceProcs gaX_deviceprocs_XAudio2;
+#endif
+
+#ifdef ENABLE_OPENAL
+extern gaX_DeviceProcs gaX_deviceprocs_OpenAL;
+#endif
+
+/** Device-specific data structure
+ *  Redefined separately in the translation unit for each device
+ */
+typedef struct gaX_DeviceImpl gaX_DeviceImpl;
+
 
 /** Hardware device abstract data structure [\ref SINGLE_CLIENT].
  *
  *  Abstracts the platform-specific details of presenting audio buffers to sound playback hardware.
  *
  *  \ingroup intDevice
- *  \warning You can only have one device open at-a-time.
+ *  \warning You can only have one device open at a time.
  *  \warning Never instantiate a ga_Device directly, unless you are implementing a new concrete
  *           device implementation. Instead, you should use ga_device_open().
  */
 struct ga_Device {
-  GA_DEVICE_HEADER
+	ga_DeviceType dev_type;
+	gc_int32 num_buffers;
+	gc_int32 num_samples;
+	ga_Format format;
+
+	gaX_DeviceProcs procs;
+	gaX_DeviceImpl *impl;
 };
 
 /*****************/

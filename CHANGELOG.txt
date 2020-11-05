@@ -2,8 +2,9 @@ CHANGE LOG
 ---
 
 0.3.3
-- Made XAudio2 the default on windows again
-- Made MSVCRT be linked statically
+- Add an OSS audio backend
+- XAudio2 is the default backend on windows
+- MSVCRT is linked statically on windows
 - Audio loading functions now take an enum rather than a string for format
 
 
