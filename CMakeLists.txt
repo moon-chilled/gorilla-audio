@@ -65,17 +65,14 @@ endif()
 if(MSVC OR CYGWIN)
   set(ENABLE_XAUDIO2 "1" CACHE STRING "Enable XAudio2 device")
   set(ENABLE_OPENAL "0" CACHE STRING "Enable OpenAL device")
+  set(ENABLE_PULSEAUDIO "0" CACHE STRING "Enable PulseAudio device")
 elseif(FREEBSD)
   set(ENABLE_OSS "1" CACHE STRING "Enable OSS device")
-  set(ENABLE_OPENAL "1" CACHE STRING "Enable OpenAL device")
+  set(ENABLE_OPENAL "0" CACHE STRING "Enable OpenAL device")
+  set(ENABLE_PULSEAUDIO "0" CACHE STRING "Enable PulseAudio device")
 else()
-  set(ENABLE_OPENAL "1" CACHE STRING "Enable OpenAL device")
-endif()
-
-if(ENABLE_OPENAL)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DENABLE_OPENAL")
-  find_package(OpenAL)
-  include_directories(${OPENAL_INCLUDE_DIR})
+  set(ENABLE_PULSEAUDIO "1" CACHE STRING "Enable PulseAudio device")
+  set(ENABLE_OPENAL "0" CACHE STRING "Enable OpenAL device")
 endif()
 
 if(ENABLE_OSS)
@@ -85,6 +82,18 @@ endif()
 if(ENABLE_XAUDIO2)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DENABLE_XAUDIO2")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_XAUDIO2")
+endif()
+
+if(ENABLE_PULSEAUDIO)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DENABLE_PULSEAUDIO")
+  find_package(PulseAudio)
+  include_directories(${PULSEAUDIO_INCLUDE_DIR})
+endif()
+
+if(ENABLE_OPENAL)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DENABLE_OPENAL")
+  find_package(OpenAL)
+  include_directories(${OPENAL_INCLUDE_DIR})
 endif()
 
 if(ENABLE_XAUDIO2)
@@ -184,16 +193,20 @@ set(OGGVORBIS_SRC
   ${LIBVORBISDIR}/lib/vorbisfile.c
   ${LIBVORBISDIR}/lib/window.c)
 
-if(ENABLE_OPENAL)
-  list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_openal.c)
-endif()
-
 if(ENABLE_OSS)
   list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_oss.c)
 endif()
 
 if(ENABLE_XAUDIO2)
   list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_xaudio2.cc)
+endif()
+
+if(ENABLE_PULSEAUDIO)
+  list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_pulseaudio.c)
+endif()
+
+if(ENABLE_OPENAL)
+  list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_openal.c)
 endif()
 
 set(INCLUDE_INTTYPES_H 0)

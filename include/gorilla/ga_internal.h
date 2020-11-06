@@ -46,6 +46,10 @@ extern gaX_DeviceProcs gaX_deviceprocs_OSS;
 extern gaX_DeviceProcs gaX_deviceprocs_XAudio2;
 #endif
 
+#ifdef ENABLE_PULSEAUDIO
+extern gaX_DeviceProcs gaX_deviceprocs_PulseAudio;
+#endif
+
 #ifdef ENABLE_OPENAL
 extern gaX_DeviceProcs gaX_deviceprocs_OpenAL;
 #endif

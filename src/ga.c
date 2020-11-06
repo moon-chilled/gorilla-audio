@@ -39,8 +39,10 @@ ga_Device* ga_device_open(ga_DeviceType type,
 		type = ga_DeviceType_OSS;
 #elif defined(ENABLE_XAUDIO2)
 		type = ga_DeviceType_XAudio2;
+#elif defined(ENABLE_PULSEAUDIO)
+		type = ga_DeviceType_PulseAudio;
 #elif defined(ENABLE_OPENAL)
-		type = ga_DeviceType_OpenAL;    // generic (multiplatform) driver goes last
+		type = ga_DeviceType_OpenAL;    // generic (multiplatform) drivers go last
 #else
 		type = ga_DeviceType_Unknown;
 #endif
@@ -58,6 +60,9 @@ ga_Device* ga_device_open(ga_DeviceType type,
 #endif
 #ifdef ENABLE_XAUDIO2
 		case ga_DeviceType_XAudio2: ret->procs = gaX_deviceprocs_XAudio2; break;
+#endif
+#ifdef ENABLE_PULSEAUDIO
+		case ga_DeviceType_PulseAudio: ret->procs = gaX_deviceprocs_PulseAudio; break;
 #endif
 #ifdef ENABLE_OPENAL
 		case ga_DeviceType_OpenAL: ret->procs = gaX_deviceprocs_OpenAL; break;
