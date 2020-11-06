@@ -178,11 +178,11 @@ gc_int32 ga_format_toSamples(ga_Format *format, gc_float32 seconds);
  */
 typedef enum {
 	ga_DeviceType_Default    = -1, /**< Default device type (based on hard-coded priorities) \ingroup ga_Device */
-	ga_DeviceType_Unknown    =  0, /**< Unknown (invalid) device type \ingroup ga_Device */
-	ga_DeviceType_OSS        =  1, /**< OSS playback device (FreeBSD) \ingroup ga_Device */
-	ga_DeviceType_XAudio2    =  2, /**< XAudio2 playback device (Windows-only) \ingroup ga_Device */
-	ga_DeviceType_PulseAudio =  2, /**< PulseAudio playback device (cross-platform, mainly for linux) \ingroup ga_Device */
-	ga_DeviceType_OpenAL     =  3, /**< OpenAL playback device (Windows, Linux, Mac) \ingroup ga_Device */
+	ga_DeviceType_Unknown,         /**< Unknown (invalid) device type \ingroup ga_Device */
+	ga_DeviceType_OSS,             /**< OSS playback device (FreeBSD) \ingroup ga_Device */
+	ga_DeviceType_XAudio2,         /**< XAudio2 playback device (Windows-only) \ingroup ga_Device */
+	ga_DeviceType_PulseAudio,      /**< PulseAudio playback device (cross-platform, mainly for linux) \ingroup ga_Device */
+	ga_DeviceType_OpenAL,          /**< OpenAL playback device (Windows, Linux, Mac) \ingroup ga_Device */
 } ga_DeviceType;
 
 /** Hardware device abstract data structure [\ref SINGLE_CLIENT].

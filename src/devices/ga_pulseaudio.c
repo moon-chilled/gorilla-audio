@@ -12,7 +12,7 @@ struct gaX_DeviceImpl {
 	pa_simple *interface;
 };
 
-gc_result gaX_open(ga_Device *dev) {
+static gc_result gaX_open(ga_Device *dev) {
 	dev->impl = gcX_ops->allocFunc(sizeof(gaX_DeviceImpl));
 	if (!dev->impl) return GC_ERROR_GENERIC;
 
@@ -43,16 +43,16 @@ gc_result gaX_open(ga_Device *dev) {
 	return GC_SUCCESS;
 }
 
-gc_result gaX_close(ga_Device *dev) {
+static gc_result gaX_close(ga_Device *dev) {
 	pa_simple_free(dev->impl->interface);
 	return GC_SUCCESS;
 }
 
-gc_int32 gaX_check(ga_Device *dev) {
+static gc_int32 gaX_check(ga_Device *dev) {
 	return dev->num_buffers; //TODO is this right?
 }
 
-gc_result gaX_queue(ga_Device *dev, void *buf) {
+static gc_result gaX_queue(ga_Device *dev, void *buf) {
 	int res = pa_simple_write(dev->impl->interface, buf, dev->num_samples * ga_format_sampleSize(&dev->format), NULL);
 	return res<0 ? GC_SUCCESS : GC_ERROR_GENERIC;
 }
