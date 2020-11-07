@@ -34,6 +34,7 @@ ga_Device* ga_device_open(ga_DeviceType type,
                           gc_int32 num_samples,
 			  ga_Format *format) {
 	// todo allow overriding with an environment variable
+	// todo if type==ga_DeviceType_Default try multiple devicetypes if the first returns an error
 	if (type == ga_DeviceType_Default) {
 #if defined(ENABLE_OSS)
 		type = ga_DeviceType_OSS;

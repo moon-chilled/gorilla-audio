@@ -32,6 +32,12 @@ static gc_result gaX_open(ga_Device *dev) {
 	if (ioctl(fd, SNDCTL_DSP_CHANNELS, &(int){dev->format.numChannels}) == -1) goto cleanup;
 	int fmt;
 	switch (dev->format.bitsPerSample) {
+		// 8-bit being unsigned is consistent with other frameworks
+		// ga_openal.c uses AL_FORMAT_*8, which is apparently (http://forum.lwjgl.org/index.php?topic=4058.0) unsigned
+		// xaudio2 uses unsigned for 8-bit audio (https://docs.microsoft.com/en-us/windows/win32/api/xaudio2/nf-xaudio2-ixaudio2-createsourcevoice),
+		//  though ga_xaudio2.cc currently doesn't take advantage of this (hardcodes 16-bit)
+		case  8: fmt = AFMT_U8; break;
+		// TODO should these be _NE (native endian) instead?  Investigate else, preferrably test on be hw
 		case 16: fmt = AFMT_S16_LE; break;
 		case 24: fmt = AFMT_S24_LE; break;
 		case 32: fmt = AFMT_S32_LE; break;
