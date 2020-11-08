@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <stdatomic.h>
 
 /* Version Functions */
 gc_int32 ga_version_check(gc_int32 major, gc_int32 minor, gc_int32 rev) {
@@ -99,7 +100,6 @@ void ga_data_source_init(ga_DataSource *dataSrc) {
 	dataSrc->tellFunc = 0;
 	dataSrc->closeFunc = 0;
 	dataSrc->flags = 0;
-	dataSrc->refMutex = gc_mutex_create();
 }
 
 gc_int32 ga_data_source_read(ga_DataSource *dataSrc, void *dst, gc_int32 size, gc_int32 count) {
@@ -129,29 +129,22 @@ gc_int32 ga_data_source_flags(ga_DataSource *dataSrc) {
 
 void gaX_data_source_destroy(ga_DataSource *dataSrc) {
 	tDataSourceFunc_Close func = dataSrc->closeFunc;
-	char* context = (char*)dataSrc + sizeof(ga_DataSource);
+	char *context = (char*)dataSrc + sizeof(ga_DataSource);
 	assert(dataSrc->refCount == 0);
 	if(func)
 		func(context);
-	gc_mutex_destroy(dataSrc->refMutex);
 	gcX_ops->freeFunc(dataSrc);
 }
 
 void ga_data_source_acquire(ga_DataSource *dataSrc) {
-	// TODO atomics???
-	gc_mutex_lock(dataSrc->refMutex);
-	++dataSrc->refCount;
-	gc_mutex_unlock(dataSrc->refMutex);
+	atomic_fetch_add(&dataSrc->refCount, 1);
 }
 
 void ga_data_source_release(ga_DataSource *dataSrc) {
-	gc_int32 refCount;
-	assert(dataSrc->refCount > 0);
-	gc_mutex_lock(dataSrc->refMutex);
-	--dataSrc->refCount;
-	refCount = dataSrc->refCount;
-	gc_mutex_unlock(dataSrc->refMutex);
-	if (refCount == 0) gaX_data_source_destroy(dataSrc);
+	gc_int32 rc = atomic_fetch_sub(&dataSrc->refCount, 1);
+	assert(rc > 0);
+	// if there *was* one reference, before we removed it
+	if (rc == 1) gaX_data_source_destroy(dataSrc);
 }
 
 /* Sample Source Structure */
@@ -164,7 +157,6 @@ void ga_sample_source_init(ga_SampleSource *sampleSrc) {
 	sampleSrc->tellFunc = NULL;
 	sampleSrc->closeFunc = NULL;
 	sampleSrc->flags = 0;
-	sampleSrc->refMutex = gc_mutex_create();
 }
 
 gc_int32 ga_sample_source_read(ga_SampleSource *sampleSrc, void *dst, gc_int32 numSamples, tOnSeekFunc onSeekFunc, void *seekContext) {
@@ -198,23 +190,17 @@ void ga_sample_source_format(ga_SampleSource *sampleSrc, ga_Format *format) {
 
 void gaX_sample_source_destroy(ga_SampleSource *sampleSrc) {
 	if (sampleSrc->closeFunc) sampleSrc->closeFunc(sampleSrc);
-	gc_mutex_destroy(sampleSrc->refMutex);
 	gcX_ops->freeFunc(sampleSrc);
 }
 
-// TODO - seriously, let's get some atomics going
 void ga_sample_source_acquire(ga_SampleSource *sampleSrc) {
-	gc_mutex_lock(sampleSrc->refMutex);
-	++sampleSrc->refCount;
-	gc_mutex_unlock(sampleSrc->refMutex);
+	atomic_fetch_add(&sampleSrc->refCount, 1);
 }
 
 void ga_sample_source_release(ga_SampleSource *sampleSrc) {
-	gc_mutex_lock(sampleSrc->refMutex);
-	assert(sampleSrc->refCount > 0);
-	gc_int32 refCount = --sampleSrc->refCount;
-	gc_mutex_unlock(sampleSrc->refMutex);
-	if (!refCount) gaX_sample_source_destroy(sampleSrc);
+	gc_int32 rc = atomic_fetch_sub(&sampleSrc->refCount, 1);
+	assert(rc > 0);
+	if (rc == 1) gaX_sample_source_destroy(sampleSrc);
 }
 
 gc_bool ga_sample_source_ready(ga_SampleSource *sampleSrc, gc_int32 numSamples) {
@@ -227,7 +213,6 @@ static ga_Memory *gaX_memory_create(void *data, gc_size size, gc_bool copy) {
 	ret->size = size;
 	if (copy) ret->data = memcpy(gcX_ops->allocFunc(size), data, size);
 	else ret->data = data;
-	ret->refMutex = gc_mutex_create();
 	ret->refCount = 1;
 	return ret;
 }
@@ -268,17 +253,13 @@ static void gaX_memory_destroy(ga_Memory *mem) {
 }
 
 void ga_memory_acquire(ga_Memory *mem) {
-	gc_mutex_lock(mem->refMutex);
-	++mem->refCount;
-	gc_mutex_unlock(mem->refMutex);
+	atomic_fetch_add(&mem->refCount, 1);
 }
 
 void ga_memory_release(ga_Memory *mem) {
-	gc_mutex_lock(mem->refMutex);
-	assert(mem->refCount > 0);
-	gc_int32 refCount = --mem->refCount;
-	gc_mutex_unlock(mem->refMutex);
-	if (!refCount) gaX_memory_destroy(mem);
+	gc_int32 rc = atomic_fetch_sub(&mem->refCount, 1);
+	assert(rc > 0);
+	if (rc == 1) gaX_memory_destroy(mem);
 }
 
 
@@ -290,7 +271,6 @@ ga_Sound *ga_sound_create(ga_Memory *memory, ga_Format *format) {
 	ret->format = *format;
 	ga_memory_acquire(memory);
 	ret->memory = memory;
-	ret->refMutex = gc_mutex_create();
 	ret->refCount = 1;
 	return (ga_Sound*)ret;
 }
@@ -368,17 +348,13 @@ static void gaX_sound_destroy(ga_Sound *sound) {
 }
 
 void ga_sound_acquire(ga_Sound *sound) {
-	gc_mutex_lock(sound->refMutex);
-	++sound->refCount;
-	gc_mutex_unlock(sound->refMutex);
+	atomic_fetch_add(&sound->refCount, 1);
 }
 
 void ga_sound_release(ga_Sound *sound) {
-	assert(sound->refCount > 0);
-	gc_mutex_lock(sound->refMutex);
-	gc_int32 refCount = --sound->refCount;
-	gc_mutex_unlock(sound->refMutex);
-	if (!refCount) gaX_sound_destroy(sound);
+	gc_int32 rc = atomic_fetch_sub(&sound->refCount, 1);
+	assert(rc > 0);
+	if (rc == 1) gaX_sound_destroy(sound);
 }
 
 /* Handle Functions */

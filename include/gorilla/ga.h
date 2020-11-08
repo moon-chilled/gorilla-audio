@@ -1058,7 +1058,7 @@ typedef struct ga_StreamManager ga_StreamManager;
  *  \ingroup ga_StreamManager
  *  \return Newly-created stream manager.
  */
-ga_StreamManager *ga_stream_manager_create();
+ga_StreamManager *ga_stream_manager_create(void);
 
 /** Fills all buffers managed by a buffered-stream manager.
  *

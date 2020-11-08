@@ -143,8 +143,7 @@ struct ga_DataSource {
   tDataSourceFunc_Seek seekFunc; /**< Internal seek callback (optional). */
   tDataSourceFunc_Tell tellFunc; /**< Internal tell callback (optional). */
   tDataSourceFunc_Close closeFunc; /**< Internal close callback (optional). */
-  gc_int32 refCount; /**< Reference count. */
-  gc_Mutex* refMutex; /**< Mutex to protect reference count manipulations. */
+  _Atomic gc_int32 refCount; /**< Reference count. */
   gc_int32 flags; /**< Flags defining which functionality this data source supports (see [\ref globDefs]). */
 };
 
@@ -176,8 +175,7 @@ struct ga_SampleSource {
   tSampleSourceFunc_Tell tellFunc; /* OPTIONAL */
   tSampleSourceFunc_Close closeFunc; /* OPTIONAL */
   ga_Format format;
-  gc_int32 refCount;
-  gc_Mutex* refMutex;
+  _Atomic gc_int32 refCount;
   gc_int32 flags;
 };
 
@@ -189,8 +187,7 @@ void ga_sample_source_init(ga_SampleSource* in_sampleSrc);
 struct ga_Memory {
 	void *data;
 	gc_size size;
-	gc_uint32 refCount;
-	gc_Mutex *refMutex;
+	_Atomic gc_int32 refCount;
 };
 
 /***********/
@@ -200,8 +197,7 @@ struct ga_Sound {
   ga_Memory* memory;
   ga_Format format;
   gc_int32 numSamples;
-  gc_int32 refCount;
-  gc_Mutex* refMutex;
+  _Atomic gc_int32 refCount;
 };
 
 /************/
@@ -256,8 +252,7 @@ struct ga_BufferedStream {
   gc_Mutex* produceMutex;
   gc_Mutex* seekMutex;
   gc_Mutex* readMutex;
-  gc_Mutex* refMutex;
-  gc_int32 refCount;
+  _Atomic gc_int32 refCount;
   gc_Link tellJumps;
   ga_Format format;
   gc_int32 seek;
