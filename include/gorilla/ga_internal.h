@@ -163,7 +163,7 @@ void ga_data_source_init(ga_DataSource* in_dataSrc);
 typedef gc_int32 (*tSampleSourceFunc_Read)(void* in_context, void* in_dst, gc_int32 in_numSamples,
                                            tOnSeekFunc in_onSeekFunc, void* in_seekContext);
 typedef gc_int32 (*tSampleSourceFunc_End)(void* in_context);
-typedef gc_int32 (*tSampleSourceFunc_Ready)(void* in_context, gc_int32 in_numSamples);
+typedef gc_bool (*tSampleSourceFunc_Ready)(void* in_context, gc_int32 in_numSamples);
 typedef gc_int32 (*tSampleSourceFunc_Seek)(void* in_context, gc_int32 in_sampleOffset);
 typedef gc_int32 (*tSampleSourceFunc_Tell)(void* in_context, gc_int32* out_totalSamples);
 typedef void (*tSampleSourceFunc_Close)(void* in_context);
@@ -187,10 +187,10 @@ void ga_sample_source_init(ga_SampleSource* in_sampleSrc);
 /*  Memory  */
 /************/
 struct ga_Memory {
-  void* data;
-  gc_uint32 size;
-  gc_int32 refCount;
-  gc_Mutex* refMutex;
+	void *data;
+	gc_size size;
+	gc_uint32 refCount;
+	gc_Mutex *refMutex;
 };
 
 /***********/

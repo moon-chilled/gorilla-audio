@@ -39,6 +39,8 @@ typedef int32_t     gc_int32;
 typedef int64_t     gc_int64;
 
 typedef _Bool       gc_bool;
+#define gc_true     ((gc_bool)1)
+#define gc_false    ((gc_bool)0)
 
 #include <stddef.h>
 typedef size_t      gc_size;
@@ -57,8 +59,6 @@ typedef double      gc_float64;
 
 typedef gc_int32 gc_result; /**< Return type for the result of an operation. \ingroup results */
 
-#define GC_FALSE 0 /**< Result was false. \ingroup results */
-#define GC_TRUE 1 /**< Result was true. \ingroup results */
 #define GC_SUCCESS 1 /**< Operation completed successfully. \ingroup results */
 #define GC_ERROR_GENERIC -1 /**< Operation failed with an unspecified error. \ingroup results */
 

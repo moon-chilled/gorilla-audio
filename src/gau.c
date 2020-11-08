@@ -840,7 +840,7 @@ gc_int32 gauX_sample_source_stream_end(void* in_context)
   gau_SampleSourceStreamContext* ctx = &((gau_SampleSourceStream*)in_context)->context;
   return ga_stream_end(ctx->stream);
 }
-gc_int32 gauX_sample_source_stream_ready(void* in_context, gc_int32 in_numSamples)
+gc_bool gauX_sample_source_stream_ready(void* in_context, gc_int32 in_numSamples)
 {
   gau_SampleSourceStreamContext* ctx = &((gau_SampleSourceStream*)in_context)->context;
   return ga_stream_ready(ctx->stream, in_numSamples);
@@ -955,7 +955,7 @@ gc_int32 gauX_sample_source_loop_end(void* in_context)
   gau_SampleSourceLoopContext* ctx = &((gau_SampleSourceLoop*)in_context)->context;
   return ga_sample_source_end(ctx->innerSrc);
 }
-gc_int32 gauX_sample_source_loop_ready(void* in_context, gc_int32 in_numSamples)
+gc_bool gauX_sample_source_loop_ready(void* in_context, gc_int32 in_numSamples)
 {
   gau_SampleSourceLoopContext* ctx = &((gau_SampleSourceLoop*)in_context)->context;
   return ga_sample_source_ready(ctx->innerSrc, in_numSamples);
