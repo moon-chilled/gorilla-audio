@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.12)
 project(Gorilla)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -66,12 +66,15 @@ if(MSVC OR CYGWIN)
   set(ENABLE_XAUDIO2 "1" CACHE STRING "Enable XAudio2 device")
   set(ENABLE_OPENAL "0" CACHE STRING "Enable OpenAL device")
   set(ENABLE_PULSEAUDIO "0" CACHE STRING "Enable PulseAudio device")
+  set(ENABLE_ALSA "0" CACHE STRING "Enable ALSA device")
 elseif(FREEBSD)
   set(ENABLE_OSS "1" CACHE STRING "Enable OSS device")
   set(ENABLE_OPENAL "0" CACHE STRING "Enable OpenAL device")
   set(ENABLE_PULSEAUDIO "0" CACHE STRING "Enable PulseAudio device")
+  set(ENABLE_ALSA "0" CACHE STRING "Enable ALSA device")
 else()
   set(ENABLE_PULSEAUDIO "1" CACHE STRING "Enable PulseAudio device")
+  set(ENABLE_ALSA "1" CACHE STRING "Enable ALSA device")
   set(ENABLE_OPENAL "0" CACHE STRING "Enable OpenAL device")
 endif()
 
@@ -88,6 +91,11 @@ if(ENABLE_PULSEAUDIO)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DENABLE_PULSEAUDIO")
   find_package(PulseAudio)
   include_directories(${PULSEAUDIO_INCLUDE_DIR})
+endif()
+
+if(ENABLE_ALSA)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DENABLE_ALSA")
+  find_package(ALSA)
 endif()
 
 if(ENABLE_OPENAL)
@@ -205,6 +213,10 @@ if(ENABLE_PULSEAUDIO)
   list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_pulseaudio.c)
 endif()
 
+if(ENABLE_ALSA)
+  list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_alsa.c)
+endif()
+
 if(ENABLE_OPENAL)
   list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_openal.c)
 endif()
@@ -228,7 +240,7 @@ source_group("src\\common" FILES ${GORILLA_COMMON_SRC})
 source_group("include\\oggvorbis" FILES ${OGGVORBIS_INCLUDE})
 source_group("src\\oggvorbis" FILES ${OGGVORBIS_SRC})
 
-add_library(gorilla STATIC
+set(ALL_SRC
   ${GORILLA_INCLUDE}
   ${GORILLA_SRC}
   ${GORILLA_COMMON_INCLUDE}
@@ -236,10 +248,18 @@ add_library(gorilla STATIC
   ${OGGVORBIS_INCLUDE}
   ${OGGVORBIS_SRC})
 
-if(ENABLE_OPENAL)
-  target_link_libraries(gorilla ${OPENAL_LIBRARY})
-endif()
+add_library(gorilla SHARED ${ALL_SRC})
+add_library(gorilla_static STATIC ${ALL_SRC})
+set_target_properties(gorilla_static PROPERTIES OUTPUT_NAME gorilla)
 
 if(ENABLE_XAUDIO2)
   target_link_libraries(gorilla ${DIRECTX_XAUDIO2_LIBRARY})
+endif()
+
+if(ENABLE_ALSA)
+  target_link_libraries(gorilla ${ALSA_LIBRARY})
+endif()
+
+if(ENABLE_OPENAL)
+  target_link_libraries(gorilla ${OPENAL_LIBRARY})
 endif()

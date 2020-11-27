@@ -35,19 +35,26 @@ ga_Device* ga_device_open(ga_DeviceType type,
                           gc_int32 num_samples,
 			  ga_Format *format) {
 	// todo allow overriding with an environment variable
-	// todo if type==ga_DeviceType_Default try multiple devicetypes if the first returns an error
 	if (type == ga_DeviceType_Default) {
+#define try(t) if ((ret = ga_device_open(t, num_buffers, num_samples, format))) return ret
+		ga_Device *ret;
 #if defined(ENABLE_OSS)
-		type = ga_DeviceType_OSS;
-#elif defined(ENABLE_XAUDIO2)
-		type = ga_DeviceType_XAudio2;
-#elif defined(ENABLE_PULSEAUDIO)
-		type = ga_DeviceType_PulseAudio;
-#elif defined(ENABLE_OPENAL)
-		type = ga_DeviceType_OpenAL;    // generic (multiplatform) drivers go last
-#else
-		type = ga_DeviceType_Unknown;
+		try(ga_DeviceType_OSS);
 #endif
+#if defined(ENABLE_XAUDIO2)
+		try(ga_DeviceType_XAudio2);
+#endif
+#if defined(ENABLE_PULSEAUDIO)
+		try(ga_DeviceType_PulseAudio);
+#endif
+#if defined(ENABLE_ALSA)
+		try(ga_DeviceType_ALSA);      // put pulse before alsa, as pulseaudio has an alsa implementation
+#endif
+#if defined(ENABLE_OPENAL)
+		try(ga_DeviceType_OpenAL);    // generic (multiplatform) drivers go last
+#endif
+#undef try
+		return NULL;
 	}
 
 	ga_Device *ret = gcX_ops->allocFunc(sizeof(ga_Device));
@@ -66,6 +73,9 @@ ga_Device* ga_device_open(ga_DeviceType type,
 #ifdef ENABLE_PULSEAUDIO
 		case ga_DeviceType_PulseAudio: ret->procs = gaX_deviceprocs_PulseAudio; break;
 #endif
+#ifdef ENABLE_ALSA
+		case ga_DeviceType_ALSA: ret->procs = gaX_deviceprocs_ALSA; break;
+#endif
 #ifdef ENABLE_OPENAL
 		case ga_DeviceType_OpenAL: ret->procs = gaX_deviceprocs_OpenAL; break;
 #endif
@@ -81,7 +91,9 @@ fail:
 }
 
 gc_result ga_device_close(ga_Device *device) {
-	return device->procs.close ? device->procs.close(device) : GC_ERROR_GENERIC;
+	gc_result ret = device->procs.close ? device->procs.close(device) : GC_ERROR_GENERIC;
+	free(device);
+	return ret;
 }
 
 gc_int32 ga_device_check(ga_Device *device) {
@@ -565,23 +577,25 @@ void gaX_mixer_mix_buffer(ga_Mixer *mixer,
 	/* TODO: Support 8-bit/16-bit mono/stereo mixer format */
 	switch (srcFmt->bitsPerSample) {
 		case 16: {
-				 gc_int32 srcBytes = srcSamples * sampleSize;
-				 const gc_int16 *src = srcBuffer;
-				 while (i < dstSamples * (gc_int32)mixerChannels && srcBytes >= 2 * srcChannels) {
-					 gc_int32 newJ, deltaSrcBytes;
-					 dst[i] += (gc_int32)((gc_int32)src[j] * gain * (1.0f - pan) * 2);
-					 dst[i + 1] += (gc_int32)((gc_int32)src[j + ((srcChannels == 1) ? 0 : 1)] * gain * pan * 2);
-					 i += mixerChannels;
-					 fj += sampleScale * srcChannels;
-					 srcSamplesRead += sampleScale * srcChannels;
-					 newJ = (gc_uint32)fj & (srcChannels == 1 ? ~0 : ~0x1);
-					 deltaSrcBytes = (newJ - j) * 2;
-					 j = newJ;
-					 srcBytes -= deltaSrcBytes;
-				 }
+			gc_int32 srcBytes = srcSamples * sampleSize;
+			const gc_int16 *src = srcBuffer;
+			while (i < dstSamples * (gc_int32)mixerChannels && srcBytes >= 2 * srcChannels) {
+				gc_int32 newJ, deltaSrcBytes;
 
-				 break;
-			 }
+				dst[i] += (gc_int32)((gc_int32)src[j] * gain * (1.0f - pan) * 2);
+				dst[i + 1] += (gc_int32)((gc_int32)src[j + ((srcChannels == 1) ? 0 : 1)] * gain * pan * 2);
+
+				i += mixerChannels;
+				fj += sampleScale * srcChannels;
+				srcSamplesRead += sampleScale * srcChannels;
+				newJ = (gc_uint32)fj & (srcChannels == 1 ? ~0 : ~0x1);
+				deltaSrcBytes = (newJ - j) * 2;
+				j = newJ;
+				srcBytes -= deltaSrcBytes;
+			}
+
+			break;
+		}
 	}
 }
 
@@ -608,7 +622,7 @@ void gaX_mixer_mix_handle(ga_Mixer *mixer, ga_Handle *handle, gc_int32 numSample
 
 	if (requested <= 0 || !ga_sample_source_ready(ss, requested)) return;
 	gc_float32 gain, pan, pitch;
-	gc_int32* dstBuffer;
+	gc_int32 *dstBuffer;
 	gc_int32 dstSamples;
 
 	gc_mutex_lock(handle->handleMutex);
@@ -651,10 +665,10 @@ gc_result ga_mixer_mix(ga_Mixer *m, void *buffer) {
 
 	link = m->mixList.next;
 	while (link != &m->mixList) {
-		ga_Handle* h = (ga_Handle*)link->data;
-		gc_Link* oldLink = link;
+		ga_Handle *h = (ga_Handle*)link->data;
+		gc_Link *oldLink = link;
 		link = link->next;
-		gaX_mixer_mix_handle(m, (ga_Handle*)h, m->numSamples);
+		gaX_mixer_mix_handle(m, h, m->numSamples);
 		if (ga_handle_finished(h)) {
 			gc_mutex_lock(m->mixMutex);
 			gc_list_unlink(oldLink);
@@ -663,7 +677,7 @@ gc_result ga_mixer_mix(ga_Mixer *m, void *buffer) {
 	}
 
 	/* mixBuffer will already be correct bps */
-	switch(fmt->bitsPerSample) {
+	switch (fmt->bitsPerSample) {
 		case 8:
 			for (i = 0; i < end; ++i) {
 				gc_int32 sample = m->mixBuffer[i];
@@ -675,6 +689,9 @@ gc_result ga_mixer_mix(ga_Mixer *m, void *buffer) {
 			        gc_int32 sample = m->mixBuffer[i];
 			        ((gc_int16*)buffer)[i] = sample > -32768 ? (sample < 32767 ? sample : 32767) : -32768;
 			}
+			break;
+		case 32:
+			memcpy(buffer, m->mixBuffer, end * 4);
 			break;
 	}
 
@@ -709,9 +726,12 @@ gc_result ga_mixer_dispatch(ga_Mixer *m) {
 
 gc_result ga_mixer_destroy(ga_Mixer *m) {
 	/* NOTE: Mixer/handles must no longer be in use on any thread when destroy is called */
-	for (gc_Link *link = m->dispatchList.next; link != &m->dispatchList; link = link->next) {
-		gaX_handle_cleanup(link->data);
+	for (gc_Link *link = m->dispatchList.next; link != &m->dispatchList;) {
+		ga_Handle *h = (ga_Handle*)link->data;
+		link = link->next;
+		gaX_handle_cleanup(h);
 	}
+
 
 	gc_mutex_destroy(m->dispatchMutex);
 	gc_mutex_destroy(m->mixMutex);

@@ -100,7 +100,6 @@ static gc_int32 gaX_check(ga_Device *dev) {
 
 static gc_result gaX_queue(ga_Device *dev, void* in_buffer) {
 	gc_int32 formatOal;
-	gc_int32 sampleSize;
 	ALint state;
 	gc_int32 bps = dev->format.bitsPerSample;
 
@@ -109,9 +108,8 @@ static gc_result gaX_queue(ga_Device *dev, void* in_buffer) {
 	else
 		formatOal = (gc_int32)(bps == 16 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO8);
 
-	sampleSize = ga_format_sampleSize(&dev->format);
 	alBufferData(dev->impl->hw_buffers[dev->impl->next_buffer], formatOal, in_buffer,
-			(ALsizei)dev->num_samples * sampleSize, dev->format.sampleRate);
+			(ALsizei)dev->num_samples * ga_format_sampleSize(&dev->format), dev->format.sampleRate);
 	CHECK_AL_ERROR(return GC_ERROR_GENERIC);
 
 	alSourceQueueBuffers(dev->impl->hw_source, 1, &dev->impl->hw_buffers[dev->impl->next_buffer]);

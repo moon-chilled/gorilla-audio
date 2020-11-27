@@ -123,9 +123,12 @@ void gc_thread_sleep(gc_uint32 in_ms)
 void gc_thread_destroy(gc_Thread* in_thread)
 {
   LinuxThreadData* threadData = (LinuxThreadData*)in_thread->threadObj;
+  pthread_cancel(threadData->thread);
+  pthread_join(threadData->thread, NULL);
   pthread_mutex_destroy(&threadData->suspendMutex);
-  pthread_exit(&threadData->thread);
   pthread_attr_destroy(&threadData->attr);
+  gcX_ops->freeFunc(threadData);
+  gcX_ops->freeFunc(in_thread);
 }
 
 #else

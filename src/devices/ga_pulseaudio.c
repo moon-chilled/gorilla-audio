@@ -22,7 +22,7 @@ static gc_result gaX_open(ga_Device *dev) {
 		case 16: spec.format = PA_SAMPLE_S16LE; break;
 		case 24: spec.format = PA_SAMPLE_S24LE; break;
 		case 32: spec.format = PA_SAMPLE_S32LE; break;
-		default: return GC_ERROR_GENERIC;
+		default: goto cleanup;
 	}
 
 	spec.channels = dev->format.numChannels;
@@ -38,13 +38,18 @@ static gc_result gaX_open(ga_Device *dev) {
 	                                     NULL,              // default buffering attributes
 	                                     NULL);             // if there was an error, we don't care which one
 
-	if (!dev->impl->interface) return GC_ERROR_GENERIC;
+	if (!dev->impl->interface) goto cleanup;
 
 	return GC_SUCCESS;
+
+cleanup:
+	if (dev->impl) gcX_ops->freeFunc(dev->impl);
+	return GC_ERROR_GENERIC;
 }
 
 static gc_result gaX_close(ga_Device *dev) {
 	pa_simple_free(dev->impl->interface);
+	gcX_ops->freeFunc(dev->impl);
 	return GC_SUCCESS;
 }
 

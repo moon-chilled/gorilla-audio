@@ -136,6 +136,8 @@ void gau_manager_destroy(gau_Manager* in_mgr)
     in_mgr->killThreads = 1;
     gc_thread_join(in_mgr->streamThread);
     gc_thread_join(in_mgr->mixThread);
+    gc_thread_destroy(in_mgr->streamThread);
+    gc_thread_destroy(in_mgr->mixThread);
   }
 
   /* Clean up mixer and stream manager */
