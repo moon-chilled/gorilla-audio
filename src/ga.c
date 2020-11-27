@@ -64,6 +64,7 @@ ga_Device* ga_device_open(ga_DeviceType type,
 	ret->format = *format;
 
 	switch (type) {
+		case ga_DeviceType_Dummy: ret->procs = gaX_deviceprocs_dummy; break;
 #ifdef ENABLE_OSS
 		case ga_DeviceType_OSS: ret->procs = gaX_deviceprocs_OSS; break;
 #endif

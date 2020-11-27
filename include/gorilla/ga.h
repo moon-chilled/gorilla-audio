@@ -179,6 +179,7 @@ gc_int32 ga_format_toSamples(ga_Format *format, gc_float32 seconds);
 typedef enum {
 	ga_DeviceType_Default    = -1, /**< Default device type (based on hard-coded priorities) \ingroup ga_Device */
 	ga_DeviceType_Unknown,         /**< Unknown (invalid) device type \ingroup ga_Device */
+	ga_DeviceType_Dummy,           /**< Dummy device, doesn't actually play anything \ingroup ga_Device */
 	ga_DeviceType_OSS,             /**< OSS playback device (mainly FreeBSD) \ingroup ga_Device */
 	ga_DeviceType_XAudio2,         /**< XAudio2 playback device (Windows-only) \ingroup ga_Device */
 	ga_DeviceType_PulseAudio,      /**< PulseAudio playback device (cross-platform, mainly for linux) \ingroup ga_Device */

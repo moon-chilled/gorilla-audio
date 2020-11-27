@@ -38,6 +38,8 @@ typedef struct {
 	gc_result (*close)(ga_Device* in_device);
 } gaX_DeviceProcs;
 
+extern gaX_DeviceProcs gaX_deviceprocs_dummy;
+
 #ifdef ENABLE_OSS
 extern gaX_DeviceProcs gaX_deviceprocs_OSS;
 #endif
