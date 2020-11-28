@@ -69,9 +69,9 @@ gau_Manager* gau_manager_create_custom(gc_int32 in_devType,
 
   /* Open device */
   memset(&ret->format, 0, sizeof(ga_Format));
-  ret->format.bitsPerSample = 16;
-  ret->format.numChannels = 2;
-  ret->format.sampleRate = 44100;
+  ret->format.bits_per_sample = 16;
+  ret->format.num_channels = 2;
+  ret->format.sample_rate = 44100;
   ret->device = ga_device_open(in_devType, in_numBuffers, in_bufferSamples, &ret->format);
   if (!ret->device) return NULL;
 
@@ -405,12 +405,11 @@ ga_DataSource* gau_data_source_create_memory(ga_Memory* in_memory)
 }
 
 /* WAV Sample Source */
-typedef struct ga_WavData
-{
-  gc_int32 fileSize;
-  gc_int16 fmtTag, channels, blockAlign, bitsPerSample;
-  gc_int32 fmtSize, sampleRate, bytesPerSec;
-  gc_int32 dataOffset, dataSize;
+typedef struct {
+  gc_int32 file_size;
+  gc_int16 fmt_tag, channels, block_align, bits_per_sample;
+  gc_int32 fmtSize, sample_rate, bytes_per_sec;
+  gc_int32 data_offset, data_size;
 } ga_WavData;
 
 void gauX_data_source_advance(ga_DataSource* in_dataSrc, gc_int32 in_delta)
@@ -433,18 +432,18 @@ gc_result gauX_sample_source_wav_load_header(ga_DataSource* in_dataSrc, ga_WavDa
   /* TODO: Make this work with non-blocking reads? Need to get this data... */
   ga_WavData* wavData = out_wavData;
   gc_int32 seekable = ga_data_source_flags(in_dataSrc) & GA_FLAG_SEEKABLE ? 1 : 0;
-  gc_int32 dataOffset = 0;
+  gc_int32 data_offset = 0;
   char id[5];
   id[4] = 0;
   if(!in_dataSrc)
     return GC_ERROR_GENERIC;
   ga_data_source_read(in_dataSrc, &id[0], sizeof(char), 4); /* 'RIFF' */
-  dataOffset += 4;
+  data_offset += 4;
   if(!strcmp(id, "RIFF"))
   {
-    ga_data_source_read(in_dataSrc, &wavData->fileSize, sizeof(gc_int32), 1);
+    ga_data_source_read(in_dataSrc, &wavData->file_size, sizeof(gc_int32), 1);
     ga_data_source_read(in_dataSrc, &id[0], sizeof(char), 4); /* 'WAVE' */
-    dataOffset += 8;
+    data_offset += 8;
     if(!strcmp(id, "WAVE"))
     {
       gc_int32 dataFound = 0;
@@ -454,30 +453,30 @@ gc_result gauX_sample_source_wav_load_header(ga_DataSource* in_dataSrc, ga_WavDa
         gc_int32 chunkSize = 0;
         ga_data_source_read(in_dataSrc, &id[0], sizeof(char), 4);
         ga_data_source_read(in_dataSrc, &chunkSize, sizeof(gc_int32), 1);
-        dataOffset += 8;
+        data_offset += 8;
         if(!hdrFound && !strcmp(id, "fmt ")) /* 'fmt ' */
         {
           wavData->fmtSize = chunkSize;
-          ga_data_source_read(in_dataSrc, &wavData->fmtTag, sizeof(gc_int16), 1);
+          ga_data_source_read(in_dataSrc, &wavData->fmt_tag, sizeof(gc_int16), 1);
           ga_data_source_read(in_dataSrc, &wavData->channels, sizeof(gc_int16), 1);
-          ga_data_source_read(in_dataSrc, &wavData->sampleRate, sizeof(gc_int32), 1);
-          ga_data_source_read(in_dataSrc, &wavData->bytesPerSec, sizeof(gc_int32), 1);
-          ga_data_source_read(in_dataSrc, &wavData->blockAlign, sizeof(gc_int16), 1);
-          ga_data_source_read(in_dataSrc, &wavData->bitsPerSample, sizeof(gc_int16), 1);
+          ga_data_source_read(in_dataSrc, &wavData->sample_rate, sizeof(gc_int32), 1);
+          ga_data_source_read(in_dataSrc, &wavData->bytes_per_sec, sizeof(gc_int32), 1);
+          ga_data_source_read(in_dataSrc, &wavData->block_align, sizeof(gc_int16), 1);
+          ga_data_source_read(in_dataSrc, &wavData->bits_per_sample, sizeof(gc_int16), 1);
           gauX_data_source_advance(in_dataSrc, chunkSize - 16);
           hdrFound = 1;
         }
         else if(!dataFound && !strcmp(id, "data")) /* 'data' */
         {
-          wavData->dataSize = chunkSize;
-          wavData->dataOffset = dataOffset;
+          wavData->data_size = chunkSize;
+          wavData->data_offset = data_offset;
           dataFound = 1;
         }
         else
         {
           gauX_data_source_advance(in_dataSrc, chunkSize);
         }
-        dataOffset += chunkSize;
+        data_offset += chunkSize;
       } while(!(hdrFound && dataFound)); /* TODO: Need End-Of-Data support in Data Sources */
       if(hdrFound && dataFound)
         return GC_SUCCESS;
@@ -487,11 +486,11 @@ gc_result gauX_sample_source_wav_load_header(ga_DataSource* in_dataSrc, ga_WavDa
 }
 
 typedef struct gau_SampleSourceWavContext {
-  ga_DataSource* dataSrc;
-  ga_WavData wavHeader;
-  gc_int32 sampleSize;
+  ga_DataSource* data_src;
+  ga_WavData wav_header;
+  gc_int32 sample_size;
   gc_int32 pos;
-  gc_Mutex* posMutex;
+  gc_Mutex* pos_mutex;
 } gau_SampleSourceWavContext;
 
 typedef struct gau_SampleSourceWav {
@@ -504,46 +503,46 @@ gc_int32 gauX_sample_source_wav_read(void* in_context, void* in_dst, gc_int32 in
 {
   gau_SampleSourceWavContext* ctx = &((gau_SampleSourceWav*)in_context)->context;
   gc_int32 numRead = 0;
-  gc_int32 totalSamples = ctx->wavHeader.dataSize / ctx->sampleSize;
-  gc_mutex_lock(ctx->posMutex);
+  gc_int32 totalSamples = ctx->wav_header.data_size / ctx->sample_size;
+  gc_mutex_lock(ctx->pos_mutex);
   if(ctx->pos + in_numSamples > totalSamples)
     in_numSamples = totalSamples - ctx->pos;
   if(in_numSamples > 0)
   {
-    numRead = ga_data_source_read(ctx->dataSrc, in_dst, ctx->sampleSize, in_numSamples);
+    numRead = ga_data_source_read(ctx->data_src, in_dst, ctx->sample_size, in_numSamples);
     ctx->pos += numRead;
   }
-  gc_mutex_unlock(ctx->posMutex);
+  gc_mutex_unlock(ctx->pos_mutex);
   return numRead;
 }
 gc_int32 gauX_sample_source_wav_end(void* in_context)
 {
   gau_SampleSourceWavContext* ctx = &((gau_SampleSourceWav*)in_context)->context;
-  gc_int32 totalSamples = ctx->wavHeader.dataSize / ctx->sampleSize;
+  gc_int32 totalSamples = ctx->wav_header.data_size / ctx->sample_size;
   return ctx->pos == totalSamples; /* No need to mutex this use */
 }
 gc_result gauX_sample_source_wav_seek(void* in_context, gc_int32 in_sampleOffset)
 {
   gau_SampleSourceWavContext* ctx = &((gau_SampleSourceWav*)in_context)->context;
-  gc_mutex_lock(ctx->posMutex);
-  gc_result ret = ga_data_source_seek(ctx->dataSrc, ctx->wavHeader.dataOffset + in_sampleOffset * ctx->sampleSize, GA_SEEK_ORIGIN_SET);
+  gc_mutex_lock(ctx->pos_mutex);
+  gc_result ret = ga_data_source_seek(ctx->data_src, ctx->wav_header.data_offset + in_sampleOffset * ctx->sample_size, GA_SEEK_ORIGIN_SET);
   if(ret >= 0)
     ctx->pos = in_sampleOffset;
-  gc_mutex_unlock(ctx->posMutex);
+  gc_mutex_unlock(ctx->pos_mutex);
   return ret;
 }
 gc_int32 gauX_sample_source_wav_tell(void* in_context, gc_int32* out_totalSamples)
 {
   gau_SampleSourceWavContext* ctx = &((gau_SampleSourceWav*)in_context)->context;
   if(out_totalSamples)
-    *out_totalSamples = ctx->wavHeader.dataSize / ctx->sampleSize;
+    *out_totalSamples = ctx->wav_header.data_size / ctx->sample_size;
   return ctx->pos; /* No need to mutex this use */
 }
 void gauX_sample_source_wav_close(void* in_context)
 {
   gau_SampleSourceWavContext* ctx = &((gau_SampleSourceWav*)in_context)->context;
-  ga_data_source_release(ctx->dataSrc);
-  gc_mutex_destroy(ctx->posMutex);
+  ga_data_source_release(ctx->data_src);
+  gc_mutex_destroy(ctx->pos_mutex);
 }
 ga_SampleSource* gau_sample_source_create_wav(ga_DataSource* in_dataSrc)
 {
@@ -565,15 +564,15 @@ ga_SampleSource* gau_sample_source_create_wav(ga_DataSource* in_dataSrc)
   ret->sampleSrc.closeFunc = &gauX_sample_source_wav_close;
   ctx->pos = 0;
   ga_data_source_acquire(in_dataSrc);
-  ctx->dataSrc = in_dataSrc;
-  validHeader = gauX_sample_source_wav_load_header(in_dataSrc, &ctx->wavHeader);
+  ctx->data_src = in_dataSrc;
+  validHeader = gauX_sample_source_wav_load_header(in_dataSrc, &ctx->wav_header);
   if(validHeader == GC_SUCCESS)
   {
-    ctx->posMutex = gc_mutex_create();
-    ret->sampleSrc.format.numChannels = ctx->wavHeader.channels;
-    ret->sampleSrc.format.bitsPerSample = ctx->wavHeader.bitsPerSample;
-    ret->sampleSrc.format.sampleRate = ctx->wavHeader.sampleRate;
-    ctx->sampleSize = ga_format_sampleSize(&ret->sampleSrc.format);
+    ctx->pos_mutex = gc_mutex_create();
+    ret->sampleSrc.format.num_channels = ctx->wav_header.channels;
+    ret->sampleSrc.format.bits_per_sample = ctx->wav_header.bits_per_sample;
+    ret->sampleSrc.format.sample_rate = ctx->wav_header.sample_rate;
+    ctx->sample_size = ga_format_sampleSize(&ret->sampleSrc.format);
   }
   else
   {
@@ -801,9 +800,9 @@ ga_SampleSource* gau_sample_source_create_ogg(ga_DataSource* in_dataSrc)
     isValidOgg = ctx->oggInfo->channels <= 2;
     if(isValidOgg)
     {
-      ret->sampleSrc.format.bitsPerSample = bytesPerSample * 8;
-      ret->sampleSrc.format.numChannels = ctx->oggInfo->channels;
-      ret->sampleSrc.format.sampleRate = ctx->oggInfo->rate;
+      ret->sampleSrc.format.bits_per_sample = bytesPerSample << 3;
+      ret->sampleSrc.format.num_channels = ctx->oggInfo->channels;
+      ret->sampleSrc.format.sample_rate = ctx->oggInfo->rate;
     }
     else
       ov_clear(&ctx->oggFile);

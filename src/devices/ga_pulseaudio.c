@@ -18,15 +18,16 @@ static gc_result gaX_open(ga_Device *dev) {
 
 	pa_sample_spec spec;
 
-	switch (dev->format.bitsPerSample) {
+	switch (dev->format.bits_per_sample) {
+		case  8: spec.format = PA_SAMPLE_U8;    break;
 		case 16: spec.format = PA_SAMPLE_S16LE; break;
 		case 24: spec.format = PA_SAMPLE_S24LE; break;
 		case 32: spec.format = PA_SAMPLE_S32LE; break;
 		default: goto cleanup;
 	}
 
-	spec.channels = dev->format.numChannels;
-	spec.rate = dev->format.sampleRate;
+	spec.channels = dev->format.num_channels;
+	spec.rate = dev->format.sample_rate;
 
 	dev->impl->interface = pa_simple_new(NULL,              // default server
 	                                     "Gorilla Audio",   // application name

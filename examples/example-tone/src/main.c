@@ -20,9 +20,9 @@ int main(int argc, char** argv) {
 	/* Initialize library + device */
 	gc_initialize(0);
 	memset(&fmt, 0, sizeof(ga_Format));
-	fmt.bitsPerSample = 16;
-	fmt.numChannels = 2;
-	fmt.sampleRate = 44100;
+	fmt.bits_per_sample = 16;
+	fmt.num_channels = 2;
+	fmt.sample_rate = 44100;
 	numSamples = 2048;
 	sampleSize = ga_format_sampleSize(&fmt);
 	dev = ga_device_open(ga_DeviceType_Default, 2, 2048, &fmt);

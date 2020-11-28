@@ -34,7 +34,7 @@ static gc_result gaX_open(ga_Device *dev) {
         acheck(snd_pcm_hw_params_set_access(dev->impl->interface, params, SND_PCM_ACCESS_RW_INTERLEAVED));
 
 	snd_pcm_format_t fmt;
-	switch (dev->format.bitsPerSample) {
+	switch (dev->format.bits_per_sample) {
 		case  8: fmt = SND_PCM_FORMAT_U8; break;
 		case 16: fmt = SND_PCM_FORMAT_S16_LE; break;
 		case 24: fmt = SND_PCM_FORMAT_S24_LE; break;
@@ -43,11 +43,11 @@ static gc_result gaX_open(ga_Device *dev) {
 	}
         acheck(snd_pcm_hw_params_set_format(dev->impl->interface, params, fmt));
 
-        acheck(snd_pcm_hw_params_set_channels(dev->impl->interface, params, dev->format.numChannels));
+        acheck(snd_pcm_hw_params_set_channels(dev->impl->interface, params, dev->format.num_channels));
         acheck(snd_pcm_hw_params_set_buffer_size(dev->impl->interface, params, dev->num_samples * ga_format_sampleSize(&dev->format)));
 	// this can transparently change the sample rate from under the user
 	// TODO: should we let them pass an option to error if they can't get exactly the desired sample rate?
-	acheck(snd_pcm_hw_params_set_rate_near(dev->impl->interface, params, &dev->format.sampleRate, NULL));
+	acheck(snd_pcm_hw_params_set_rate_near(dev->impl->interface, params, &dev->format.sample_rate, NULL));
 	acheck(snd_pcm_hw_params(dev->impl->interface, params));
 
 	//todo latency

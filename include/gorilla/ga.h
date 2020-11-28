@@ -9,15 +9,14 @@
  *  \htmlinclude manual.htm
  */
 
-#ifndef _GORILLA_GA_H
-#define _GORILLA_GA_H
+#ifndef GORILLA_GA_H
+#define GORILLA_GA_H
 
 #include "gorilla/common/gc_common.h"
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif /* __cplusplus */
+extern "C" {
+#endif
 
 /** Data structures and functions.
  *
@@ -134,9 +133,9 @@ gc_int32 ga_version_check(gc_int32 major, gc_int32 minor, gc_int32 rev);
  *  \ingroup ga_Format
  */
 typedef struct {
-	gc_int32 sampleRate; /**< Sample rate (usually 44100) */
-	gc_int32 bitsPerSample; /**< Bits per PCM sample (usually 16) */
-	gc_int32 numChannels; /**< Number of audio channels (1 for mono, 2 for stereo) */
+	gc_int32 sample_rate; /**< Sample rate (usually 44100) */
+	gc_int32 bits_per_sample; /**< Bits per PCM sample (usually 16) */
+	gc_int32 num_channels; /**< Number of audio channels (1 for mono, 2 for stereo) */
 } ga_Format;
 
 /** Retrieves the sample size (in bytes) of a specified format.
@@ -513,7 +512,8 @@ typedef struct ga_Memory ga_Memory;
  *  \param data Data buffer to be copied into an internal data buffer.
  *  \param size Size (in bytes) of the provided data buffer.
  *  \return Newly-allocated memory object, containing an internal copy of the
- *          provided data buffer.
+ *          provided data buffer.  If the buffer is null, then the contents
+ *          will be uninitialized instead.
  */
 ga_Memory *ga_memory_create(void *data, gc_size size);
 
@@ -1211,7 +1211,7 @@ void ga_stream_acquire(ga_BufferedStream *stream);
 void ga_stream_release(ga_BufferedStream *stream);
 
 #ifdef __cplusplus
-}
-#endif /* __cplusplus */
+} /* extern "C" */
+#endif
 
-#endif /* _GORILLA_GA_H */
+#endif // GORILLA_GA_H

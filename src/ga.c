@@ -18,15 +18,15 @@ gc_int32 ga_version_check(gc_int32 major, gc_int32 minor, gc_int32 rev) {
 
 /* Format Functions */
 gc_int32 ga_format_sampleSize(ga_Format *format) {
-	return (format->bitsPerSample >> 3) * format->numChannels;
+	return (format->bits_per_sample >> 3) * format->num_channels;
 }
 
 gc_float32 ga_format_toSeconds(ga_Format *format, gc_int32 samples) {
-	return samples / (gc_float32)format->sampleRate;
+	return samples / (gc_float32)format->sample_rate;
 }
 
 gc_int32 ga_format_toSamples(ga_Format *format, gc_float32 seconds) {
-	return seconds * format->sampleRate;
+	return seconds * format->sample_rate;
 }
 
 /* Device Functions */
@@ -318,7 +318,7 @@ ga_Sound *ga_sound_create_sample_source(ga_SampleSource *sampleSrc) {
 		}
 	} else {
 		/* Unknown total samples */
-		gc_int32 BUFFER_SAMPLES = format.sampleRate * 2;
+		gc_int32 BUFFER_SAMPLES = format.sample_rate * 2;
 		char* data = 0;
 		ga_Memory* memory;
 		totalSamples = 0;
@@ -545,9 +545,9 @@ ga_Mixer *ga_mixer_create(ga_Format *format, gc_int32 numSamples) {
 	gc_list_head(&ret->mixList);
 	ret->numSamples = numSamples;
 	ret->format = *format;
-	ret->mixFormat.bitsPerSample = 32;
-	ret->mixFormat.numChannels = format->numChannels;
-	ret->mixFormat.sampleRate = format->sampleRate;
+	ret->mixFormat.bits_per_sample = 32;
+	ret->mixFormat.num_channels = format->num_channels;
+	ret->mixFormat.sample_rate = format->sample_rate;
 	mixSampleSize = ga_format_sampleSize(&ret->mixFormat);
 	ret->mixBuffer = gcX_ops->allocFunc(numSamples * mixSampleSize);
 	ret->dispatchMutex = gc_mutex_create();
@@ -567,9 +567,9 @@ void gaX_mixer_mix_buffer(ga_Mixer *mixer,
                           void *srcBuffer, gc_int32 srcSamples, ga_Format *srcFmt,
                           gc_int32 *dst, gc_int32 dstSamples, ga_Format *dstFmt,
 			  gc_float32 gain, gc_float32 pan, gc_float32 pitch) {
-	gc_int32 mixerChannels = dstFmt->numChannels;
-	gc_int32 srcChannels = srcFmt->numChannels;
-	gc_float32 sampleScale = srcFmt->sampleRate / (gc_float32)dstFmt->sampleRate * pitch;
+	gc_int32 mixerChannels = dstFmt->num_channels;
+	gc_int32 srcChannels = srcFmt->num_channels;
+	gc_float32 sampleScale = srcFmt->sample_rate / (gc_float32)dstFmt->sample_rate * pitch;
 	gc_float32 fj = 0.0f;
 	gc_int32 j = 0;
 	gc_int32 i = 0;
@@ -580,7 +580,7 @@ void gaX_mixer_mix_buffer(ga_Mixer *mixer,
 	pan = pan < 0.0f ? 0.0f : pan;
 
 	/* TODO: Support 8-bit/16-bit mono/stereo mixer format */
-	switch (srcFmt->bitsPerSample) {
+	switch (srcFmt->bits_per_sample) {
 		case 16: {
 			gc_int32 srcBytes = srcSamples * sampleSize;
 			const gc_int16 *src = srcBuffer;
@@ -621,7 +621,7 @@ void gaX_mixer_mix_handle(ga_Mixer *mixer, ga_Handle *handle, gc_int32 numSample
 	gc_int32 srcSampleSize = ga_format_sampleSize(&handleFormat);
 	gc_int32 dstSampleSize = ga_format_sampleSize(&mixer->format);
 	gc_float32 oldPitch = handle->pitch;
-	gc_float32 dstToSrc = handleFormat.sampleRate / (gc_float32)mixer->format.sampleRate * oldPitch;
+	gc_float32 dstToSrc = handleFormat.sample_rate / (gc_float32)mixer->format.sample_rate * oldPitch;
 	gc_int32 requested = (gc_int32)(numSamples * dstToSrc);
 	requested = requested / dstToSrc < numSamples ? requested + 1 : requested;
 
@@ -639,7 +639,7 @@ void gaX_mixer_mix_handle(ga_Mixer *mixer, ga_Handle *handle, gc_int32 numSample
 	/* We avoided a mutex lock by using pitch to check if buffer has enough dst samples */
 	/* If it has changed since then, we re-test to make sure we still have enough samples */
 	if (oldPitch != pitch) {
-		dstToSrc = handleFormat.sampleRate / (gc_float32)mixer->format.sampleRate * pitch;
+		dstToSrc = handleFormat.sample_rate / (gc_float32)mixer->format.sample_rate * pitch;
 		requested = (gc_int32)(numSamples * dstToSrc);
 		requested = requested / dstToSrc < numSamples ? requested + 1 : requested;
 		if (requested <= 0 || !ga_sample_source_ready(ss, requested)) return;
@@ -663,7 +663,7 @@ void gaX_mixer_mix_handle(ga_Mixer *mixer, ga_Handle *handle, gc_int32 numSample
 gc_result ga_mixer_mix(ga_Mixer *m, void *buffer) {
 	gc_int32 i;
 	gc_Link* link;
-	gc_int32 end = m->numSamples * m->format.numChannels;
+	gc_int32 end = m->numSamples * m->format.num_channels;
 	ga_Format* fmt = &m->format;
 	gc_int32 mixSampleSize = ga_format_sampleSize(&m->mixFormat);
 	memset(m->mixBuffer, 0, m->numSamples * mixSampleSize);
@@ -682,7 +682,7 @@ gc_result ga_mixer_mix(ga_Mixer *m, void *buffer) {
 	}
 
 	/* mixBuffer will already be correct bps */
-	switch (fmt->bitsPerSample) {
+	switch (fmt->bits_per_sample) {
 		case 8:
 			for (i = 0; i < end; ++i) {
 				gc_int32 sample = m->mixBuffer[i];

@@ -49,7 +49,9 @@ int main(int argc, char **argv) {
 	ga_handle_play(handle);
 
 	ga_Device *dev = gau_manager_device(mgr);
-	printf("gaplay [%s %iHz %ich] %s\n", devicetypename(dev->dev_type), dev->format.sampleRate, dev->format.numChannels, argv[1]);
+	ga_Format hfmt;
+	ga_handle_format(handle, &hfmt);
+	printf("gaplay [%s %i -> %iHz %i -> %ich] %s\n", devicetypename(dev->dev_type), hfmt.sample_rate, dev->format.sample_rate, hfmt.num_channels, dev->format.num_channels, argv[1]);
 
 	int dur = ga_format_toSeconds(&dev->format, ga_handle_tell(handle, GA_TELL_PARAM_TOTAL));
 
@@ -62,7 +64,6 @@ int main(int argc, char **argv) {
 		printf(" (%.0f%%)\r", 100*cur/(float)dur);
 		fflush(stdout);
 		gc_thread_sleep(1000);
-		break;
 	}
 
 	putchar('\n');
