@@ -224,8 +224,12 @@ gc_bool ga_sample_source_ready(ga_SampleSource *sampleSrc, gc_int32 numSamples) 
 static ga_Memory *gaX_memory_create(void *data, gc_size size, gc_bool copy) {
 	ga_Memory *ret = gcX_ops->allocFunc(sizeof(ga_Memory));
 	ret->size = size;
-	if (copy) ret->data = memcpy(gcX_ops->allocFunc(size), data, size);
-	else ret->data = data;
+	if (data) {
+		if (copy) ret->data = memcpy(gcX_ops->allocFunc(size), data, size);
+		else ret->data = data;
+	} else {
+		ret->data = gcX_ops->allocFunc(size);
+	}
 	ret->refCount = 1;
 	return ret;
 }
