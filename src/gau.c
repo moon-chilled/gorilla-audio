@@ -156,70 +156,67 @@ void gau_on_finish_destroy(ga_Handle* in_finishedHandle, void* in_context)
 
 /* File-Based Data Source */
 typedef struct gau_DataSourceFileContext {
-  FILE* f;
-  gc_Mutex* fileMutex;
+	FILE* f;
+	gc_Mutex* fileMutex;
 } gau_DataSourceFileContext;
 
 typedef struct gau_DataSourceFile {
-  ga_DataSource dataSrc;
-  gau_DataSourceFileContext context;
+	ga_DataSource dataSrc;
+	gau_DataSourceFileContext context;
 } gau_DataSourceFile;
 
-gc_int32 gauX_data_source_file_read(void* in_context, void* in_dst, gc_int32 in_size, gc_int32 in_count)
-{
-  gau_DataSourceFileContext* ctx = (gau_DataSourceFileContext*)in_context;
-  gc_int32 ret;
-  gc_mutex_lock(ctx->fileMutex);
-  ret = (gc_int32)fread(in_dst, in_size, in_count, ctx->f);
-  gc_mutex_unlock(ctx->fileMutex);
-  return ret;
+static gc_int32 gauX_data_source_file_read(void* in_context, void* in_dst, gc_int32 in_size, gc_int32 in_count) {
+	gau_DataSourceFileContext* ctx = (gau_DataSourceFileContext*)in_context;
+	gc_int32 ret;
+	gc_mutex_lock(ctx->fileMutex);
+	ret = (gc_int32)fread(in_dst, in_size, in_count, ctx->f);
+	gc_mutex_unlock(ctx->fileMutex);
+	return ret;
 }
-gc_int32 gauX_data_source_file_seek(void* in_context, gc_int32 in_offset, gc_int32 in_origin)
-{
-  gau_DataSourceFileContext* ctx = (gau_DataSourceFileContext*)in_context;
-  gc_mutex_lock(ctx->fileMutex);
-  switch(in_origin)
-  {
-  case GA_SEEK_ORIGIN_SET: fseek(ctx->f, in_offset, SEEK_SET); break;
-  case GA_SEEK_ORIGIN_CUR: fseek(ctx->f, in_offset, SEEK_CUR); break;
-  case GA_SEEK_ORIGIN_END: fseek(ctx->f, in_offset, SEEK_END); break;
-  }
-  gc_mutex_unlock(ctx->fileMutex);
-  return 0;
+static gc_int32 gauX_data_source_file_seek(void* in_context, gc_int32 in_offset, gc_int32 in_origin) {
+	gau_DataSourceFileContext* ctx = (gau_DataSourceFileContext*)in_context;
+	gc_mutex_lock(ctx->fileMutex);
+	switch(in_origin) {
+		case GA_SEEK_ORIGIN_SET: fseek(ctx->f, in_offset, SEEK_SET); break;
+		case GA_SEEK_ORIGIN_CUR: fseek(ctx->f, in_offset, SEEK_CUR); break;
+		case GA_SEEK_ORIGIN_END: fseek(ctx->f, in_offset, SEEK_END); break;
+	}
+	gc_mutex_unlock(ctx->fileMutex);
+	return 0;
 }
-gc_int32 gauX_data_source_file_tell(void* in_context)
-{
-  gau_DataSourceFileContext* ctx = (gau_DataSourceFileContext*)in_context;
-  gc_int32 ret;
-  gc_mutex_lock(ctx->fileMutex);
-  ret = ftell(ctx->f);
-  gc_mutex_unlock(ctx->fileMutex);
-  return ret;
+static gc_int32 gauX_data_source_file_tell(void* in_context) {
+	gau_DataSourceFileContext* ctx = (gau_DataSourceFileContext*)in_context;
+	gc_int32 ret;
+	gc_mutex_lock(ctx->fileMutex);
+	ret = ftell(ctx->f);
+	gc_mutex_unlock(ctx->fileMutex);
+	return ret;
 }
-void gauX_data_source_file_close(void* in_context)
-{
-  gau_DataSourceFileContext* ctx = (gau_DataSourceFileContext*)in_context;
-  fclose(ctx->f);
-  gc_mutex_destroy(ctx->fileMutex);
+static void gauX_data_source_file_close(void* in_context) {
+	gau_DataSourceFileContext* ctx = (gau_DataSourceFileContext*)in_context;
+	fclose(ctx->f);
+	gc_mutex_destroy(ctx->fileMutex);
 }
-ga_DataSource* gau_data_source_create_file(const char* in_filename)
-{
-  gau_DataSourceFile* ret = gcX_ops->allocFunc(sizeof(gau_DataSourceFile));
-  ga_data_source_init(&ret->dataSrc);
-  ret->dataSrc.flags = GA_FLAG_SEEKABLE | GA_FLAG_THREADSAFE;
-  ret->dataSrc.readFunc = &gauX_data_source_file_read;
-  ret->dataSrc.seekFunc = &gauX_data_source_file_seek;
-  ret->dataSrc.tellFunc = &gauX_data_source_file_tell;
-  ret->dataSrc.closeFunc = &gauX_data_source_file_close;
-  ret->context.f = fopen(in_filename, "rb");
-  if(ret->context.f)
-    ret->context.fileMutex = gc_mutex_create();
-  else
-  {
-    gcX_ops->freeFunc(ret);
-    ret = 0;
-  }
-  return (ga_DataSource*)ret;
+static ga_DataSource* gauX_data_source_create_fp(FILE *fp) {
+	if (!fp) return NULL;
+
+	clearerr(fp);
+	rewind(fp);
+
+	gau_DataSourceFile* ret = gcX_ops->allocFunc(sizeof(gau_DataSourceFile));
+	ga_data_source_init(&ret->dataSrc);
+	ret->dataSrc.flags = GA_FLAG_SEEKABLE | GA_FLAG_THREADSAFE;
+	ret->dataSrc.readFunc = &gauX_data_source_file_read;
+	ret->dataSrc.seekFunc = &gauX_data_source_file_seek;
+	ret->dataSrc.tellFunc = &gauX_data_source_file_tell;
+	ret->dataSrc.closeFunc = &gauX_data_source_file_close;
+	ret->context.f = fp;
+	ret->context.fileMutex = gc_mutex_create();
+	return (ga_DataSource*)ret;
+}
+
+ga_DataSource *gau_data_source_create_file(const char *fname) {
+	return gau_data_source_create_fp(fopen(fname, "rb"));
 }
 
 /* File-Based Archived Data Source */
