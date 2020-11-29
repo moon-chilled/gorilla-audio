@@ -56,7 +56,10 @@ void gc_thread_destroy(gc_Thread* in_thread)
 #include <sched.h>
 
 static gc_int32 priorityLut[] = {
-  0, -10, 10, 19
+	[GC_THREAD_PRIORITY_NORMAL] = 0,
+	[GC_THREAD_PRIORITY_LOW] = 19,
+	[GC_THREAD_PRIORITY_HIGH] = -11,
+	[GC_THREAD_PRIORITY_HIGHEST] = -20
 };
 
 typedef struct LinuxThreadData {
@@ -77,34 +80,38 @@ static void* StaticThreadWrapper(void* in_context)
 }
 
 gc_Thread* gc_thread_create(gc_ThreadFunc in_threadFunc, void* in_context,
-                            gc_int32 in_priority, gc_int32 in_stackSize)
-{
-  int result = 0;
-  struct sched_param param;
-  gc_Thread* ret = gcX_ops->allocFunc(sizeof(gc_Thread));
-  LinuxThreadData* threadData = (LinuxThreadData*)gcX_ops->allocFunc(sizeof(LinuxThreadData));
-  threadData->threadFunc = in_threadFunc;
-  threadData->context = in_context;
+                            gc_int32 in_priority, gc_int32 in_stackSize) {
+	struct sched_param param;
+	gc_Thread* ret = gcX_ops->allocFunc(sizeof(gc_Thread));
+	if (!ret) goto fail;
+	LinuxThreadData* threadData = (LinuxThreadData*)gcX_ops->allocFunc(sizeof(LinuxThreadData));
+	if (!threadData) goto fail;
+	threadData->threadFunc = in_threadFunc;
+	threadData->context = in_context;
 
-  ret->threadObj = threadData;
-  ret->threadFunc = in_threadFunc;
-  ret->context = in_context;
-  ret->priority = in_priority;
-  ret->stackSize = in_stackSize;
+	ret->threadObj = threadData;
+	ret->threadFunc = in_threadFunc;
+	ret->context = in_context;
+	ret->priority = in_priority;
+	ret->stackSize = in_stackSize;
 
-  pthread_mutex_init(&threadData->suspendMutex, NULL);
-  pthread_mutex_lock(&threadData->suspendMutex);
+	pthread_mutex_init(&threadData->suspendMutex, NULL);
+	pthread_mutex_lock(&threadData->suspendMutex);
 
-  result = pthread_attr_init(&threadData->attr);
+	if (pthread_attr_init(&threadData->attr) != 0) ; // report error
 #if defined(__APPLE__) || defined(__ANDROID__) || defined(__FreeBSD__) || defined(__OpenBSD__)
-  param.sched_priority = priorityLut[in_priority];
+	param.sched_priority = priorityLut[in_priority];
 #elif defined(__linux__)
-  param.__sched_priority = priorityLut[in_priority];
+	param.__sched_priority = priorityLut[in_priority];
 #endif /* __APPLE__ */
-  pthread_attr_setschedparam(&threadData->attr, &param);
-  pthread_create(&threadData->thread, &threadData->attr, StaticThreadWrapper, threadData);
+	if (pthread_attr_setschedparam(&threadData->attr, &param) != 0) ; //report error
+	if (pthread_create(&threadData->thread, &threadData->attr, StaticThreadWrapper, threadData) != 0) goto fail;
 
-  return ret;
+	return ret;
+fail:
+	if (ret) gcX_ops->freeFunc(ret->threadObj);
+	gcX_ops->freeFunc(ret);
+	return NULL;
 }
 void gc_thread_run(gc_Thread* in_thread)
 {

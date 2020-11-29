@@ -42,24 +42,26 @@ typedef struct gau_Manager gau_Manager;
  *  \ingroup gau_Manager
  *  \defgroup threadPolicy Thread Policies
  */
-#define GAU_THREAD_POLICY_UNKNOWN 0 /**< Unknown thread policy. \ingroup threadPolicy */
-#define GAU_THREAD_POLICY_SINGLE 1 /**< Single-threaded policy (does not use background threads). \ingroup threadPolicy */
-#define GAU_THREAD_POLICY_MULTI 2 /**< Multi-threaded mode (uses background threads). \ingroup threadPolicy */
+typedef enum {
+	GauThreadPolicy_Unknown, /**< Unknown thread policy. \ingroup threadPolicy */
+	GauThreadPolicy_Single,  /**< Single-threaded policy (does not use background threads). \ingroup threadPolicy */
+	GauThreadPolicy_Multi,   /**< Multi-threaded mode (uses background threads). \ingroup threadPolicy */
+} GauThreadPolicy;
 
 /** Creates an audio manager.
  *
  *  \ingroup gau_Manager
  */
-gau_Manager* gau_manager_create();
+gau_Manager* gau_manager_create(void);
 
 /** Creates an audio manager (customizable).
 *
 *  \ingroup gau_Manager
 */
-gau_Manager* gau_manager_create_custom(gc_int32 in_devType,
-                                       gc_int32 in_threadPolicy,
-                                       gc_int32 in_numBuffers,
-                                       gc_int32 in_bufferSamples);
+gau_Manager* gau_manager_create_custom(GaDeviceType *dev_type,
+                                       GauThreadPolicy thread_policy,
+                                       gc_int32 *num_buffers,
+                                       gc_int32 *num_samples);
 
 /** Updates an audio manager.
  *
@@ -110,7 +112,7 @@ ga_DataSource* gau_data_source_create_file(const char* in_filename);
  *
  *  \ingroup concreteData
  */
-ga_DataSource* gau_data_source_create_file_arc(const char* in_filename, gc_int32 in_offset, gc_int32 in_size);
+ga_DataSource* gau_data_source_create_file_arc(const char* in_filename, gc_size in_offset, gc_size in_size);
 
 /** Creates a data source of bytes from a block of shared memory.
  *

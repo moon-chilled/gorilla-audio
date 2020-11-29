@@ -14,13 +14,13 @@
 	_ptr; \
 })
 
-const char *devicetypename(ga_DeviceType type) {
+const char *devicetypename(GaDeviceType type) {
 	switch (type) {
-		case ga_DeviceType_OSS: return "oss";
-		case ga_DeviceType_XAudio2: return "xaudio2";
-		case ga_DeviceType_PulseAudio: return "pulse";
-		case ga_DeviceType_ALSA: return "alsa";
-		case ga_DeviceType_OpenAL: return "al";
+		case GaDeviceType_OSS: return "oss";
+		case GaDeviceType_XAudio2: return "xaudio2";
+		case GaDeviceType_PulseAudio: return "pulse";
+		case GaDeviceType_ALSA: return "alsa";
+		case GaDeviceType_OpenAL: return "al";
 		default: return "???";
 	}
 }
@@ -36,14 +36,12 @@ int main(int argc, char **argv) {
 	}
 
 	gc_initialize(NULL);
-	//gau_Manager *mgr = gau_manager_create_custom(ga_DeviceType_ALSA, GAU_THREAD_POLICY_MULTI, 4, 512);
-	//gau_Manager *mgr = gau_manager_create_custom(ga_DeviceType_PulseAudio, GAU_THREAD_POLICY_MULTI, 4, 512);
-	gau_Manager *mgr = check(gau_manager_create_custom(ga_DeviceType_Default, GAU_THREAD_POLICY_MULTI, 4, 512), "Unable to create audio device");
+	gau_Manager *mgr = check(gau_manager_create_custom(&(GaDeviceType){GaDeviceType_Default}, GauThreadPolicy_Multi, &(int){4}, &(int){512}), "Unable to create audio device");
 	ga_Mixer *mixer = check(gau_manager_mixer(mgr), "Unable to get mixer from manager");
 	ga_StreamManager *smgr = gau_manager_streamManager(mgr);
 
-	//ga_Handle *handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GAU_AUDIO_TYPE_OGG, NULL, NULL, NULL);
 	ga_Handle *handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GAU_AUDIO_TYPE_WAV, NULL, NULL, NULL);
+	//ga_Handle *handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GAU_AUDIO_TYPE_WAV, NULL, NULL, NULL);
 	check(handle, "Could not load file '%s'.", argv[1]);
 	//ga_handle_setParamf(handle, GA_HANDLE_PARAM_PAN, 0);
 

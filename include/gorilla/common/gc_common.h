@@ -35,9 +35,9 @@ extern "C"
  *  \ingroup gc_SystemOps
  */
 typedef struct gc_SystemOps {
-  void* (*allocFunc)(gc_uint32 in_size);
-  void* (*reallocFunc)(void* in_ptr, gc_uint32 in_size);
-  void (*freeFunc)(void* in_ptr);
+	void* (*allocFunc)(gc_size in_size);
+	void* (*reallocFunc)(void* in_ptr, gc_size in_size);
+	void (*freeFunc)(void* in_ptr);
 } gc_SystemOps;
 extern gc_SystemOps* gcX_ops;
 
@@ -53,7 +53,7 @@ extern gc_SystemOps* gcX_ops;
  *  \return GC_SUCCESS if library initialized successfully. GC_ERROR_GENERIC
  *          if not.
  */
-gc_result gc_initialize(gc_SystemOps* in_callbacks);
+gc_result gc_initialize(gc_SystemOps *in_callbacks);
 
 /** Shutdown the Gorilla library.
  *
@@ -64,7 +64,7 @@ gc_result gc_initialize(gc_SystemOps* in_callbacks);
  *  \return GC_SUCCESS if the library shut down successfully. GC_ERROR_GENERIC
  *          if not.
  */
-gc_result gc_shutdown();
+gc_result gc_shutdown(void);
 
 /***********************/
 /**  Circular Buffer  **/
@@ -84,22 +84,22 @@ gc_result gc_shutdown();
  *
  *  \ingroup gc_CircBuffer
  *  \warning While it can be read/written from two different threads, the
- *           object’s memory management policy is Single Client, since there
+ *           object's memory management policy is Single Client, since there
  *           is only one owner responsible for creation/destruction of the
  *           thread.
  */
 typedef struct gc_CircBuffer {
-  gc_uint8* data;
-  gc_uint32 dataSize;
-  volatile gc_uint32 nextAvail;
-  volatile gc_uint32 nextFree;
+	gc_uint8 *data;
+	gc_size dataSize;
+	volatile gc_size nextAvail;
+	volatile gc_size nextFree;
 } gc_CircBuffer;
 
 /** Create a circular buffer object.
  *
  *  \ingroup gc_CircBuffer
  */
-gc_CircBuffer* gc_buffer_create(gc_uint32 in_size);
+gc_CircBuffer* gc_buffer_create(gc_size in_size);
 
 /** Destroy a circular buffer object.
  *
@@ -111,13 +111,13 @@ gc_result gc_buffer_destroy(gc_CircBuffer* in_buffer);
  *
  *  \ingroup gc_CircBuffer
  */
-gc_uint32 gc_buffer_bytesAvail(gc_CircBuffer* in_buffer);
+gc_size gc_buffer_bytesAvail(gc_CircBuffer* in_buffer);
 
 /** Retrieve number of free bytes to write to a circular buffer object.
  *
  *  \ingroup gc_CircBuffer
  */
-gc_uint32 gc_buffer_bytesFree(gc_CircBuffer* in_buffer);
+gc_size gc_buffer_bytesFree(gc_CircBuffer* in_buffer);
 
 /** Retrieve write buffer(s) of free data in a circular buffer object.
  *
@@ -125,9 +125,9 @@ gc_uint32 gc_buffer_bytesFree(gc_CircBuffer* in_buffer);
  *  \warning You must call gc_buffer_produce() to tell the buffer how many
  *           bytes you wrote to it.
  */
-gc_result gc_buffer_getFree(gc_CircBuffer* in_buffer, gc_uint32 in_numBytes,
-                            void** out_dataA, gc_uint32* out_sizeA,
-                            void** out_dataB, gc_uint32* out_sizeB);
+gc_result gc_buffer_getFree(gc_CircBuffer* in_buffer, gc_size in_numBytes,
+                            void** out_dataA, gc_size* out_sizeA,
+                            void** out_dataB, gc_size* out_sizeB);
 
 /** Write data to the circular buffer.
  *
@@ -138,7 +138,7 @@ gc_result gc_buffer_getFree(gc_CircBuffer* in_buffer, gc_uint32 in_numBytes,
  *           bytes you wrote to it.
  */
 gc_result gc_buffer_write(gc_CircBuffer* in_buffer, void* in_data,
-                          gc_uint32 in_numBytes);
+                          gc_size in_numBytes);
 
 /** Retrieve read buffer(s) of available data in a circular buffer object.
  *
@@ -146,9 +146,9 @@ gc_result gc_buffer_write(gc_CircBuffer* in_buffer, void* in_data,
  *  \warning You must call gc_buffer_consume() to tell the buffer how many
  *           bytes you read from it.
  */
-gc_result gc_buffer_getAvail(gc_CircBuffer* in_buffer, gc_uint32 in_numBytes,
-                             void** out_dataA, gc_uint32* out_sizeA,
-                             void** out_dataB, gc_uint32* out_sizeB);
+gc_result gc_buffer_getAvail(gc_CircBuffer* in_buffer, gc_size in_numBytes,
+                             void** out_dataA, gc_size* out_sizeA,
+                             void** out_dataB, gc_size* out_sizeB);
 
 /** Read data from the circular buffer.
  *
@@ -159,19 +159,19 @@ gc_result gc_buffer_getAvail(gc_CircBuffer* in_buffer, gc_uint32 in_numBytes,
  *           bytes you read from it.
  */
 void gc_buffer_read(gc_CircBuffer* in_buffer, void* in_data,
-                    gc_uint32 in_numBytes);
+                    gc_size in_numBytes);
 
 /** Tell the buffer that bytes have been written to it.
  *
  *  \ingroup gc_CircBuffer
  */
-void gc_buffer_produce(gc_CircBuffer* in_buffer, gc_uint32 in_numBytes);
+void gc_buffer_produce(gc_CircBuffer* in_buffer, gc_size in_numBytes);
 
 /** Tell the buffer that bytes have been read from it.
  *
  *  \ingroup gc_CircBuffer
  */
-void gc_buffer_consume(gc_CircBuffer* in_buffer, gc_uint32 in_numBytes);
+void gc_buffer_consume(gc_CircBuffer* in_buffer, gc_size in_numBytes);
 
 /***********************/
 /**  Linked List  **/

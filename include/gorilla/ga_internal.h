@@ -12,11 +12,18 @@
 #ifndef _GORILLA_GA_INTERNAL_H
 #define _GORILLA_GA_INTERNAL_H
 
+#include <stdatomic.h>
+#include <assert.h>
+
 #include "gorilla/common/gc_common.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+typedef _Atomic gc_int32 gc_atomic_int32;
+typedef _Atomic gc_uint32 gc_atomic_uint32;
+typedef _Atomic gc_size gc_atomic_size;
 
 /************/
 /*  Device  */
@@ -76,9 +83,9 @@ typedef struct gaX_DeviceImpl gaX_DeviceImpl;
  *           device implementation. Instead, you should use ga_device_open().
  */
 struct ga_Device {
-	ga_DeviceType dev_type;
-	gc_int32 num_buffers;
-	gc_int32 num_samples;
+	GaDeviceType dev_type;
+	gc_uint32 num_buffers;
+	gc_uint32 num_samples;
 	ga_Format format;
 
 	gaX_DeviceProcs procs;
@@ -104,7 +111,7 @@ struct ga_Device {
  *  \param in_count Number of elements to read.
  *  \return Total number of bytes read into the destination buffer.
  */
-typedef gc_int32 (*tDataSourceFunc_Read)(void* in_context, void* in_dst, gc_int32 in_size, gc_int32 in_count);
+typedef gc_size (*tDataSourceFunc_Read)(void *context, void *dst, gc_size size, gc_size count);
 
 /** Data source seek callback prototype.
  *
@@ -118,7 +125,7 @@ typedef gc_int32 (*tDataSourceFunc_Read)(void* in_context, void* in_dst, gc_int3
  *           an invalid seek request.
  *  \todo Define a less-confusing contract for extending/defining this function.
  */
-typedef gc_result (*tDataSourceFunc_Seek)(void* in_context, gc_int32 in_offset, gc_int32 in_origin);
+typedef gc_result (*tDataSourceFunc_Seek)(void *context, gc_ssize in_offset, GaSeekOrigin whence);
 
 /** Data source tell callback prototype.
  *
@@ -126,14 +133,14 @@ typedef gc_result (*tDataSourceFunc_Seek)(void* in_context, gc_int32 in_offset, 
  *  \param in_context User context (pointer to the first byte after the data source).
  *  \return The current data source read position.
  */
-typedef gc_int32 (*tDataSourceFunc_Tell)(void* in_context);
+typedef gc_size (*tDataSourceFunc_Tell)(void *context);
 
 /** Data source close callback prototype.
  *
  *  \ingroup intDataSource
  *  \param in_context User context (pointer to the first byte after the data source).
  */
-typedef void (*tDataSourceFunc_Close)(void* in_context);
+typedef void (*tDataSourceFunc_Close)(void *context);
 
 /** Abstract data source data structure [\ref MULTI_CLIENT].
  *
@@ -145,12 +152,12 @@ typedef void (*tDataSourceFunc_Close)(void* in_context);
  *  \todo Design a clearer/better system for easily extending this data type.
  */
 struct ga_DataSource {
-  tDataSourceFunc_Read readFunc; /**< Internal read callback. */
-  tDataSourceFunc_Seek seekFunc; /**< Internal seek callback (optional). */
-  tDataSourceFunc_Tell tellFunc; /**< Internal tell callback (optional). */
-  tDataSourceFunc_Close closeFunc; /**< Internal close callback (optional). */
-  _Atomic gc_int32 refCount; /**< Reference count. */
-  gc_int32 flags; /**< Flags defining which functionality this data source supports (see [\ref globDefs]). */
+	tDataSourceFunc_Read readFunc; /**< Internal read callback. */
+	tDataSourceFunc_Seek seekFunc; /**< Internal seek callback (optional). */
+	tDataSourceFunc_Tell tellFunc; /**< Internal tell callback (optional). */
+	tDataSourceFunc_Close closeFunc; /**< Internal close callback (optional). */
+	gc_atomic_uint32 refCount; /**< Reference count. */
+	GaDataAccessFlags flags; /**< Flags defining which functionality this data source supports (see [\ref globDefs]). */
 };
 
 /** Initializes the reference count and other default values.
@@ -165,12 +172,12 @@ void ga_data_source_init(ga_DataSource* in_dataSrc);
 /*******************/
 /*  Sample Source  */
 /*******************/
-typedef gc_int32 (*tSampleSourceFunc_Read)(void* in_context, void* in_dst, gc_int32 in_numSamples,
+typedef gc_size (*tSampleSourceFunc_Read)(void* in_context, void* in_dst, gc_size in_numSamples,
                                            tOnSeekFunc in_onSeekFunc, void* in_seekContext);
-typedef gc_int32 (*tSampleSourceFunc_End)(void* in_context);
-typedef gc_bool (*tSampleSourceFunc_Ready)(void* in_context, gc_int32 in_numSamples);
-typedef gc_int32 (*tSampleSourceFunc_Seek)(void* in_context, gc_int32 in_sampleOffset);
-typedef gc_int32 (*tSampleSourceFunc_Tell)(void* in_context, gc_int32* out_totalSamples);
+typedef gc_bool (*tSampleSourceFunc_End)(void* in_context);
+typedef gc_bool (*tSampleSourceFunc_Ready)(void* in_context, gc_size in_numSamples);
+typedef gc_result (*tSampleSourceFunc_Seek)(void* in_context, gc_size in_sampleOffset);
+typedef gc_result (*tSampleSourceFunc_Tell)(void* in_context, gc_size *samples, gc_size *totalSamples);
 typedef void (*tSampleSourceFunc_Close)(void* in_context);
 
 struct ga_SampleSource {
@@ -181,8 +188,8 @@ struct ga_SampleSource {
   tSampleSourceFunc_Tell tellFunc; /* OPTIONAL */
   tSampleSourceFunc_Close closeFunc; /* OPTIONAL */
   ga_Format format;
-  _Atomic gc_int32 refCount;
-  gc_int32 flags;
+  gc_atomic_uint32 refCount;
+  GaDataAccessFlags flags;
 };
 
 void ga_sample_source_init(ga_SampleSource* in_sampleSrc);
@@ -193,17 +200,17 @@ void ga_sample_source_init(ga_SampleSource* in_sampleSrc);
 struct ga_Memory {
 	void *data;
 	gc_size size;
-	_Atomic gc_int32 refCount;
+	gc_atomic_uint32 refCount;
 };
 
 /***********/
 /*  Sound  */
 /***********/
 struct ga_Sound {
-  ga_Memory* memory;
-  ga_Format format;
-  gc_int32 numSamples;
-  _Atomic gc_int32 refCount;
+	ga_Memory* memory;
+	ga_Format format;
+	gc_size numSamples;
+	gc_atomic_uint32 refCount;
 };
 
 /************/
@@ -217,32 +224,32 @@ struct ga_Sound {
 #define GA_HANDLE_STATE_DESTROYED 5
 
 struct ga_Handle {
-  ga_Mixer* mixer;
-  ga_FinishCallback callback;
-  void* context;
-  gc_int32 state;
-  gc_float32 gain;
-  gc_float32 pitch;
-  gc_float32 pan;
-  gc_Link dispatchLink;
-  gc_Link mixLink;
-  gc_Mutex* handleMutex;
-  ga_SampleSource* sampleSrc;
-  volatile gc_int32 finished;
+	ga_Mixer* mixer;
+	ga_FinishCallback callback;
+	void* context;
+	gc_int32 state;
+	gc_float32 gain;
+	gc_float32 pitch;
+	gc_float32 pan;
+	gc_Link dispatchLink;
+	gc_Link mixLink;
+	gc_Mutex* handleMutex;
+	ga_SampleSource* sampleSrc;
+	volatile gc_int32 finished;
 };
 
 /************/
 /*  Mixer  */
 /************/
 struct ga_Mixer {
-  ga_Format format;
-  ga_Format mixFormat;
-  gc_int32 numSamples;
-  gc_int32* mixBuffer;
-  gc_Link dispatchList;
-  gc_Mutex* dispatchMutex;
-  gc_Link mixList;
-  gc_Mutex* mixMutex;
+	ga_Format format;
+	ga_Format mixFormat;
+	gc_uint32 numSamples;
+	gc_int32* mixBuffer;
+	gc_Link dispatchList;
+	gc_Mutex* dispatchMutex;
+	gc_Link mixList;
+	gc_Mutex* mixMutex;
 };
 
 
@@ -258,7 +265,7 @@ struct ga_BufferedStream {
   gc_Mutex* produceMutex;
   gc_Mutex* seekMutex;
   gc_Mutex* readMutex;
-  _Atomic gc_int32 refCount;
+  gc_atomic_uint32 refCount;
   gc_Link tellJumps;
   ga_Format format;
   gc_int32 seek;
@@ -268,6 +275,15 @@ struct ga_BufferedStream {
   gc_int32 flags;
   gc_int32 bufferSize;
 };
+
+static inline gc_bool gcX_decref(gc_atomic_uint32 *count) {
+	gc_atomic_uint32 old = atomic_fetch_sub(count, 1);
+	assert(old);
+	return old == 1;
+}
+
+#define min(x, y) ((x) < (y) ? (x) : (y))
+#define max(x, y) ((x) > (y) ? (x) : (y))
 
 #ifdef __cplusplus
 }

@@ -71,6 +71,7 @@ static gc_result gaX_close(ga_Device *dev) {
 	// transparently by alsa in the event that the library user creates and
 	// then destroys multiple devices
 	// but freeing it avoids false positives from valgrind/memtest
+	return GC_SUCCESS;
 }
 
 static gc_int32 gaX_check(ga_Device *dev) {
@@ -87,6 +88,7 @@ static gc_result gaX_queue(ga_Device *dev, void *buf) {
 	if (written == -ESTRPIPE) return GC_ERROR_GENERIC; // a suspend event occurred (stream is suspended and waiting for an application recovery)
 
 	if (written != dev->num_samples) return GC_ERROR_GENERIC; // underrun/signal
+	return GC_SUCCESS;
 }
 
 gaX_DeviceProcs gaX_deviceprocs_ALSA = { gaX_open, gaX_check, gaX_queue, gaX_close };

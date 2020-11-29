@@ -56,8 +56,8 @@ typedef struct {
 } GaWavData;
 
 void gauX_data_source_advance(ga_DataSource *data_src, gc_int32 delta) {
-	if(ga_data_source_flags(data_src) & GA_FLAG_SEEKABLE) {
-		ga_data_source_seek(data_src, delta, GA_SEEK_ORIGIN_CUR);
+	if(ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable) {
+		ga_data_source_seek(data_src, delta, GaSeekOrigin_Cur);
 	} else {
 		char buffer[256];
 		while(delta > 0) {
@@ -74,7 +74,6 @@ static gc_result gauX_sample_source_wav_load_header(ga_DataSource *data_src, GaW
 		return GC_ERROR_GENERIC;
 
 	/* TODO: Make this work with non-blocking reads? Need to get this data... */
-	gc_bool seekable = ga_data_source_flags(data_src) & GA_FLAG_SEEKABLE;
 	gc_int32 data_offset = 0;
 	char id[5];
 	id[4] = 0;
@@ -121,8 +120,8 @@ static gc_result gauX_sample_source_wav_load_header(ga_DataSource *data_src, GaW
 typedef struct gau_SampleSourceWavContext {
 	ga_DataSource *data_src;
 	GaWavData wav_header;
-	gc_int32 sample_size;
-	gc_int32 pos;
+	gc_uint32 sample_size;
+	gc_atomic_size pos;
 	gc_Mutex *pos_mutex;
 } gau_SampleSourceWavContext;
 
@@ -131,37 +130,36 @@ typedef struct gau_SampleSourceWav {
 	gau_SampleSourceWavContext context;
 } gau_SampleSourceWav;
 
-static gc_int32 gauX_sample_source_wav_read(void *context, void *dst, gc_int32 numSamples,
+static gc_size gauX_sample_source_wav_read(void *context, void *dst, gc_size numSamples,
                                             tOnSeekFunc onSeekFunc, void *seekContext) {
 	gau_SampleSourceWavContext *ctx = &((gau_SampleSourceWav*)context)->context;
-	gc_int32 numRead = 0;
-	gc_int32 totalSamples = ctx->wav_header.data_size / ctx->sample_size;
+	gc_size numRead = 0;
+	gc_size totalSamples = ctx->wav_header.data_size / ctx->sample_size;
 	gc_mutex_lock(ctx->pos_mutex);
 	if (ctx->pos + numSamples > totalSamples) numSamples = totalSamples - ctx->pos;
-	if (numSamples > 0) {
-		numRead = ga_data_source_read(ctx->data_src, dst, ctx->sample_size, numSamples);
-		ctx->pos += numRead;
-	}
+	numRead = ga_data_source_read(ctx->data_src, dst, ctx->sample_size, numSamples);
+	ctx->pos += numRead;
 	gc_mutex_unlock(ctx->pos_mutex);
 	return numRead;
 }
-static gc_int32 gauX_sample_source_wav_end(void *context) {
+static gc_bool gauX_sample_source_wav_end(void *context) {
 	gau_SampleSourceWavContext *ctx = &((gau_SampleSourceWav*)context)->context;
-	gc_int32 totalSamples = ctx->wav_header.data_size / ctx->sample_size;
-	return ctx->pos == totalSamples; /* No need to mutex this use */
+	gc_size totalSamples = ctx->wav_header.data_size / ctx->sample_size;
+	return atomic_load(&ctx->pos) == totalSamples; /* No need to mutex this use */
 }
-static gc_result gauX_sample_source_wav_seek(void *context, gc_int32 sampleOffset) {
+static gc_result gauX_sample_source_wav_seek(void *context, gc_size sample_offset) {
 	gau_SampleSourceWavContext *ctx = &((gau_SampleSourceWav*)context)->context;
 	gc_mutex_lock(ctx->pos_mutex);
-	gc_result ret = ga_data_source_seek(ctx->data_src, ctx->wav_header.data_offset + sampleOffset * ctx->sample_size, GA_SEEK_ORIGIN_SET);
-	if(ret >= 0) ctx->pos = sampleOffset;
+	gc_result ret = ga_data_source_seek(ctx->data_src, ctx->wav_header.data_offset + sample_offset * ctx->sample_size, GaSeekOrigin_Set);
+	if (ret == GC_SUCCESS) ctx->pos = sample_offset;
 	gc_mutex_unlock(ctx->pos_mutex);
 	return ret;
 }
-static gc_int32 gauX_sample_source_wav_tell(void *context, gc_int32 *out_totalSamples) {
+static gc_result gauX_sample_source_wav_tell(void *context, gc_size *cur, gc_size *total) {
 	gau_SampleSourceWavContext *ctx = &((gau_SampleSourceWav*)context)->context;
-	if (out_totalSamples) *out_totalSamples = ctx->wav_header.data_size / ctx->sample_size;
-	return ctx->pos; /* No need to mutex this use */
+	if (total) *total = ctx->wav_header.data_size / ctx->sample_size;
+	if (cur) *cur = atomic_load(&ctx->pos);
+	return GC_SUCCESS;
 }
 static void gauX_sample_source_wav_close(void *context) {
 	gau_SampleSourceWavContext *ctx = &((gau_SampleSourceWav*)context)->context;
@@ -173,10 +171,10 @@ ga_SampleSource *gau_sample_source_create_wav(ga_DataSource *data_src) {
 	gc_result validHeader;
 	gau_SampleSourceWav *ret = gcX_ops->allocFunc(sizeof(gau_SampleSourceWav));
 	gau_SampleSourceWavContext *ctx = &ret->context;
-	gc_bool seekable = ga_data_source_flags(data_src) & GA_FLAG_SEEKABLE;
+	gc_bool seekable = ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable;
 	ga_sample_source_init(&ret->sample_src);
-	ret->sample_src.flags = GA_FLAG_THREADSAFE;
-	if (seekable) ret->sample_src.flags |= GA_FLAG_SEEKABLE;
+	ret->sample_src.flags = GaDataAccessFlag_Threadsafe;
+	if (seekable) ret->sample_src.flags |= GaDataAccessFlag_Seekable;
 	ret->sample_src.readFunc = &gauX_sample_source_wav_read;
 	ret->sample_src.endFunc = &gauX_sample_source_wav_end;
 	if (seekable) {
