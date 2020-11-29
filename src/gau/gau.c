@@ -216,7 +216,7 @@ static ga_DataSource* gauX_data_source_create_fp(FILE *fp) {
 }
 
 ga_DataSource *gau_data_source_create_file(const char *fname) {
-	return gau_data_source_create_fp(fopen(fname, "rb"));
+	return gauX_data_source_create_fp(fopen(fname, "rb"));
 }
 
 /* File-Based Archived Data Source */
