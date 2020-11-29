@@ -155,9 +155,10 @@ set(GORILLA_INCLUDE
 
 set(GORILLA_SRC
   ${SRC_DIR}/ga.c
-  ${SRC_DIR}/gau.c
+  ${SRC_DIR}/devices/ga_dummy.c
   ${SRC_DIR}/ga_stream.c
-  ${SRC_DIR}/devices/ga_dummy.c)
+  ${SRC_DIR}/gau/gau.c
+  ${SRC_DIR}/gau/ogg-vorbis.c ${SRC_DIR}/gau/wav.c)
 
 set(GORILLA_COMMON_INCLUDE
   ${INCLUDE_DIR}/gorilla/common/gc_common.h
