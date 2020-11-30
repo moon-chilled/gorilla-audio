@@ -1,5 +1,3 @@
-syntax: glob
-
 # Vim turds
 .*.swp
 .*.swo
@@ -7,35 +5,22 @@ syntax: glob
 .*.swm
 .*.swl
 
-# Test turds
 *.exe
 *.wav
 *.ogg
 
-# CMake turds
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-*.vcproj
-*.vcxproj
-Makefile
-*.sln
-*.suo
-
-# Like, the actual library
+# What we're here for
 *.obj
 *.idb
-build/
+/build/
 *.pdb
 *.user
 *.ncb
 BuildLog.htm
 gorilla.lib
 gorillaD.lib
-docs/output/*
-bin/
+/docs/output/
+/bin/
 *.ilk
 *.a
 *.so
-
-#ext/libogg/include/config.h
