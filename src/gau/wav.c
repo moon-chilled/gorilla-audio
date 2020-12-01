@@ -145,7 +145,7 @@ static gc_size gauX_sample_source_wav_read(void *context, void *dst, gc_size num
 static gc_bool gauX_sample_source_wav_end(void *context) {
 	gau_SampleSourceWavContext *ctx = &((gau_SampleSourceWav*)context)->context;
 	gc_size totalSamples = ctx->wav_header.data_size / ctx->sample_size;
-	return atomic_load(&ctx->pos) == totalSamples; /* No need to mutex this use */
+	return atomic_load(&ctx->pos) == totalSamples;
 }
 static gc_result gauX_sample_source_wav_seek(void *context, gc_size sample_offset) {
 	gau_SampleSourceWavContext *ctx = &((gau_SampleSourceWav*)context)->context;

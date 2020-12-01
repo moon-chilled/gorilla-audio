@@ -189,8 +189,7 @@ gc_result ga_sample_source_seek(ga_SampleSource *sampleSrc, gc_size sampleOffset
 gc_result ga_sample_source_tell(ga_SampleSource *sampleSrc, gc_size *samples, gc_size *totalSamples) {
 	if (!sampleSrc->tellFunc) return GC_ERROR_GENERIC;
 
-	sampleSrc->tellFunc(sampleSrc, samples, totalSamples);
-	return GC_SUCCESS;
+	return sampleSrc->tellFunc(sampleSrc, samples, totalSamples);
 }
 
 GaDataAccessFlags ga_sample_source_flags(ga_SampleSource *sampleSrc) {
@@ -365,7 +364,7 @@ void ga_sound_acquire(ga_Sound *sound) {
 }
 
 void ga_sound_release(ga_Sound *sound) {
-	if (gcX_decref(&sound->refCount)) raX_sound_destroy(sound);
+	if (gcX_decref(&sound->refCount)) gaX_sound_destroy(sound);
 }
 
 /* Handle Functions */
