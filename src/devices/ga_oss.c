@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-static gc_result gaX_open(ga_Device *dev) {
+static ga_result gaX_open(GaDevice *dev) {
 	int fd = open("/dev/dsp", O_WRONLY, O_NONBLOCK); //todo configurable
 	if (fd < 0) goto cleanup;
 
@@ -58,25 +58,25 @@ static gc_result gaX_open(ga_Device *dev) {
 	if (ioctl(fd, SNDCTL_DSP_SETFMT, &(int){fmt}) == -1) goto cleanup;
 	dev->impl = (void*)(gc_size)fd;
 
-	return GC_SUCCESS;
+	return GA_OK;
 
 cleanup:
 	if (fd >= 0) close(fd);
-	return GC_ERROR_GENERIC;
+	return GA_ERR_GENERIC;
 }
 
-static gc_result gaX_close(ga_Device *dev) {
-	return close((int)(gc_size)dev->impl) ? GC_ERROR_GENERIC : GC_SUCCESS;
+static ga_result gaX_close(GaDevice *dev) {
+	return close((int)(gc_size)dev->impl) ? GA_ERR_GENERIC : GA_OK;
 }
 
-static gc_int32 gaX_check(ga_Device *dev) {
+static gc_int32 gaX_check(GaDevice *dev) {
 	return dev->num_buffers; //TODO is this right?
 }
 
-static gc_result gaX_queue(ga_Device *dev, void *buf) {
+static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	gc_ssize sz = dev->num_samples * ga_format_sample_size(&dev->format);
 	gc_ssize written = write((int)(gc_size)dev->impl, buf, sz);
-	return sz==written ? GC_SUCCESS : GC_ERROR_GENERIC;
+	return sz==written ? GA_OK : GA_ERR_GENERIC;
 }
 
-gaX_DeviceProcs gaX_deviceprocs_OSS = { gaX_open, gaX_check, gaX_queue, gaX_close };
+GaXDeviceProcs gaX_deviceprocs_OSS = { gaX_open, gaX_check, gaX_queue, gaX_close };

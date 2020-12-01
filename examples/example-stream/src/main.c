@@ -3,24 +3,24 @@
 
 #include <stdio.h>
 
-static void setFlagAndDestroyOnFinish(ga_Handle *handle, void *context) {
+static void setFlagAndDestroyOnFinish(GaHandle *handle, void *context) {
 	*(gc_int32*)context = 1;
 	ga_handle_destroy(handle);
 }
 
 int main(void) {
-	gau_Manager *mgr;
-	ga_Mixer *mixer;
-	ga_StreamManager *streamMgr;
-	ga_Handle *stream;
-	gau_SampleSourceLoop *loopSrc = 0;
-	gau_SampleSourceLoop **pLoopSrc = &loopSrc;
+	GauManager *mgr;
+	GaMixer *mixer;
+	GaStreamManager *streamMgr;
+	GaHandle *stream;
+	GauSampleSourceLoop *loopSrc = 0;
+	GauSampleSourceLoop **pLoopSrc = &loopSrc;
 	gc_int32 loop = 0;
 	gc_int32 quit = 0;
 
 	/* Initialize library + manager */
-	gc_initialize(0);
-	mgr = gau_manager_create_custom(ga_DeviceType_Default, GAU_THREAD_POLICY_SINGLE, 4, 512);
+	ga_initialize_systemops(0);
+	mgr = gau_manager_create_custom(GaDeviceType_Default, GAU_THREAD_POLICY_SINGLE, 4, 512);
 	mixer = gau_manager_mixer(mgr);
 	streamMgr = gau_manager_streamManager(mgr);
 
@@ -35,12 +35,12 @@ int main(void) {
 	while(!quit) {
 		gau_manager_update(mgr);
 		printf("%d / %d\n", ga_handle_tell(stream, GA_TELL_PARAM_CURRENT), ga_handle_tell(stream, GA_TELL_PARAM_TOTAL));
-		gc_thread_sleep(1);
+		ga_thread_sleep(1);
 	}
 
 	/* Clean up library + manager */
 	gau_manager_destroy(mgr);
-	gc_shutdown();
+	ga_shutdown_systemops();
 
 	return 0;
 }

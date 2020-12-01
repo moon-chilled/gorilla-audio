@@ -8,13 +8,13 @@
 #include <stdio.h>
 #include <assert.h>
 
-struct gaX_DeviceImpl {
+struct GaXDeviceImpl {
 	pa_simple *interface;
 };
 
-static gc_result gaX_open(ga_Device *dev) {
-	dev->impl = gcX_ops->allocFunc(sizeof(gaX_DeviceImpl));
-	if (!dev->impl) return GC_ERROR_GENERIC;
+static ga_result gaX_open(GaDevice *dev) {
+	dev->impl = gcX_ops->allocFunc(sizeof(GaXDeviceImpl));
+	if (!dev->impl) return GA_ERR_GENERIC;
 
 	pa_sample_spec spec;
 
@@ -41,26 +41,26 @@ static gc_result gaX_open(ga_Device *dev) {
 
 	if (!dev->impl->interface) goto cleanup;
 
-	return GC_SUCCESS;
+	return GA_OK;
 
 cleanup:
 	if (dev->impl) gcX_ops->freeFunc(dev->impl);
-	return GC_ERROR_GENERIC;
+	return GA_ERR_GENERIC;
 }
 
-static gc_result gaX_close(ga_Device *dev) {
+static ga_result gaX_close(GaDevice *dev) {
 	pa_simple_free(dev->impl->interface);
 	gcX_ops->freeFunc(dev->impl);
-	return GC_SUCCESS;
+	return GA_OK;
 }
 
-static gc_int32 gaX_check(ga_Device *dev) {
+static gc_int32 gaX_check(GaDevice *dev) {
 	return dev->num_buffers; //TODO is this right?
 }
 
-static gc_result gaX_queue(ga_Device *dev, void *buf) {
+static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	int res = pa_simple_write(dev->impl->interface, buf, dev->num_samples * ga_format_sample_size(&dev->format), NULL);
-	return res<0 ? GC_SUCCESS : GC_ERROR_GENERIC;
+	return res<0 ? GA_OK : GA_ERR_GENERIC;
 }
 
-gaX_DeviceProcs gaX_deviceprocs_PulseAudio = { gaX_open, gaX_check, gaX_queue, gaX_close };
+GaXDeviceProcs gaX_deviceprocs_PulseAudio = { gaX_open, gaX_check, gaX_queue, gaX_close };

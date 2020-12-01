@@ -6,8 +6,8 @@
 #include <math.h>
 
 int main(int argc, char** argv) {
-	ga_Format fmt;
-	ga_Device *dev;
+	GaFormat fmt;
+	GaDevice *dev;
 	gc_int16 *buf;
 	gc_int32 numSamples;
 	gc_int32 sampleSize;
@@ -18,14 +18,14 @@ int main(int argc, char** argv) {
 	gc_float32 t = 0.0f;
 
 	/* Initialize library + device */
-	gc_initialize(0);
-	memset(&fmt, 0, sizeof(ga_Format));
+	ga_initialize_systemops(0);
+	memset(&fmt, 0, sizeof(GaFormat));
 	fmt.bits_per_sample = 16;
 	fmt.num_channels = 2;
 	fmt.sample_rate = 44100;
 	numSamples = 2048;
 	sampleSize = ga_format_sampleSize(&fmt);
-	dev = ga_device_open(ga_DeviceType_Default, 2, 2048, &fmt);
+	dev = ga_device_open(GaDeviceType_Default, 2, 2048, &fmt);
 	if(!dev)
 		return 1;
 
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
 
 	/* Clean up device + library */
 	ga_device_close(dev);
-	gc_shutdown();
+	ga_shutdown_systemops();
 
 	/* Free buffer */
 	free(buf);

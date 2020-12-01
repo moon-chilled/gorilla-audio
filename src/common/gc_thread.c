@@ -1,6 +1,6 @@
-#include "gorilla/common/gc_common.h"
+#include "gorilla/common/ga_common.h"
 
-#include "gorilla/common/gc_thread.h"
+#include "gorilla/common/ga_thread.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,15 +16,15 @@
 #include <windows.h>
 
 static gc_int32 priorityLut[] = {
-	[GC_THREAD_PRIORITY_NORMAL] = 0,
-	[GC_THREAD_PRIORITY_LOW] = -1,
-	[GC_THREAD_PRIORITY_HIGH] = 1,
-	[GC_THREAD_PRIORITY_HIGHEST] = 2,
+	[GaThreadPriority_Normal] = 0,
+	[GaThreadPriority_Low] = -1,
+	[GaThreadPriority_High] = 1,
+	[GaThreadPriority_Highest] = 2,
 };
 
-gc_Thread* gc_thread_create(gc_ThreadFunc thread_func, void* context,
+GaThread* ga_thread_create(GaCbThreadFunc thread_func, void* context,
                             gc_int32 priority, gc_uint32 stack_size) {
-	gc_Thread* ret = gcX_ops->allocFunc(sizeof(gc_Thread));
+	GaThread* ret = gcX_ops->allocFunc(sizeof(GaThread));
 	ret->thread_obj = gcX_ops->allocFunc(sizeof(HANDLE));
 	ret->thread_func = thread_func;
 	ret->context = context;
@@ -34,16 +34,16 @@ gc_Thread* gc_thread_create(gc_ThreadFunc thread_func, void* context,
 	SetThreadPriority(*(HANDLE*)ret->thread_obj, priorityLut[priority]);
 	return ret;
 }
-void gc_thread_run(gc_Thread *thread) {
+void ga_thread_run(GaThread *thread) {
 	ResumeThread(*(HANDLE*)thread->thread_obj);
 }
-void gc_thread_join(gc_Thread *thread) {
+void ga_thread_join(GaThread *thread) {
 	WaitForSingleObject(*(HANDLE*)thread->thread_obj, INFINITE);
 }
-void gc_thread_sleep(gc_uint32 in_ms) {
+void ga_thread_sleep(gc_uint32 in_ms) {
 	Sleep(in_ms);
 }
-void gc_thread_destroy(gc_Thread *thread) {
+void ga_thread_destroy(GaThread *thread) {
 	CloseHandle(*(HANDLE*)thread->thread_obj);
 	gcX_ops->freeFunc(thread->thread_obj);
 	gcX_ops->freeFunc(thread);
@@ -54,17 +54,17 @@ void gc_thread_destroy(gc_Thread *thread) {
 #include <sched.h>
 
 static gc_int32 priorityLut[] = {
-	[GC_THREAD_PRIORITY_NORMAL] = 0,
-	[GC_THREAD_PRIORITY_LOW] = 19,
-	[GC_THREAD_PRIORITY_HIGH] = -11,
-	[GC_THREAD_PRIORITY_HIGHEST] = -20
+	[GaThreadPriority_Normal] = 0,
+	[GaThreadPriority_Low] = 19,
+	[GaThreadPriority_High] = -11,
+	[GaThreadPriority_Highest] = -20
 };
 
 typedef struct {
 	pthread_t thread;
 	pthread_attr_t attr;
 	pthread_mutex_t suspend_mutex;
-	gc_ThreadFunc thread_func;
+	GaCbThreadFunc thread_func;
 	void *context;
 } LinuxThreadData;
 
@@ -76,10 +76,10 @@ static void *StaticThreadWrapper(void *context) {
 	return 0;
 }
 
-gc_Thread* gc_thread_create(gc_ThreadFunc thread_func, void* context,
+GaThread* ga_thread_create(GaCbThreadFunc thread_func, void* context,
                             gc_int32 priority, gc_uint32 stack_size) {
 	struct sched_param param;
-	gc_Thread* ret = gcX_ops->allocFunc(sizeof(gc_Thread));
+	GaThread* ret = gcX_ops->allocFunc(sizeof(GaThread));
 	if (!ret) goto fail;
 	LinuxThreadData* thread_data = (LinuxThreadData*)gcX_ops->allocFunc(sizeof(LinuxThreadData));
 	if (!thread_data) goto fail;
@@ -111,18 +111,18 @@ fail:
 	gcX_ops->freeFunc(ret);
 	return NULL;
 }
-void gc_thread_run(gc_Thread *thread) {
+void ga_thread_run(GaThread *thread) {
 	LinuxThreadData* thread_data = (LinuxThreadData*)thread->thread_obj;
 	pthread_mutex_unlock(&thread_data->suspend_mutex);
 }
-void gc_thread_join(gc_Thread *thread) {
+void ga_thread_join(GaThread *thread) {
 	LinuxThreadData* thread_data = (LinuxThreadData*)thread->thread_obj;
 	pthread_join(thread_data->thread, 0);
 }
-void gc_thread_sleep(gc_uint32 in_ms) {
+void ga_thread_sleep(gc_uint32 in_ms) {
 	usleep(in_ms * 1000);
 }
-void gc_thread_destroy(gc_Thread *thread) {
+void ga_thread_destroy(GaThread *thread) {
 	LinuxThreadData* thread_data = (LinuxThreadData*)thread->thread_obj;
 	pthread_cancel(thread_data->thread);
 	pthread_join(thread_data->thread, NULL);
@@ -144,21 +144,21 @@ void gc_thread_destroy(gc_Thread *thread) {
 
 #include <windows.h>
 
-gc_Mutex *gc_mutex_create() {
-	gc_Mutex* ret = gcX_ops->allocFunc(sizeof(gc_Mutex));
+GaMutex *ga_mutex_create() {
+	GaMutex* ret = gcX_ops->allocFunc(sizeof(GaMutex));
 	ret->mutex = gcX_ops->allocFunc(sizeof(CRITICAL_SECTION));
 	InitializeCriticalSection((CRITICAL_SECTION*)ret->mutex);
 	return ret;
 }
-void gc_mutex_destroy(gc_Mutex *mutex) {
+void ga_mutex_destroy(GaMutex *mutex) {
 	DeleteCriticalSection((CRITICAL_SECTION*)mutex->mutex);
 	gcX_ops->freeFunc(mutex->mutex);
 	gcX_ops->freeFunc(mutex);
 }
-void gc_mutex_lock(gc_Mutex *mutex) {
+void ga_mutex_lock(GaMutex *mutex) {
 	EnterCriticalSection((CRITICAL_SECTION*)mutex->mutex);
 }
-void gc_mutex_unlock(gc_Mutex *mutex) {
+void ga_mutex_unlock(GaMutex *mutex) {
 	LeaveCriticalSection((CRITICAL_SECTION*)mutex->mutex);
 }
 
@@ -166,21 +166,21 @@ void gc_mutex_unlock(gc_Mutex *mutex) {
 
 #include <pthread.h>
 
-gc_Mutex* gc_mutex_create() {
-	gc_Mutex* ret = gcX_ops->allocFunc(sizeof(gc_Mutex));
+GaMutex* ga_mutex_create() {
+	GaMutex* ret = gcX_ops->allocFunc(sizeof(GaMutex));
 	ret->mutex = gcX_ops->allocFunc(sizeof(pthread_mutex_t));
 	pthread_mutex_init((pthread_mutex_t*)ret->mutex, NULL);
 	return ret;
 }
-void gc_mutex_destroy(gc_Mutex *mutex) {
+void ga_mutex_destroy(GaMutex *mutex) {
 	pthread_mutex_destroy((pthread_mutex_t*)mutex->mutex);
 	gcX_ops->freeFunc(mutex->mutex);
 	gcX_ops->freeFunc(mutex);
 }
-void gc_mutex_lock(gc_Mutex *mutex) {
+void ga_mutex_lock(GaMutex *mutex) {
 	pthread_mutex_lock((pthread_mutex_t*)mutex->mutex);
 }
-void gc_mutex_unlock(gc_Mutex *mutex) {
+void ga_mutex_unlock(GaMutex *mutex) {
 	pthread_mutex_unlock((pthread_mutex_t*)mutex->mutex);
 }
 

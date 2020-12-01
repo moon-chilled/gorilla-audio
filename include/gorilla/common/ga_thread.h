@@ -1,16 +1,15 @@
 /** Threads and Synchronization.
  *
- *  \file gc_thread.h
+ *  \file ga_thread.h
  */
 
-#ifndef _GORILLA_GC_THREAD_H
-#define _GORILLA_GC_THREAD_H
+#ifndef _GORILLA_GA_THREAD_H
+#define _GORILLA_GA_THREAD_H
 
-#include "gc_types.h"
+#include "ga_types.h"
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif /* __cplusplus */
 
 /************/
@@ -19,18 +18,20 @@ extern "C"
 /** Thread data structure and associated functions.
  *
  *  \ingroup common
- *  \defgroup gc_Thread Thread
+ *  \defgroup GaThread Thread
  */
 
 /** Enumerated thread priorities.
  *
- *  \ingroup gc_Thread
+ *  \ingroup GaThread
  *  \defgroup threadPrio Thread Priorities
  */
-#define GC_THREAD_PRIORITY_NORMAL 0 /**< Normal thread priority. \ingroup threadPrio */
-#define GC_THREAD_PRIORITY_LOW 1 /**< Low thread priority. \ingroup threadPrio */
-#define GC_THREAD_PRIORITY_HIGH 2 /**< High thread priority. \ingroup threadPrio */
-#define GC_THREAD_PRIORITY_HIGHEST 3 /**< Highest thread priority. \ingroup threadPrio */
+typedef enum {
+	GaThreadPriority_Normal,
+	GaThreadPriority_Low,
+	GaThreadPriority_High,
+	GaThreadPriority_Highest,
+} GaThreadPriority;
 
 /** Thread function callback.
  *
@@ -38,66 +39,66 @@ extern "C"
  *  Thread functions should return non-zero values if they encounter an
  *  error, zero if they terminate without error.
  *
- *  \ingroup gc_Thread
+ *  \ingroup GaThread
  *  \param context The user-specified thread context.
- *  \return GC_SUCCESS if thread terminated without error. GC_ERROR_GENERIC
+ *  \return GA_OK if thread terminated without error. GA_ERR_GENERIC
  *          if not.
  */
-typedef gc_int32 (*gc_ThreadFunc)(void* context);
+typedef gc_int32 (*GaCbThreadFunc)(void* context);
 
 /** Thread data structure [\ref SINGLE_CLIENT].
  *
- *  \ingroup gc_Thread
+ *  \ingroup GaThread
  */
 typedef struct {
-	gc_ThreadFunc thread_func;
+	GaCbThreadFunc thread_func;
 	void *thread_obj;
 	void *context;
 	gc_int32 id;
 	gc_int32 priority;
 	gc_uint32 stack_size;
-} gc_Thread;
+} GaThread;
 
 /** Creates a new thread.
  *
- *  The created thread will not run until gc_thread_run() is called on it.
+ *  The created thread will not run until ga_thread_run() is called on it.
  *
- *  \ingroup gc_Thread
+ *  \ingroup GaThread
  */
-gc_Thread* gc_thread_create(gc_ThreadFunc thread_func, void *context,
+GaThread* ga_thread_create(GaCbThreadFunc thread_func, void *context,
                             gc_int32 priority, gc_uint32 stack_size);
 
 /** Runs a thread.
  *
- *  \ingroup gc_Thread
+ *  \ingroup GaThread
  */
-void gc_thread_run(gc_Thread *thread);
+void ga_thread_run(GaThread *thread);
 
 /** Joins a thread with the current thread.
  *
- *  \ingroup gc_Thread
+ *  \ingroup GaThread
  */
-void gc_thread_join(gc_Thread *thread);
+void ga_thread_join(GaThread *thread);
 
 /** Signals a thread to wait for a specified time interval.
  *
  *  While the time interval is specified in milliseconds, different operating
  *  systems have different guarantees about the minimum time interval provided.
  *  If accurate sleep timings are desired, make sure the thread priority is set
- *  to GC_THREAD_PRIORITY_HIGH or GC_THREAD_PRIORITY_HIGHEST.
+ *  to GaThreadPriority_High or GaThreadPriority_Highest.
  *
- *  \ingroup gc_Thread
+ *  \ingroup GaThread
  */
-void gc_thread_sleep(gc_uint32 ms);
+void ga_thread_sleep(gc_uint32 ms);
 
 /** Destroys a thread object.
  *
- *  \ingroup gc_Thread
+ *  \ingroup GaThread
  *  \warning This should usually only be called once the the thread has
  *           successfully joined with another thread.
  *  \warning Never use a thread after it has been destroyed.
  */
-void gc_thread_destroy(gc_Thread *thread);
+void ga_thread_destroy(GaThread *thread);
 
 /***********/
 /*  Mutex  */
@@ -105,49 +106,49 @@ void gc_thread_destroy(gc_Thread *thread);
 /** Mutual exclusion lock data structure and associated functions.
  *
  *  \ingroup common
- *  \defgroup gc_Mutex Mutex
+ *  \defgroup GaMutex Mutex
  */
 
 /** Mutual exclusion lock (mutex) thread synchronization primitive data structure [\ref SINGLE_CLIENT].
  *
- *  \ingroup gc_Mutex
+ *  \ingroup GaMutex
  */
-typedef struct gc_Mutex {
+typedef struct GaMutex {
 	void *mutex;
-} gc_Mutex;
+} GaMutex;
 
 /** Creates a mutex.
  *
- *  \ingroup gc_Mutex
+ *  \ingroup GaMutex
  */
-gc_Mutex *gc_mutex_create(void);
+GaMutex *ga_mutex_create(void);
 
 /** Locks a mutex.
  *
  *  In general, any lock should have a matching unlock().
  *
- *  \ingroup gc_Mutex
+ *  \ingroup GaMutex
  *  \warning Do not lock a mutex on the same thread without first unlocking.
  */
-void gc_mutex_lock(gc_Mutex *mutex);
+void ga_mutex_lock(GaMutex *mutex);
 
 /** Unlocks a mutex.
  *
- *  \ingroup gc_Mutex
+ *  \ingroup GaMutex
  *  \warning Do not unlock a mutex without first locking it.
  */
-void gc_mutex_unlock(gc_Mutex *mutex);
+void ga_mutex_unlock(GaMutex *mutex);
 
 /** Destroys a mutex.
  *
- *  \ingroup gc_Mutex
+ *  \ingroup GaMutex
  *  \warning Make sure the mutex is no longer in use before destroying it.
  *  \warning Never use a mutex after it has been destroyed.
  */
-void gc_mutex_destroy(gc_Mutex *mutex);
+void ga_mutex_destroy(GaMutex *mutex);
 
 #ifdef __cplusplus
-}
-#endif /* __cplusplus */
+} // extern "C"
+#endif
 
-#endif /* _GORILLA_GC_H */
+#endif // _GORILLA_GA_THREAD_H

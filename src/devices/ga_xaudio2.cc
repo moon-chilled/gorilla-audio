@@ -16,18 +16,18 @@ struct ga_DeviceImpl {
 	struct IXAudio2MasteringVoice* master;
 	struct IXAudio2SourceVoice* source;
 	gc_uint32 sample_size;
-	gc_uint32 nextBuffer;
+	gc_uint32 next_buffer;
 	void** buffers;
 };
 
 extern "C" {
-static gc_result gaX_open(ga_Device *dev) {
+static ga_result gaX_open(ga_Device *dev) {
 	HRESULT result;
 	WAVEFORMATEX fmt;
 	gc_int32 i;
 	dev->impl = gcX_ops->allocFunc(sizeof(gaX_DeviceImpl));
 	dev->impl->sample_size = ga_format_sample_size(&dev->format);
-	dev->impl->nextBuffer = 0;
+	dev->impl->next_buffer = 0;
 	dev->impl->xa = 0;
 	dev->impl->master = 0;
 
@@ -61,7 +61,7 @@ static gc_result gaX_open(ga_Device *dev) {
 	for(i = 0; i < dev->num_buffers; ++i)
 		dev->impl->buffers[i] = gcX_ops->allocFunc(dev->num_samples * dev->impl->sample_size);
 
-	return GC_SUCCESS;
+	return GA_OK;
 
 cleanup:
 	if (dev->impl->source) {
@@ -74,10 +74,10 @@ cleanup:
 	if (dev->impl->xa) dev->impl->xa->Release();
 	CoUninitialize();
 	gcX_ops->freeFunc(dev->impl);
-	return GC_ERROR_GENERIC;
+	return GA_ERR_GENERIC;
 }
 
-static gc_result gaX_close(ga_Device *dev) {
+static ga_result gaX_close(ga_Device *dev) {
 	gc_int32 i;
 	if(dev->impl->source) {
 		dev->impl->source->Stop(0, XAUDIO2_COMMIT_NOW);
@@ -96,7 +96,7 @@ static gc_result gaX_close(ga_Device *dev) {
 		gcX_ops->freeFunc(dev->impl->buffers[i]);
 	gcX_ops->freeFunc(in_device->buffers);
 	gcX_ops->freeFunc(in_device);
-	return GC_SUCCESS;
+	return GA_OK;
 }
 
 static gc_int32 gaX_check(ga_Device *dev) {
@@ -106,17 +106,17 @@ static gc_int32 gaX_check(ga_Device *dev) {
 	return dev->num_buffers - state.BuffersQueued;
 }
 
-static gc_result gaX_queue(ga_Device *dev, void *in_buffer) {
+static ga_result gaX_queue(ga_Device *dev, void *in_buffer) {
 	XAUDIO2_BUFFER buf;
 	void* data;
 	ZeroMemory(&buf, sizeof(XAUDIO2_BUFFER));
 	buf.AudioBytes = dev->num_samples * dev->impl->sample_size;
-	data = dev->impl->buffers[in_device->nextBuffer++];
-	dev->impl->nextBuffer %= dev->num_buffers;
+	data = dev->impl->buffers[in_device->next_buffer++];
+	dev->impl->next_buffer %= dev->num_buffers;
 	memcpy(data, in_buffer, buf.AudioBytes);
 	buf.pAudioData = (const BYTE*)data;
 	dev->impl->source->SubmitSourceBuffer(&buf, 0);
-	return GC_SUCCESS;
+	return GA_OK;
 }
 gaX_DeviceProcs gaX_deviceprocs_XAudio2 = { gaX_open, gaX_check, gaX_queue, gaX_close };
 } // extern "C"

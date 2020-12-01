@@ -8,7 +8,7 @@
 #ifndef _GORILLA_GAU_H
 #define _GORILLA_GAU_H
 
-#include "gorilla/common/gc_common.h"
+#include "gorilla/common/ga_common.h"
 #include "gorilla/ga.h"
 #include "gorilla/ga_internal.h"
 
@@ -28,18 +28,18 @@ extern "C"
 /** High-level audio manager and associated functions.
  *
  *  \ingroup utility
- *  \defgroup gau_Manager Manager
+ *  \defgroup GauManager Manager
  */
 
 /** High-level audio manager.
  *
- *  \ingroup gau_Manager
+ *  \ingroup GauManager
  */
-typedef struct gau_Manager gau_Manager;
+typedef struct GauManager GauManager;
 
 /** Manager thread policies.
  *
- *  \ingroup gau_Manager
+ *  \ingroup GauManager
  *  \defgroup threadPolicy Thread Policies
  */
 typedef enum {
@@ -50,48 +50,48 @@ typedef enum {
 
 /** Creates an audio manager.
  *
- *  \ingroup gau_Manager
+ *  \ingroup GauManager
  */
-gau_Manager* gau_manager_create(void);
+GauManager* gau_manager_create(void);
 
 /** Creates an audio manager (customizable).
 *
-*  \ingroup gau_Manager
+*  \ingroup GauManager
 */
-gau_Manager* gau_manager_create_custom(GaDeviceType *dev_type,
+GauManager* gau_manager_create_custom(GaDeviceType *dev_type,
                                        GauThreadPolicy thread_policy,
                                        gc_uint32 *num_buffers,
                                        gc_uint32 *num_samples);
 
 /** Updates an audio manager.
  *
- *  \ingroup gau_Manager
+ *  \ingroup GauManager
  */
-void gau_manager_update(gau_Manager* in_mgr);
+void gau_manager_update(GauManager* in_mgr);
 
 /** Retrieves the internal mixer object from an audio manager.
  *
- *  \ingroup gau_Manager
+ *  \ingroup GauManager
  */
-ga_Mixer* gau_manager_mixer(gau_Manager* in_mgr);
+GaMixer* gau_manager_mixer(GauManager* in_mgr);
 
 /** Retrieves the internal buffered stream manager object from an audio manager.
  *
- *  \ingroup gau_Manager
+ *  \ingroup GauManager
  */
-ga_StreamManager* gau_manager_stream_manager(gau_Manager* in_mgr);
+GaStreamManager* gau_manager_stream_manager(GauManager* in_mgr);
 
 /** Retrieves the internal device object from an audio manager.
  *
- *  \ingroup gau_Manager
+ *  \ingroup GauManager
  */
-ga_Device* gau_manager_device(gau_Manager* in_mgr);
+GaDevice* gau_manager_device(GauManager* in_mgr);
 
 /** Destroys an audio manager.
  *
- *  \ingroup gau_Manager
+ *  \ingroup GauManager
  */
-void gau_manager_destroy(gau_Manager* in_mgr);
+void gau_manager_destroy(GauManager* in_mgr);
 
 /*****************************/
 /**  Concrete Data Sources  **/
@@ -106,19 +106,19 @@ void gau_manager_destroy(gau_Manager* in_mgr);
  *
  *  \ingroup concreteData
  */
-ga_DataSource* gau_data_source_create_file(const char* in_filename);
+GaDataSource* gau_data_source_create_file(const char* in_filename);
 
 /** Creates a data source of bytes from a subregion of a file-on-disk.
  *
  *  \ingroup concreteData
  */
-ga_DataSource* gau_data_source_create_file_arc(const char* in_filename, gc_size in_offset, gc_size in_size);
+GaDataSource* gau_data_source_create_file_arc(const char* in_filename, gc_size in_offset, gc_size in_size);
 
 /** Creates a data source of bytes from a block of shared memory.
  *
  *  \ingroup concreteData
  */
-ga_DataSource* gau_data_source_create_memory(ga_Memory* in_memory);
+GaDataSource* gau_data_source_create_memory(GaMemory* in_memory);
 
 /*******************************/
 /**  Concrete Sample Sources  **/
@@ -133,25 +133,25 @@ ga_DataSource* gau_data_source_create_memory(ga_Memory* in_memory);
  *
  *  \ingroup concreteSample
  */
-ga_SampleSource* gau_sample_source_create_wav(ga_DataSource* in_dataSrc);
+GaSampleSource* gau_sample_source_create_wav(GaDataSource* in_dataSrc);
 
 /** Creates a sample source of PCM samples from an Ogg/Vorbis file.
  *
  *  \ingroup concreteSample
  */
-ga_SampleSource* gau_sample_source_create_ogg(ga_DataSource* in_dataSrc);
+GaSampleSource* gau_sample_source_create_ogg(GaDataSource* in_dataSrc);
 
 /** Creates a buffered sample source of PCM samples from another sample source.
  *
  *  \ingroup concreteSample
  */
-ga_SampleSource* gau_sample_source_create_buffered(ga_StreamManager* in_mgr, ga_SampleSource* in_sampleSrc, gc_int32 in_bufferSamples);
+GaSampleSource* gau_sample_source_create_buffered(GaStreamManager* in_mgr, GaSampleSource* in_sampleSrc, gc_int32 in_bufferSamples);
 
 /** Creates a sample source of PCM samples from a cached sound object.
  *
  *  \ingroup concreteSample
  */
-ga_SampleSource* gau_sample_source_create_sound(ga_Sound* in_sound);
+GaSampleSource* gau_sample_source_create_sound(GaSound* in_sound);
 
 /**************************/
 /**  Loop Sample Source  **/
@@ -168,31 +168,31 @@ ga_SampleSource* gau_sample_source_create_sound(ga_Sound* in_sound);
  *
  *  \ingroup loopSample
  */
-typedef struct gau_SampleSourceLoop gau_SampleSourceLoop;
+typedef struct GauSampleSourceLoop GauSampleSourceLoop;
 
 /** Create a loop sample source.
  *
  *  \ingroup loopSample
  */
-gau_SampleSourceLoop* gau_sample_source_create_loop(ga_SampleSource* in_sampleSrc);
+GauSampleSourceLoop* gau_sample_source_create_loop(GaSampleSource* in_sampleSrc);
 
 /** Set loop points on a loop sample source.
  *
  *  \ingroup loopSample
  */
-void gau_sample_source_loop_set(gau_SampleSourceLoop* in_sampleSrc, gc_int32 in_triggerSample, gc_int32 in_targetSample);
+void gau_sample_source_loop_set(GauSampleSourceLoop* in_sampleSrc, gc_int32 in_triggerSample, gc_int32 in_targetSample);
 
 /** Clear loop points on a loop sample source.
  *
  *  \ingroup loopSample
  */
-void gau_sample_source_loop_clear(gau_SampleSourceLoop* in_sampleSrc);
+void gau_sample_source_loop_clear(GauSampleSourceLoop* in_sampleSrc);
 
 /** Count number of times a loop sample source has looped.
  *
  *  \ingroup loopSample
  */
-gc_int32 gau_sample_source_loop_count(gau_SampleSourceLoop* in_sampleSrc);
+gc_int32 gau_sample_source_loop_count(GauSampleSourceLoop* in_sampleSrc);
 
 /***************************/
 /**  On-Finish Callbacks  **/
@@ -207,7 +207,7 @@ gc_int32 gau_sample_source_loop_count(gau_SampleSourceLoop* in_sampleSrc);
  *
  *  \ingroup onFinish
  */
-void gau_on_finish_destroy(ga_Handle* in_finishedHandle, void* in_context);
+void gau_on_finish_destroy(GaHandle* in_finishedHandle, void* in_context);
 
 /********************/
 /**  Load Helpers  **/
@@ -222,21 +222,21 @@ void gau_on_finish_destroy(ga_Handle* in_finishedHandle, void* in_context);
  *
  *  \ingroup loadHelper
  */
-ga_Memory* gau_load_memory_file(const char* in_filename);
+GaMemory* gau_load_memory_file(const char* in_filename);
 
 
 typedef enum {
-  GAU_AUDIO_TYPE_UNKNOWN = 1,
-  GAU_AUDIO_TYPE_AUTODETECT = 2, // TODO: support this
-  GAU_AUDIO_TYPE_OGG = 3,
-  GAU_AUDIO_TYPE_WAV = 4,
-} gau_AudioType;
+	GauAudioType_Unknown = 1,
+	GauAudioType_Autodetect = 2, // TODO: support this
+	GauAudioType_Ogg = 3,
+	GauAudioType_Wav = 4,
+} GauAudioType;
 
 /** Load a file's PCM data into a sound object.
  *
  *  \ingroup loadHelper
  */
-ga_Sound* gau_load_sound_file(const char* in_filename, gau_AudioType in_format);
+GaSound* gau_load_sound_file(const char* in_filename, GauAudioType in_format);
 
 
 /**********************/
@@ -252,35 +252,35 @@ ga_Sound* gau_load_sound_file(const char* in_filename, gau_AudioType in_format);
  *
  *  \ingroup createHelper
  */
-ga_Handle* gau_create_handle_memory(ga_Mixer* in_mixer, ga_Memory* in_memory, gau_AudioType in_format,
+GaHandle* gau_create_handle_memory(GaMixer* in_mixer, GaMemory* in_memory, GauAudioType in_format,
                                     ga_FinishCallback in_callback, void* in_context,
-                                    gau_SampleSourceLoop** out_loopSrc);
+                                    GauSampleSourceLoop** out_loopSrc);
 
 /** Create a handle to play a sound object.
  *
  *  \ingroup createHelper
  */
-ga_Handle* gau_create_handle_sound(ga_Mixer* in_mixer, ga_Sound* in_sound,
+GaHandle* gau_create_handle_sound(GaMixer* in_mixer, GaSound* in_sound,
                                    ga_FinishCallback in_callback, void* in_context,
-                                   gau_SampleSourceLoop** out_loopSrc);
+                                   GauSampleSourceLoop** out_loopSrc);
 
 /** Create a handle to play a background-buffered stream from a data source.
  *
  *  \ingroup createHelper
  */
-ga_Handle* gau_create_handle_buffered_data(ga_Mixer* in_mixer, ga_StreamManager* in_streamMgr,
-                                           ga_DataSource* in_dataSrc, gau_AudioType in_format,
+GaHandle* gau_create_handle_buffered_data(GaMixer* in_mixer, GaStreamManager* in_streamMgr,
+                                           GaDataSource* in_dataSrc, GauAudioType in_format,
                                            ga_FinishCallback in_callback, void* in_context,
-                                           gau_SampleSourceLoop** out_loopSrc);
+                                           GauSampleSourceLoop** out_loopSrc);
 
 /** Create a handle to play a background-buffered stream from a file.
  *
  *  \ingroup createHelper
  */
-ga_Handle* gau_create_handle_buffered_file(ga_Mixer* in_mixer, ga_StreamManager* in_streamMgr,
-                                           const char* in_filename, gau_AudioType in_format,
+GaHandle* gau_create_handle_buffered_file(GaMixer* in_mixer, GaStreamManager* in_streamMgr,
+                                           const char* in_filename, GauAudioType in_format,
                                            ga_FinishCallback in_callback, void* in_context,
-                                           gau_SampleSourceLoop** out_loopSrc);
+                                           GauSampleSourceLoop** out_loopSrc);
 
 #ifdef __cplusplus
 }

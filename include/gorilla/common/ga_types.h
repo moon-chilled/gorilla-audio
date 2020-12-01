@@ -2,11 +2,11 @@
  *
  *  Cross-platform primitive type definitions.
  *
- *  \file gc_types.h
+ *  \file ga_types.h
  */
 
-#ifndef _GORILLA_GC_TYPES_H
-#define _GORILLA_GC_TYPES_H
+#ifndef _GORILLA_GA_TYPES_H
+#define _GORILLA_GA_TYPES_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,13 +51,18 @@ typedef double      gc_float64;
  *  \defgroup results Result Values
  */
 
-typedef gc_int32 gc_result; /**< Return type for the result of an operation. \ingroup results */
+/**< Return type for the result of an operation. \ingroup results */
+typedef enum {
+	GA_OK = 0,       /**< Operation completed successfully.  Keep this at 0 so precocious callers can use !res to see if res was successful \ingroup results */
+	GA_ERR_GENERIC,  /**< Operation failed with an unspecified error. \ingroup results */
+} ga_result;
 
-#define GC_SUCCESS 1 /**< Operation completed successfully. \ingroup results */
-#define GC_ERROR_GENERIC -1 /**< Operation failed with an unspecified error. \ingroup results */
+static inline gc_bool ga_isok(ga_result res) {
+	return res == GA_OK;
+}
 
 #ifdef __cplusplus
 } // extern "C"
 #endif
 
-#endif /* _GORILLA_GC_TYPES_H */
+#endif /* _GORILLA_GA_TYPES_H */

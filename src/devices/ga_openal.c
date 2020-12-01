@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <memory.h>
 
-struct gaX_DeviceImpl {
+struct GaXDeviceImpl {
 	struct ALCdevice *dev;
 	struct ALCcontext *context;
 	gc_uint32 *hw_buffers;
@@ -39,8 +39,8 @@ static gc_int32 AUDIO_ERROR = 0;
 	} \
 } while (0)
 
-static gc_result gaX_open(ga_Device *dev) {
-	dev->impl = gcX_ops->allocFunc(sizeof(gaX_DeviceImpl));
+static ga_result gaX_open(GaDevice *dev) {
+	dev->impl = gcX_ops->allocFunc(sizeof(GaXDeviceImpl));
 	memset(dev->impl, 0, sizeof(*dev->impl));
 
 	dev->impl->next_buffer = 0;
@@ -65,27 +65,27 @@ static gc_result gaX_open(ga_Device *dev) {
 	alGenSources(1, &dev->impl->hw_source);
 	CHECK_AL_ERROR(alDeleteBuffers(dev->num_buffers, dev->impl->hw_buffers); goto cleanup);
 
-	return GC_SUCCESS;
+	return GA_OK;
 
 cleanup:
 	if (dev->impl->hw_buffers) gcX_ops->freeFunc(dev->impl->hw_buffers);
 	if (dev->impl->context) alcDestroyContext(dev->impl->context);
 	if (dev->impl->dev) alcCloseDevice(dev->impl->dev);
 	gcX_ops->freeFunc(dev->impl);
-	return GC_ERROR_GENERIC;
+	return GA_ERR_GENERIC;
 }
 
-static gc_result gaX_close(ga_Device *dev) {
+static ga_result gaX_close(GaDevice *dev) {
 	alDeleteSources(1, &dev->impl->hw_source);
 	alDeleteBuffers(dev->num_buffers, dev->impl->hw_buffers);
 	alcDestroyContext(dev->impl->context);
 	alcCloseDevice(dev->impl->dev);
 	gcX_ops->freeFunc(dev->impl->hw_buffers);
 	gcX_ops->freeFunc(dev->impl);
-	return GC_SUCCESS;
+	return GA_OK;
 }
 
-static gc_int32 gaX_check(ga_Device *dev) {
+static gc_int32 gaX_check(GaDevice *dev) {
 	gc_int32 whichBuf = 0;
 	gc_int32 numProcessed = 0;
 	alGetSourcei(dev->impl->hw_source, AL_BUFFERS_PROCESSED, &numProcessed);
@@ -98,7 +98,7 @@ static gc_int32 gaX_check(ga_Device *dev) {
 	return dev->impl->empty_buffers;
 }
 
-static gc_result gaX_queue(ga_Device *dev, void* in_buffer) {
+static ga_result gaX_queue(GaDevice *dev, void* in_buffer) {
 	gc_int32 formatOal;
 	ALint state;
 	gc_int32 bps = dev->format.bits_per_sample;
@@ -110,23 +110,23 @@ static gc_result gaX_queue(ga_Device *dev, void* in_buffer) {
 
 	alBufferData(dev->impl->hw_buffers[dev->impl->next_buffer], formatOal, in_buffer,
 			(ALsizei)dev->num_samples * ga_format_sample_size(&dev->format), dev->format.sample_rate);
-	CHECK_AL_ERROR(return GC_ERROR_GENERIC);
+	CHECK_AL_ERROR(return GA_ERR_GENERIC);
 
 	alSourceQueueBuffers(dev->impl->hw_source, 1, &dev->impl->hw_buffers[dev->impl->next_buffer]);
-	CHECK_AL_ERROR(return GC_ERROR_GENERIC);
+	CHECK_AL_ERROR(return GA_ERR_GENERIC);
 
 	dev->impl->next_buffer = (dev->impl->next_buffer + 1) % dev->num_buffers;
 	--dev->impl->empty_buffers;
 	alGetSourcei(dev->impl->hw_source, AL_SOURCE_STATE, &state);
-	CHECK_AL_ERROR(return GC_ERROR_GENERIC);
+	CHECK_AL_ERROR(return GA_ERR_GENERIC);
 
 	if (state != AL_PLAYING) {
 		/* NOTE: calling this, even as a 'noop', can cause a clicking sound. */
 		alSourcePlay(dev->impl->hw_source);
 	}
 
-	CHECK_AL_ERROR(return GC_ERROR_GENERIC);
-	return GC_SUCCESS;
+	CHECK_AL_ERROR(return GA_ERR_GENERIC);
+	return GA_OK;
 }
 
-gaX_DeviceProcs gaX_deviceprocs_OpenAL = { gaX_open, gaX_check, gaX_queue, gaX_close };
+GaXDeviceProcs gaX_deviceprocs_OpenAL = { gaX_open, gaX_check, gaX_queue, gaX_close };

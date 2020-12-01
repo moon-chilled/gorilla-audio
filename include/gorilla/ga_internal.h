@@ -15,7 +15,7 @@
 #include <stdatomic.h>
 #include <assert.h>
 
-#include "gorilla/common/gc_common.h"
+#include "gorilla/common/ga_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,38 +39,38 @@ typedef _Atomic gc_size gc_atomic_size;
  *           instead
  */
 typedef struct {
-	gc_result (*open)(ga_Device *dev);
-	gc_int32 (*check)(ga_Device *dev);
-	gc_result (*queue)(ga_Device *dev, void *buffer);
-	gc_result (*close)(ga_Device *device);
-} gaX_DeviceProcs;
+	ga_result (*open)(GaDevice *dev);
+	gc_int32 (*check)(GaDevice *dev);
+	ga_result (*queue)(GaDevice *dev, void *buffer);
+	ga_result (*close)(GaDevice *device);
+} GaXDeviceProcs;
 
-extern gaX_DeviceProcs gaX_deviceprocs_dummy;
+extern GaXDeviceProcs gaX_deviceprocs_dummy;
 
 #ifdef ENABLE_OSS
-extern gaX_DeviceProcs gaX_deviceprocs_OSS;
+extern GaXDeviceProcs gaX_deviceprocs_OSS;
 #endif
 
 #ifdef ENABLE_XAUDIO2
-extern gaX_DeviceProcs gaX_deviceprocs_XAudio2;
+extern GaXDeviceProcs gaX_deviceprocs_XAudio2;
 #endif
 
 #ifdef ENABLE_PULSEAUDIO
-extern gaX_DeviceProcs gaX_deviceprocs_PulseAudio;
+extern GaXDeviceProcs gaX_deviceprocs_PulseAudio;
 #endif
 
 #ifdef ENABLE_ALSA
-extern gaX_DeviceProcs gaX_deviceprocs_ALSA;
+extern GaXDeviceProcs gaX_deviceprocs_ALSA;
 #endif
 
 #ifdef ENABLE_OPENAL
-extern gaX_DeviceProcs gaX_deviceprocs_OpenAL;
+extern GaXDeviceProcs gaX_deviceprocs_OpenAL;
 #endif
 
 /** Device-specific data structure
  *  Redefined separately in the translation unit for each device
  */
-typedef struct gaX_DeviceImpl gaX_DeviceImpl;
+typedef struct GaXDeviceImpl GaXDeviceImpl;
 
 
 /** Hardware device abstract data structure [\ref SINGLE_CLIENT].
@@ -79,17 +79,17 @@ typedef struct gaX_DeviceImpl gaX_DeviceImpl;
  *
  *  \ingroup intDevice
  *  \warning You can only have one device open at a time.
- *  \warning Never instantiate a ga_Device directly, unless you are implementing a new concrete
+ *  \warning Never instantiate a GaDevice directly, unless you are implementing a new concrete
  *           device implementation. Instead, you should use ga_device_open().
  */
-struct ga_Device {
+struct GaDevice {
 	GaDeviceType dev_type;
 	gc_uint32 num_buffers;
 	gc_uint32 num_samples;
-	ga_Format format;
+	GaFormat format;
 
-	gaX_DeviceProcs procs;
-	gaX_DeviceImpl *impl;
+	GaXDeviceProcs procs;
+	GaXDeviceImpl *impl;
 };
 
 /*****************/
@@ -119,13 +119,13 @@ typedef gc_size (*GaCbDataSource_Read)(void *context, void *dst, gc_size size, g
  *  \param context User context (pointer to the first byte after the data source).
  *  \param offset Offset (in bytes) from the specified seek origin.
  *  \param origin Seek origin (see [\ref globDefs]).
- *  \return If seek succeeds, the callback should return GC_SUCCESS, otherwise it should return GC_ERROR_GENERIC.
+ *  \return If seek succeeds, the callback should return GA_OK, otherwise it should return GA_ERR_GENERIC.
  *  \warning Data sources with GA_FLAG_SEEKABLE should always provide a seek callback.
  *  \warning Data sources with GA_FLAG_SEEKABLE set should only return -1 in the case of
  *           an invalid seek request.
  *  \todo Define a less-confusing contract for extending/defining this function.
  */
-typedef gc_result (*GaCbDataSource_Seek)(void *context, gc_ssize offset, GaSeekOrigin whence);
+typedef ga_result (*GaCbDataSource_Seek)(void *context, gc_ssize offset, GaSeekOrigin whence);
 
 /** Data source tell callback prototype.
  *
@@ -151,7 +151,7 @@ typedef void (*GaCbDataSource_Close)(void *context);
  *  \ingroup intDataSource
  *  \todo Design a clearer/better system for easily extending this data type.
  */
-struct ga_DataSource {
+struct GaDataSource {
 	GaCbDataSource_Read read; /**< Internal read callback. */
 	GaCbDataSource_Seek seek; /**< Internal seek callback (optional). */
 	GaCbDataSource_Tell tell; /**< Internal tell callback (optional). */
@@ -162,12 +162,12 @@ struct ga_DataSource {
 
 /** Initializes the reference count and other default values.
  *
- *  Because ga_DataSource is an abstract data type, this function should not be
+ *  Because GaDataSource is an abstract data type, this function should not be
  *  called except when implement a concrete data source implementation.
  *
  *  \ingroup intDataSource
  */
-void ga_data_source_init(ga_DataSource *data_src);
+void ga_data_source_init(GaDataSource *data_src);
 
 /*******************/
 /*  Sample Source  */
@@ -176,28 +176,28 @@ typedef gc_size (*GaCbSampleSource_Read)(void *context, void *dst, gc_size num_s
                                            GaCbOnSeek onseek, void *seek_ctx);
 typedef gc_bool (*GaCbSampleSource_End)(void *context);
 typedef gc_bool (*GaCbSampleSource_Ready)(void *context, gc_size num_samples);
-typedef gc_result (*GaCbSampleSource_Seek)(void *context, gc_size sample_offset);
-typedef gc_result (*GaCbSampleSource_Tell)(void *context, gc_size *samples, gc_size *total_samples);
+typedef ga_result (*GaCbSampleSource_Seek)(void *context, gc_size sample_offset);
+typedef ga_result (*GaCbSampleSource_Tell)(void *context, gc_size *samples, gc_size *total_samples);
 typedef void (*GaCbSampleSource_Close)(void *context);
 
-struct ga_SampleSource {
+struct GaSampleSource {
 	GaCbSampleSource_Read read;
 	GaCbSampleSource_End end;
 	GaCbSampleSource_Ready ready;
 	GaCbSampleSource_Seek seek; /* OPTIONAL */
 	GaCbSampleSource_Tell tell; /* OPTIONAL */
 	GaCbSampleSource_Close close; /* OPTIONAL */
-	ga_Format format;
+	GaFormat format;
 	gc_atomic_uint32 refCount;
 	GaDataAccessFlags flags;
 };
 
-void ga_sample_source_init(ga_SampleSource *sample_src);
+void ga_sample_source_init(GaSampleSource *sample_src);
 
 /************/
 /*  Memory  */
 /************/
-struct ga_Memory {
+struct GaMemory {
 	void *data;
 	gc_size size;
 	gc_atomic_uint32 refCount;
@@ -206,9 +206,9 @@ struct ga_Memory {
 /***********/
 /*  Sound  */
 /***********/
-struct ga_Sound {
-	ga_Memory* memory;
-	ga_Format format;
+struct GaSound {
+	GaMemory* memory;
+	GaFormat format;
 	gc_size num_samples;
 	gc_atomic_uint32 refCount;
 };
@@ -217,65 +217,65 @@ struct ga_Sound {
 /*  Handle  */
 /************/
 typedef enum {
-	GA_HANDLE_STATE_UNKNOWN,
-	GA_HANDLE_STATE_INITIAL,
-	GA_HANDLE_STATE_PLAYING,
-	GA_HANDLE_STATE_STOPPED,
-	GA_HANDLE_STATE_FINISHED,
-	GA_HANDLE_STATE_DESTROYED,
-} GA_HANDLE_STATE;
+	GaHandleState_Unknown,
+	GaHandleState_Initial,
+	GaHandleState_Playing,
+	GaHandleState_Stopped,
+	GaHandleState_Finished,
+	GaHandleState_Destroyed,
+} GaHandleState;
 
-struct ga_Handle {
-	ga_Mixer* mixer;
+struct GaHandle {
+	GaMixer* mixer;
 	ga_FinishCallback callback;
 	void* context;
-	GA_HANDLE_STATE state;
+	GaHandleState state;
 	gc_float32 gain;
 	gc_float32 pitch;
 	gc_float32 pan;
-	gc_Link dispatch_link;
-	gc_Link mix_link;
-	gc_Mutex *mutex;
-	ga_SampleSource *sample_src;
+	GaLink dispatch_link;
+	GaLink mix_link;
+	GaMutex *mutex;
+	GaSampleSource *sample_src;
 	volatile gc_int32 finished;
 };
 
 /************/
 /*  Mixer  */
 /************/
-struct ga_Mixer {
-	ga_Format format;
-	ga_Format mix_format;
+struct GaMixer {
+	GaFormat format;
+	GaFormat mix_format;
 	gc_size num_samples;
 	gc_int32 *mix_buffer;
-	gc_Link dispatch_list;
-	gc_Mutex *dispatch_mutex;
-	gc_Link mix_list;
-	gc_Mutex *mix_mutex;
+	GaLink dispatch_list;
+	GaMutex *dispatch_mutex;
+	GaLink mix_list;
+	GaMutex *mix_mutex;
 };
 
 
-struct ga_StreamManager {
-	gc_Link stream_list;
-	gc_Mutex *mutex;
+struct GaStreamManager {
+	GaLink stream_list;
+	GaMutex *mutex;
 };
 
-struct ga_BufferedStream {
-	gc_Link *stream_link;
-	ga_SampleSource *inner_src;
-	gc_CircBuffer *buffer;
-	gc_Mutex *produce_mutex;
-	gc_Mutex *seek_mutex;
-	gc_Mutex *read_mutex;
+struct GaBufferedStream {
+	GaLink *stream_link;
+	GaSampleSource *inner_src;
+	GaCircBuffer *buffer;
+	GaMutex *produce_mutex;
+	GaMutex *seek_mutex;
+	GaMutex *read_mutex;
 	gc_atomic_uint32 refCount;
-	gc_Link tell_jumps;
-	ga_Format format;
+	GaLink tell_jumps;
+	GaFormat format;
 	gc_size buffer_size;
 	gc_int32 seek;
 	gc_int32 tell;
 	gc_int32 next_sample;
 	gc_int32 end;
-	gc_int32 flags;
+	GaDataAccessFlags flags;
 };
 
 static inline gc_bool gcX_decref(gc_atomic_uint32 *count) {

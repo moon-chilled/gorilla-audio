@@ -35,39 +35,40 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	gc_initialize(NULL);
-	gau_Manager *mgr = check(gau_manager_create_custom(&(GaDeviceType){GaDeviceType_Default}, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
-	ga_Mixer *mixer = check(gau_manager_mixer(mgr), "Unable to get mixer from manager");
-	ga_StreamManager *smgr = gau_manager_stream_manager(mgr);
+	ga_initialize_systemops(NULL);
+	GauManager *mgr = check(gau_manager_create_custom(&(GaDeviceType){GaDeviceType_Default}, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
+	GaMixer *mixer = check(gau_manager_mixer(mgr), "Unable to get mixer from manager");
+	GaStreamManager *smgr = gau_manager_stream_manager(mgr);
 
-	//ga_Handle *handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GAU_AUDIO_TYPE_OGG, NULL, NULL, NULL);
-	ga_Handle *handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GAU_AUDIO_TYPE_OGG, NULL, NULL, NULL);
+	//GaHandle *handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GauAudioType_Wav, NULL, NULL, NULL);
+	GaHandle *handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GauAudioType_Ogg, NULL, NULL, NULL);
 	check(handle, "Could not load file '%s'.", argv[1]);
 	//ga_handle_setParamf(handle, GA_HANDLE_PARAM_PAN, 0);
 
 	ga_handle_play(handle);
 
-	ga_Device *dev = gau_manager_device(mgr);
-	ga_Format hfmt;
+	GaDevice *dev = gau_manager_device(mgr);
+	GaFormat hfmt;
 	ga_handle_format(handle, &hfmt);
 	printf("gaplay [%s %i -> %iHz %i -> %ich] %s\n", devicetypename(dev->dev_type), hfmt.sample_rate, dev->format.sample_rate, hfmt.num_channels, dev->format.num_channels, argv[1]);
 
-	int dur = ga_format_to_seconds(&dev->format, ga_handle_tell(handle, GA_TELL_PARAM_TOTAL));
+	int dur = ga_format_to_seconds(&dev->format, ga_handle_tell(handle, GaTellParam_Total));
 
 	while (ga_handle_playing(handle)) {
 		gau_manager_update(mgr);
-		int cur = ga_format_to_seconds(&dev->format, ga_handle_tell(handle, GA_TELL_PARAM_CURRENT));
+		int cur = ga_format_to_seconds(&dev->format, ga_handle_tell(handle, GaTellParam_Current));
 		printtime(cur);
 		printf(" / ");
 		printtime(dur);
 		printf(" (%.0f%%)\r", 100*cur/(float)dur);
 		fflush(stdout);
-		gc_thread_sleep(1000);
+		ga_thread_sleep(1000);
+		break;
 	}
 
 	putchar('\n');
 
 	ga_handle_destroy(handle);
 	gau_manager_destroy(mgr);
-	gc_shutdown();
+	ga_shutdown_systemops();
 }

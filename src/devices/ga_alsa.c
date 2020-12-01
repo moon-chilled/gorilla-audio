@@ -13,18 +13,18 @@
 // it would require some restructuring elsewhere.  Probably not worth it,
 // especially since most people aren't using straight alsa anymore
 
-struct gaX_DeviceImpl {
+struct GaXDeviceImpl {
 	snd_pcm_t *interface;
 };
 
-static gc_result gaX_open(ga_Device *dev) {
+static ga_result gaX_open(GaDevice *dev) {
 #define acheck(expr) if ((expr) < 0) goto cleanup
-	dev->impl = gcX_ops->allocFunc(sizeof(gaX_DeviceImpl));
-	if (!dev->impl) return GC_ERROR_GENERIC;
+	dev->impl = gcX_ops->allocFunc(sizeof(GaXDeviceImpl));
+	if (!dev->impl) return GA_ERR_GENERIC;
 
 	if (snd_pcm_open(&dev->impl->interface, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0) {
 		gcX_ops->freeFunc(dev->impl);
-		return GC_ERROR_GENERIC;
+		return GA_ERR_GENERIC;
 	}
 
 	snd_pcm_hw_params_t *params;
@@ -52,16 +52,16 @@ static gc_result gaX_open(ga_Device *dev) {
 
 	//todo latency
 
-	return GC_SUCCESS;
+	return GA_OK;
 
 cleanup:
 	snd_pcm_drain(dev->impl->interface);
 	snd_pcm_close(dev->impl->interface);
 	gcX_ops->freeFunc(dev->impl);
-	return GC_ERROR_GENERIC;
+	return GA_ERR_GENERIC;
 }
 
-static gc_result gaX_close(ga_Device *dev) {
+static ga_result gaX_close(GaDevice *dev) {
 	snd_pcm_drain(dev->impl->interface);
 	snd_pcm_close(dev->impl->interface);
 	gcX_ops->freeFunc(dev->impl);
@@ -71,24 +71,24 @@ static gc_result gaX_close(ga_Device *dev) {
 	// transparently by alsa in the event that the library user creates and
 	// then destroys multiple devices
 	// but freeing it avoids false positives from valgrind/memtest
-	return GC_SUCCESS;
+	return GA_OK;
 }
 
-static gc_int32 gaX_check(ga_Device *dev) {
+static gc_int32 gaX_check(GaDevice *dev) {
 	snd_pcm_sframes_t avail = snd_pcm_avail(dev->impl->interface);
 	if (avail < 0) return 0;
 	return avail / dev->num_samples;
 }
 
-static gc_result gaX_queue(ga_Device *dev, void *buf) {
+static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	snd_pcm_sframes_t written = snd_pcm_writei(dev->impl->interface, buf, dev->num_samples);
 	// TODO: handle the below
-	if (written == -EBADFD) return GC_ERROR_GENERIC; // PCM is not in the right state (SND_PCM_STATE_PREPARED or SND_PCM_STATE_RUNNING) 
-	if (written == -EPIPE) return GC_ERROR_GENERIC; // underrun
-	if (written == -ESTRPIPE) return GC_ERROR_GENERIC; // a suspend event occurred (stream is suspended and waiting for an application recovery)
+	if (written == -EBADFD) return GA_ERR_GENERIC; // PCM is not in the right state (SND_PCM_STATE_PREPARED or SND_PCM_STATE_RUNNING) 
+	if (written == -EPIPE) return GA_ERR_GENERIC; // underrun
+	if (written == -ESTRPIPE) return GA_ERR_GENERIC; // a suspend event occurred (stream is suspended and waiting for an application recovery)
 
-	if (written != dev->num_samples) return GC_ERROR_GENERIC; // underrun/signal
-	return GC_SUCCESS;
+	if (written != dev->num_samples) return GA_ERR_GENERIC; // underrun/signal
+	return GA_OK;
 }
 
-gaX_DeviceProcs gaX_deviceprocs_ALSA = { gaX_open, gaX_check, gaX_queue, gaX_close };
+GaXDeviceProcs gaX_deviceprocs_ALSA = { gaX_open, gaX_check, gaX_queue, gaX_close };

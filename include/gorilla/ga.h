@@ -12,7 +12,7 @@
 #ifndef GORILLA_GA_H
 #define GORILLA_GA_H
 
-#include "gorilla/common/gc_common.h"
+#include "gorilla/common/ga_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -124,7 +124,7 @@ typedef enum {
 /** Audio format definition data structure and associated functions.
  *
  *  \ingroup external
- *  \defgroup ga_Format Format
+ *  \defgroup GaFormat Format
  */
 
 /** Audio format data structure [\ref POD].
@@ -133,41 +133,41 @@ typedef enum {
  *
  *  This object may be used on any thread.
  *
- *  \ingroup ga_Format
+ *  \ingroup GaFormat
  */
 typedef struct {
 	gc_uint32 sample_rate; /**< Sample rate (usually 44100) */
 	gc_uint32 bits_per_sample; /**< Bits per PCM sample (usually 16) */
 	gc_uint32 num_channels; /**< Number of audio channels (1 for mono, 2 for stereo) */
-} ga_Format;
+} GaFormat;
 
 /** Retrieves the sample size (in bytes) of a specified format.
  *
- *  \ingroup ga_Format
+ *  \ingroup GaFormat
  *  \param format Format of the PCM data
  *  \return Sample size (in bytes) of the specified format
  */
-gc_uint32 ga_format_sample_size(ga_Format *format);
+gc_uint32 ga_format_sample_size(GaFormat *format);
 
 /** Converts a discrete number of PCM samples into the duration (in seconds) it
  *  will take to play back.
  *
- *  \ingroup ga_Format
+ *  \ingroup GaFormat
  *  \param format Format of PCM sample data
  *  \param samples Number of PCM samples
  *  \return Duration (in seconds) it will take to play back
  */
-gc_float32 ga_format_to_seconds(ga_Format *format, gc_size samples);
+gc_float32 ga_format_to_seconds(GaFormat *format, gc_size samples);
 
 /** Converts a duration (in seconds) into the discrete number of PCM samples it
  *  will take to play for that long.
  *
- *  \ingroup ga_Format
+ *  \ingroup GaFormat
  *  \param format Format of PCM sample data
  *  \param seconds Duration (in seconds)
  *  \return Number of PCM samples it will take to play back for the given time
  */
-gc_int32 ga_format_to_samples(ga_Format *format, gc_float32 seconds);
+gc_int32 ga_format_to_samples(GaFormat *format, gc_float32 seconds);
 
 
 /************/
@@ -176,17 +176,17 @@ gc_int32 ga_format_to_samples(ga_Format *format, gc_float32 seconds);
 /** Abstract device data structure and associated functions.
  *
  *  \ingroup external
- *  \defgroup ga_Device Device
+ *  \defgroup GaDevice Device
  */
 typedef enum {
-	GaDeviceType_Default    = -1, /**< Default device type (based on hard-coded priorities) \ingroup ga_Device */
-	GaDeviceType_Unknown,         /**< Unknown (invalid) device type \ingroup ga_Device */
-	GaDeviceType_Dummy,           /**< Dummy device, doesn't actually play anything \ingroup ga_Device */
-	GaDeviceType_OSS,             /**< OSS playback device (mainly FreeBSD) \ingroup ga_Device */
-	GaDeviceType_XAudio2,         /**< XAudio2 playback device (Windows-only) \ingroup ga_Device */
-	GaDeviceType_PulseAudio,      /**< PulseAudio playback device (cross-platform, mainly for linux) \ingroup ga_Device */
-	GaDeviceType_ALSA,            /**< ALSA playback device (mainly for linux) \ingroup ga_Device */
-	GaDeviceType_OpenAL,          /**< OpenAL playback device (cross-platform) \ingroup ga_Device */
+	GaDeviceType_Default    = -1, /**< Default device type (based on hard-coded priorities) \ingroup GaDevice */
+	GaDeviceType_Unknown,         /**< Unknown (invalid) device type \ingroup GaDevice */
+	GaDeviceType_Dummy,           /**< Dummy device, doesn't actually play anything \ingroup GaDevice */
+	GaDeviceType_OSS,             /**< OSS playback device (mainly FreeBSD) \ingroup GaDevice */
+	GaDeviceType_XAudio2,         /**< XAudio2 playback device (Windows-only) \ingroup GaDevice */
+	GaDeviceType_PulseAudio,      /**< PulseAudio playback device (cross-platform, mainly for linux) \ingroup GaDevice */
+	GaDeviceType_ALSA,            /**< ALSA playback device (mainly for linux) \ingroup GaDevice */
+	GaDeviceType_OpenAL,          /**< OpenAL playback device (cross-platform) \ingroup GaDevice */
 } GaDeviceType;
 
 /** Hardware device abstract data structure [\ref SINGLE_CLIENT].
@@ -203,16 +203,16 @@ typedef enum {
  *
  *  This object may only be used on the main thread.
  *
- *  \ingroup ga_Device
+ *  \ingroup GaDevice
  *  \warning You can only have one device open at-a-time.
  *  \todo Create a way to query the actual buffers/samples/format of the opened device.
- *        ga_device_check() does not work in all use cases (such as gau_Manager))
+ *        ga_device_check() does not work in all use cases (such as GauManager))
  */
-typedef struct ga_Device ga_Device;
+typedef struct GaDevice GaDevice;
 
 /** Opens a concrete audio device.
  *
- *  \ingroup ga_Device
+ *  \ingroup GaDevice
  *  \param type Requested and received device type (former is usually GaDeviceType_Default).
  *  \param num_buffers Requested and received number of buffers.
  *  \param num_samples Requested and received sample buffer size.
@@ -225,38 +225,38 @@ typedef struct ga_Device ga_Device;
  *           locations.  If you pass in NULL for any of these arguments, a
  *           reasonable default will be chosen.
  */
-ga_Device *ga_device_open(GaDeviceType *type,
+GaDevice *ga_device_open(GaDeviceType *type,
                           gc_uint32 *num_buffers,
                           gc_uint32 *num_samples,
-                          ga_Format *format);
+                          GaFormat *format);
 
 /** Checks the number of free (unqueued) buffers.
  *
- *  \ingroup ga_Device
+ *  \ingroup GaDevice
  *  \param device Device to check.
  *  \return Number of free (unqueued) buffers.
  */
-gc_int32 ga_device_check(ga_Device *device);
+gc_int32 ga_device_check(GaDevice *device);
 
 /** Adds a buffer to a device's presentation queue.
  *
- *  \ingroup ga_Device
+ *  \ingroup GaDevice
  *  \param device Device in which to queue the buffer.
  *  \param buffer Buffer to add to the presentation queue.
- *  \return GC_SUCCESS if the buffer was queued successfully. GC_ERROR_GENERIC if not.
+ *  \return GA_OK if the buffer was queued successfully. GA_ERR_GENERIC if not.
  *  \warning You should always call ga_device_check() prior to queueing a buffer! If
  *           there isn't a free (unqueued) buffer, the operation will fail.
  */
-gc_result ga_device_queue(ga_Device *device, void *buffer);
+ga_result ga_device_queue(GaDevice *device, void *buffer);
 
 /** Closes an open audio device.
  *
- *  \ingroup ga_Device
+ *  \ingroup GaDevice
  *  \param device Device to close.
- *  \return GC_SUCCESS if the device was closed successfully. GC_ERROR_GENERIC if not.
+ *  \return GA_OK if the device was closed successfully. GA_ERR_GENERIC if not.
  *  \warning The client must never use a device after calling ga_device_close().
  */
-gc_result ga_device_close(ga_Device *device);
+ga_result ga_device_close(GaDevice *device);
 
 
 /*****************/
@@ -265,8 +265,8 @@ gc_result ga_device_close(ga_Device *device);
 /** Abstract data source data structure and associated functions.
  *
  *  \ingroup external
- *  \defgroup ga_DataSource Data Source
- *  \todo Write an tutorial on how to write a ga_DataSource concrete implementation.
+ *  \defgroup GaDataSource Data Source
+ *  \todo Write an tutorial on how to write a GaDataSource concrete implementation.
  *  \todo Design a clearer/better system for easily extending this data type.
  */
 
@@ -278,15 +278,15 @@ gc_result ga_device_close(ga_Device *device);
  *
  *  This object may only be used on the main thread.
  *
- *  \ingroup ga_DataSource
+ *  \ingroup GaDataSource
  */
-typedef struct ga_DataSource ga_DataSource;
+typedef struct GaDataSource GaDataSource;
 
 /** Enumerated seek origin values.
 *
 *  Used when seeking within data sources.
 *
-*  \ingroup ga_DataSource
+*  \ingroup GaDataSource
 *  \defgroup seekOrigins Seek Origins
 */
 typedef enum {
@@ -297,7 +297,7 @@ typedef enum {
 
 /** Reads binary data from the data source.
  *
- *  \ingroup ga_DataSource
+ *  \ingroup GaDataSource
  *  \param dataSrc Data source from which to read.
  *  \param dst Destination buffer into which bytes should be read.  Must
  *                be at least (size * count) bytes in size.
@@ -305,54 +305,54 @@ typedef enum {
  *  \param count Number of elements to read.
  *  \return Total number of bytes read into the destination buffer.
  */
-gc_size ga_data_source_read(ga_DataSource *dataSrc, void *dst, gc_size size, gc_size count);
+gc_size ga_data_source_read(GaDataSource *dataSrc, void *dst, gc_size size, gc_size count);
 
 /** Seek to an offset within a data source.
  *
- *  \ingroup ga_DataSource
+ *  \ingroup GaDataSource
  *  \param dataSrc Data source to seek within.
  *  \param offset Offset (in bytes) from the specified seek origin.
  *  \param whence Seek origin (see [\ref seekOrigins]).
- *  \return If seek succeeds, returns GC_SUCCESS, otherwise returns GC_ERROR_GENERIC (invalid seek request).
+ *  \return If seek succeeds, returns GA_OK, otherwise returns GA_ERR_GENERIC (invalid seek request).
  *  \warning Only data sources with GaDataAccessFlag_Seekable can have ga_data_source_seek() called on them.
 */
-gc_result ga_data_source_seek(ga_DataSource *dataSrc, gc_ssize offset, GaSeekOrigin whence);
+ga_result ga_data_source_seek(GaDataSource *dataSrc, gc_ssize offset, GaSeekOrigin whence);
 
 /** Tells the current read position of a data source.
  *
- *  \ingroup ga_DataSource
+ *  \ingroup GaDataSource
  *  \param dataSrc Data source to tell the read position of.
  *  \return The current data source read position.
  */
-gc_size ga_data_source_tell(ga_DataSource *dataSrc);
+gc_size ga_data_source_tell(GaDataSource *dataSrc);
 
 /** Returns the bitfield of flags set for a data source (see \ref globDefs).
  *
- *  \ingroup ga_DataSource
+ *  \ingroup GaDataSource
  *  \param dataSrc Data source whose flags should be retrieved.
  *  \return The bitfield of flags set for the data source.
  */
-GaDataAccessFlags ga_data_source_flags(ga_DataSource *dataSrc);
+GaDataAccessFlags ga_data_source_flags(GaDataSource *dataSrc);
 
 /** Acquires a reference for a data source.
  *
  *  Increments the data source's reference count by 1.
  *
- *  \ingroup ga_DataSource
+ *  \ingroup GaDataSource
  *  \param dataSrc Data source whose reference count should be incremented.
  */
-void ga_data_source_acquire(ga_DataSource *dataSrc);
+void ga_data_source_acquire(GaDataSource *dataSrc);
 
 /** Releases a reference for a data source.
  *
  *  Decrements the data source's reference count by 1. When the last reference is
  *  released, the data source's resources will be deallocated.
  *
- *  \ingroup ga_DataSource
+ *  \ingroup GaDataSource
  *  \param dataSrc Data source whose reference count should be decremented.
  *  \warning A client must never use a data source after releasing its reference.
  */
-void ga_data_source_release(ga_DataSource *dataSrc);
+void ga_data_source_release(GaDataSource *dataSrc);
 
 
 /*******************/
@@ -361,7 +361,7 @@ void ga_data_source_release(ga_DataSource *dataSrc);
 /** Abstract sample source data structure and associated functions.
  *
  *  \ingroup external
- *  \defgroup ga_SampleSource Sample Source
+ *  \defgroup GaSampleSource Sample Source
  *  \todo Design a clearer/better system for easily extending this data type.
  */
 
@@ -373,9 +373,9 @@ void ga_data_source_release(ga_DataSource *dataSrc);
  *
  *  This object may only be used on the main thread.
  *
- *  \ingroup ga_SampleSource
+ *  \ingroup GaSampleSource
  */
-typedef struct ga_SampleSource ga_SampleSource;
+typedef struct GaSampleSource GaSampleSource;
 
 /** On-seek callback function.
  *
@@ -383,7 +383,7 @@ typedef struct ga_SampleSource ga_SampleSource;
  *  seeks as part of the read. This callback is used to implement gapless looping
  *  features within the sample source pipeline.
  *
- *  \ingroup ga_SampleSource
+ *  \ingroup GaSampleSource
  *  \param sample The sample the sample source was at when the seek happened.
  *  \param delta The signed distance from the old position to the new position.
  *  \param seekContext The user-specified context provided in ga_sample_source_read().
@@ -392,7 +392,7 @@ typedef void (*GaCbOnSeek)(gc_int32 sample, gc_int32 delta, void *seekContext);
 
 /** Reads samples from a samples source.
  *
- *  \ingroup ga_SampleSource
+ *  \ingroup GaSampleSource
  *  \param sampleSrc Sample source from which to read.
  *  \param dst Destination buffer into which samples should be read. Must
  *                be at least (num_samples * sample-size) bytes in size.
@@ -401,16 +401,16 @@ typedef void (*GaCbOnSeek)(gc_int32 sample, gc_int32 delta, void *seekContext);
  *  \param seekContext User-specified context for the on-seek function.
  *  \return Total number of bytes read into the destination buffer.
  */
-gc_size ga_sample_source_read(ga_SampleSource *sample_src, void *dst, gc_size num_samples,
+gc_size ga_sample_source_read(GaSampleSource *sample_src, void *dst, gc_size num_samples,
                                GaCbOnSeek onseek, void *seek_ctx);
 
 /** Checks whether a sample source has reached the end of the stream.
  *
- *  \ingroup ga_SampleSource
+ *  \ingroup GaSampleSource
  *  \param sampleSrc Sample source to check.
  *  \return Whether the sample source has reached the end of the stream.
  */
-gc_bool ga_sample_source_end(ga_SampleSource *sampleSrc);
+gc_bool ga_sample_source_end(GaSampleSource *sampleSrc);
 
 /** Checks whether a sample source has at least a given number of available
  *  samples.
@@ -419,73 +419,73 @@ gc_bool ga_sample_source_end(ga_SampleSource *sampleSrc);
  *  finishes, this function will returns GA_TRUE regardless of the number of
  *  samples.
  *
- *  \ingroup ga_SampleSource
+ *  \ingroup GaSampleSource
  *  \param sampleSrc Sample source to check.
  *  \param num_samples The minimum number of samples required for the sample
  *                       source to be considered ready.
  *  \return Whether the sample source has at least a given number of available
  *          samples.
  */
-gc_bool ga_sample_source_ready(ga_SampleSource *sampleSrc, gc_size num_samples);
+gc_bool ga_sample_source_ready(GaSampleSource *sampleSrc, gc_size num_samples);
 
 /** Seek to an offset (in samples) within a sample source.
  *
- *  \ingroup ga_SampleSource
+ *  \ingroup GaSampleSource
  *  \param sampleSrc Sample source to seek within.
  *  \param sampleOffset Offset (in samples) from the start of the sample stream.
- *  \return If seek succeeds, returns GC_SUCCESS, otherwise returns GC_ERROR_GENERIC (invalid seek request).
+ *  \return If seek succeeds, returns GA_OK, otherwise returns GA_ERR_GENERIC (invalid seek request).
  *  \warning Only sample sources with GA_FLAG_SEEKABLE can have ga_sample_source_seek()
  *           called on them.
  */
-gc_result ga_sample_source_seek(ga_SampleSource *sampleSrc, gc_size sampleOffset);
+ga_result ga_sample_source_seek(GaSampleSource *sampleSrc, gc_size sampleOffset);
 
 /** Tells the current sample number of a sample source.
  *
- *  \ingroup ga_SampleSource
+ *  \ingroup GaSampleSource
  *  \param sampleSrc Sample source to tell the current sample number of.
  *  \param totalSamples If set, this value will be set to the total number of
  *                          samples in the sample source. Output parameter.
  *  \return The current sample source sample number.
  */
-gc_result ga_sample_source_tell(ga_SampleSource *sampleSrc, gc_size *samples, gc_size *totalSamples);
+ga_result ga_sample_source_tell(GaSampleSource *sampleSrc, gc_size *samples, gc_size *totalSamples);
 
 /** Returns the bitfield of flags set for a sample source (see \ref globDefs).
  *
- *  \ingroup ga_SampleSource
+ *  \ingroup GaSampleSource
  *  \param sampleSrc Sample source whose flags should be retrieved.
  *  \return The bitfield of flags set for the sample source.
  */
-GaDataAccessFlags ga_sample_source_flags(ga_SampleSource *sampleSrc);
+GaDataAccessFlags ga_sample_source_flags(GaSampleSource *sampleSrc);
 
 /** Retrieves the PCM sample format for a sample source.
  *
- *  \ingroup ga_SampleSource
+ *  \ingroup GaSampleSource
  *  \param sampleSrc Sample source whose format should should be retrieved.
  *  \param format This value will be set to the same sample format
  *                    as samples in the sample source. Output parameter.
  *  \todo Either return a copy of the format, or make it a const* return value.
  */
-void ga_sample_source_format(ga_SampleSource *sampleSrc, ga_Format *format);
+void ga_sample_source_format(GaSampleSource *sampleSrc, GaFormat *format);
 
 /** Acquires a reference for a sample source.
  *
  *  Increments the sample source's reference count by 1.
  *
- *  \ingroup ga_SampleSource
+ *  \ingroup GaSampleSource
  *  \param sampleSrc Sample source whose reference count should be incremented.
  */
-void ga_sample_source_acquire(ga_SampleSource *sampleSrc);
+void ga_sample_source_acquire(GaSampleSource *sampleSrc);
 
 /** Releases a reference for a sample source.
  *
  *  Decrements the sample source's reference count by 1. When the last reference is
  *  released, the sample source's resources will be deallocated.
  *
- *  \ingroup ga_SampleSource
+ *  \ingroup GaSampleSource
  *  \param sampleSrc Sample source whose reference count should be decremented.
  *  \warning A client must never use a sample source after releasing its reference.
  */
-void ga_sample_source_release(ga_SampleSource *sampleSrc);
+void ga_sample_source_release(GaSampleSource *sampleSrc);
 
 
 /************/
@@ -494,23 +494,23 @@ void ga_sample_source_release(ga_SampleSource *sampleSrc);
 /** Shared (reference-counted) memory data structure and associated functions.
  *
  *  \ingroup external
- *  \defgroup ga_Memory Memory
+ *  \defgroup GaMemory Memory
  */
 
 /** Shared memory object data structure [\ref MULTI_CLIENT].
  *
  *  As a way of sharing data between multiple client across multiple threads,
  *  this data structure allows for a safe internal copy of the data. This is
- *  used in the internal implementation of ga_Sound, and can also be used to
+ *  used in the internal implementation of GaSound, and can also be used to
  *  play compressed audio directly from memory without having to read the data
  *  source from a high-latency I/O interface or needlessly duplicate the data.
  *
  *  This object may be created on a secondary thread, but may otherwise only
  *  be used on the main thread.
  *
- *  \ingroup ga_Memory
+ *  \ingroup GaMemory
  */
-typedef struct ga_Memory ga_Memory;
+typedef struct GaMemory GaMemory;
 
 /** Create a shared memory object.
  *
@@ -519,14 +519,14 @@ typedef struct ga_Memory ga_Memory;
  *  ga_memory_create() as soon as the function returns.
  *  The returned memory object has an initial reference count of 1.
  *
- *  \ingroup ga_Memory
+ *  \ingroup GaMemory
  *  \param data Data buffer to be copied into an internal data buffer.
  *  \param size Size (in bytes) of the provided data buffer.
  *  \return Newly-allocated memory object, containing an internal copy of the
  *          provided data buffer.  If the buffer is null, then the contents
  *          will be uninitialized instead.
  */
-ga_Memory *ga_memory_create(void *data, gc_size size);
+GaMemory *ga_memory_create(void *data, gc_size size);
 
 /** Create a shared memory object from the full contents of a data source.
  *
@@ -534,49 +534,49 @@ ga_Memory *ga_memory_create(void *data, gc_size size);
  *  into a newly-allocated internal storage buffer.
  *  The returned object has an initial reference count of 1.
  *
- *  \ingroup ga_Memory
+ *  \ingroup GaMemory
  *  \param dataSource Data source to be read into an internal data buffer.
  *  \return Newly-allocated memory object, containing an internal copy of the
  *          full contents of the provided data source.
  */
-ga_Memory *ga_memory_create_data_source(ga_DataSource *dataSource);
+GaMemory *ga_memory_create_data_source(GaDataSource *dataSource);
 
 /** Retrieve the size (in bytes) of a memory object's stored data.
  *
- *  \ingroup ga_Memory
+ *  \ingroup GaMemory
  *  \param mem Memory object whose stored data size should be retrieved.
  *  \return Size (in bytes) of the memory object's stored data.
  */
-gc_size ga_memory_size(ga_Memory *mem);
+gc_size ga_memory_size(GaMemory *mem);
 
 /** Retrieve a pointer to a memory object's stored data.
  *
- *  \ingroup ga_Memory
+ *  \ingroup GaMemory
  *  \param mem Memory object whose stored data pointer should be retrieved.
  *  \return Pointer to the memory object's stored data.
  *  \warning Never manually free the pointer returned by this function.
  */
-void *ga_memory_data(ga_Memory *mem);
+void *ga_memory_data(GaMemory *mem);
 
 /** Acquires a reference for a memory object.
  *
  *  Increments the memory object's reference count by 1.
  *
- *  \ingroup ga_Memory
+ *  \ingroup GaMemory
  *  \param mem Memory object whose reference count should be incremented.
  */
-void ga_memory_acquire(ga_Memory *mem);
+void ga_memory_acquire(GaMemory *mem);
 
 /** Releases a reference for a memory object.
  *
  *  Decrements the memory object's reference count by 1. When the last reference is
  *  released, the memory object's resources will be deallocated.
  *
- *  \ingroup ga_Memory
+ *  \ingroup GaMemory
  *  \param mem Memory object whose reference count should be decremented.
  *  \warning A client must never use a memory object after releasing its reference.
  */
-void ga_memory_release(ga_Memory *mem);
+void ga_memory_release(GaMemory *mem);
 
 
 /***********/
@@ -585,7 +585,7 @@ void ga_memory_release(ga_Memory *mem);
 /** Shared (reference-counted) sound data structure and associated functions.
  *
  *  \ingroup external
- *  \defgroup ga_Sound Sound
+ *  \defgroup GaSound Sound
  */
 
 /** Shared sound object data structure [\ref MULTI_CLIENT].
@@ -593,14 +593,14 @@ void ga_memory_release(ga_Memory *mem);
  *  As a way of sharing sounds between multiple client across multiple threads,
  *  this data structure allows for a safe internal copy of the PCM data. The
  *  data buffer must contain only raw PCM data, not formatted or compressed
- *  in any other way. To cache or share any other data, use a ga_Memory.
+ *  in any other way. To cache or share any other data, use a GaMemory.
  *
  *  This object may be created on a secondary thread, but may otherwise only
  *  be used on the main thread.
  *
- *  \ingroup ga_Sound
+ *  \ingroup GaSound
  */
-typedef struct ga_Sound ga_Sound;
+typedef struct GaSound GaSound;
 
 /** Create a shared sound object.
  *
@@ -608,13 +608,13 @@ typedef struct ga_Sound ga_Sound;
  *  object has an initial reference count of 1. This function acquires a
  *  reference from the provided memory object.
  *
- *  \ingroup ga_Sound
+ *  \ingroup GaSound
  *  \param memory Shared memory object containing raw PCM data. This
  *  function acquires a reference from the provided memory object.
  *  \param format Format of the raw PCM data contained by memory.
  *  \return Newly-allocated sound object.
  */
-ga_Sound *ga_sound_create(ga_Memory *memory, ga_Format *format);
+GaSound *ga_sound_create(GaMemory *memory, GaFormat *format);
 
 /** Create a shared memory object from the full contents of a sample source.
  *
@@ -622,68 +622,68 @@ ga_Sound *ga_sound_create(ga_Memory *memory, ga_Format *format);
  *  streamed into a newly-allocated internal memory object.
  *  The returned sound object has an initial reference count of 1.
  *
- *  \ingroup ga_Sound
+ *  \ingroup GaSound
  *  \param sampleSrc Sample source to be read into an internal data buffer.
  *  \return Newly-allocated memory object, containing an internal copy of the
  *          full contents of the provided data source.
  */
-ga_Sound *ga_sound_create_sample_source(ga_SampleSource *sampleSrc);
+GaSound *ga_sound_create_sample_source(GaSampleSource *sampleSrc);
 
 /** Retrieve a pointer to a sound object's stored data.
  *
- *  \ingroup ga_Sound
+ *  \ingroup GaSound
  *  \param sound Sound object whose stored data pointer should be retrieved.
  *  \return Pointer to the sound object's stored data.
  *  \warning Never manually free the pointer returned by this function.
  */
-void *ga_sound_data(ga_Sound *sound);
+void *ga_sound_data(GaSound *sound);
 
 /** Retrieve the size (in bytes) of a sound object's stored data.
  *
- *  \ingroup ga_Sound
+ *  \ingroup GaSound
  *  \param sound Sound object whose stored data size should be retrieved.
  *  \return Size (in bytes) of the sound object's stored data.
  */
-gc_size ga_sound_size(ga_Sound *sound);
+gc_size ga_sound_size(GaSound *sound);
 
 /** Retrieve the number of samples in a sound object's stored PCM data.
  *
- *  \ingroup ga_Sound
+ *  \ingroup GaSound
  *  \param sound Sound object whose number of samples should be retrieved.
  *  \return Number of samples in the sound object's stored PCM data.
  */
-gc_size ga_sound_num_samples(ga_Sound *sound);
+gc_size ga_sound_num_samples(GaSound *sound);
 
 /** Retrieves the PCM sample format for a sound.
  *
- *  \ingroup ga_Sound
+ *  \ingroup GaSound
  *  \param sound Sound whose format should should be retrieved.
  *  \param format This value will be set to the same sample format
  *                    as samples in the sound. Output parameter.
  *  \todo Either return a copy of the format, or make it a const* return value.
  */
-void ga_sound_format(ga_Sound *sound, ga_Format *format);
+void ga_sound_format(GaSound *sound, GaFormat *format);
 
 /** Acquires a reference for a sound object.
  *
  *  Increments the sound object's reference count by 1.
  *
- *  \ingroup ga_Sound
+ *  \ingroup GaSound
  *  \param sound Sound object whose reference count should be incremented.
  *  \todo Either return a copy of the format, or make it a const* return value.
  */
-void ga_sound_acquire(ga_Sound *sound);
+void ga_sound_acquire(GaSound *sound);
 
 /** Releases a reference for a sound object.
  *
  *  Decrements the sound object's reference count by 1. When the last reference is
  *  released, the sound object's resources will be deallocated.
  *
- *  \ingroup ga_Sound
+ *  \ingroup GaSound
  *  \param sound Sound object whose reference count should be decremented.
  *  \warning A client must never use a sound object after releasing its reference.
  */
-void ga_sound_release(ga_Sound *sound);
+void ga_sound_release(GaSound *sound);
 
 
 /************/
@@ -692,7 +692,7 @@ void ga_sound_release(ga_Sound *sound);
 /** Multi-channel audio mixer data structure and associated functions.
  *
  *  \ingroup external
- *  \defgroup ga_Mixer Mixer
+ *  \defgroup GaMixer Mixer
  */
 
 /** Audio mixer data structure [\ref SINGLE_CLIENT].
@@ -705,45 +705,45 @@ void ga_sound_release(ga_Sound *sound);
  *
  *  This object may only be used on the main thread.
  *
- *  \ingroup ga_Mixer
+ *  \ingroup GaMixer
  */
-typedef struct ga_Mixer ga_Mixer;
+typedef struct GaMixer GaMixer;
 
 /** Creates a mixer object with the specified number and format of PCM samples.
  *
- *  \ingroup ga_Mixer
+ *  \ingroup GaMixer
  *  \param format Format for the PCM samples produced by the buffer.
  *  \param num_samples Number of samples to be mixed at a time (must be a power-of-two).
  *  \return Newly-created mixer object.
  *  \warning The number of samples must be a power-of-two.
  *  \todo Remove the requirement that the buffer be a power-of-two in size.
  */
-ga_Mixer *ga_mixer_create(ga_Format *format, gc_int32 num_samples);
+GaMixer *ga_mixer_create(GaFormat *format, gc_int32 num_samples);
 
 /** Retrieves the PCM sample format for a mixer object.
  *
- *  \ingroup ga_Mixer
+ *  \ingroup GaMixer
  *  \param mixer Mixer whose format should should be retrieved.
  *  \return Pointer to the internal format structure used by this object.
  *  \warning Do not modify the contents of this pointer
  *  \todo Either return a copy of the format, or make it a const*.
  */
-ga_Format *ga_mixer_format(ga_Mixer *mixer);
+GaFormat *ga_mixer_format(GaMixer *mixer);
 
 /** Retrieve the number of samples in a mixer object's mix buffer.
  *
- *  \ingroup ga_Mixer
+ *  \ingroup GaMixer
  *  \param mixer Mixer object whose number of samples should be retrieved.
  *  \return Number of samples in a mixer object's mix buffer.
  */
-gc_int32 ga_mixer_num_samples(ga_Mixer *mixer);
+gc_int32 ga_mixer_num_samples(GaMixer *mixer);
 
 /** Mixes samples from all ready handles into a single output buffer.
  *
  *  The output buffer is generally presented directly to the device queue
  *  for playback.
  *
- *  \ingroup ga_Mixer
+ *  \ingroup GaMixer
  *  \param mixer Mixer object whose handles' samples should be mixed.
  *  \param buffer An empty buffer into which the mixed samples should be
  *                    copied. The buffer must be large enough to hold the
@@ -751,7 +751,7 @@ gc_int32 ga_mixer_num_samples(ga_Mixer *mixer);
  *  \return Whether the mixer successfully mixed the data. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-gc_result ga_mixer_mix(ga_Mixer *mixer, void *buffer);
+ga_result ga_mixer_mix(GaMixer *mixer, void *buffer);
 
 /** Dispatches all pending finish callbacks.
  *
@@ -759,22 +759,22 @@ gc_result ga_mixer_mix(ga_Mixer *mixer, void *buffer);
  *  associated with this object) must be called from the main thread. All callbacks
  *  will be called on the main thread.
  *
- *  \ingroup ga_Mixer
+ *  \ingroup GaMixer
  *  \param mixer Mixer object whose handles' finish callbacks should be dispatched.
  *  \return Whether the mixer successfully dispatched the callbacks. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-gc_result ga_mixer_dispatch(ga_Mixer *mixer);
+ga_result ga_mixer_dispatch(GaMixer *mixer);
 
 /** Destroys a mixer object.
  *
- *  \ingroup ga_Mixer
+ *  \ingroup GaMixer
  *  \param mixer Mixer object to destroy.
  *  \return Whether the mixer was successfully destroyed. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  *  \warning The client must never use a mixer after calling ga_mixer_destroy().
  */
-gc_result ga_mixer_destroy(ga_Mixer *mixer);
+ga_result ga_mixer_destroy(GaMixer *mixer);
 
 
 /************/
@@ -786,7 +786,7 @@ gc_result ga_mixer_destroy(ga_Mixer *mixer);
  *  as playback state (play/pause/stop).
  *
  *  \ingroup external
- *  \defgroup ga_Handle Handle
+ *  \defgroup GaHandle Handle
  */
 
 /** Audio playback control handle data structure [\ref SINGLE_CLIENT].
@@ -800,32 +800,36 @@ gc_result ga_mixer_destroy(ga_Mixer *mixer);
  *
  *  This object may only be used on the main thread.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  */
-typedef struct ga_Handle ga_Handle;
+typedef struct GaHandle GaHandle;
 
 /** Enumerated handle parameter values.
  *
  *  Used when calling \ref ga_handle_setParamf() "ga_handle_setParam*()"
  *  or \ref ga_handle_getParamf() "ga_handle_getParam*()".
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \defgroup handleParams Handle Parameters
  */
-#define GA_HANDLE_PARAM_UNKNOWN 0 /**< Unknown parameter. \ingroup handleParams */
-#define GA_HANDLE_PARAM_PAN 1 /**< Left <-> right pan (center -> 0.0, left -> -1.0, right -> 1.0). Floating-point parameter. \ingroup handleParams */
-#define GA_HANDLE_PARAM_PITCH 2 /**< Pitch/speed multiplier (normal -> 1.0). Floating-point parameter. \ingroup handleParams */
-#define GA_HANDLE_PARAM_GAIN 3 /**< Gain/volume (silent -> 0.0, normal -> 1.0). Floating-point parameter. \ingroup handleParams */
+typedef enum {
+	GaHandleParam_Unknown,  /**< Unknown parameter. \ingroup handleParams */
+	GaHandleParam_Pan,      /**< Left <-> right pan (center -> 0.0, left -> -1.0, right -> 1.0). Floating-point parameter. \ingroup handleParams */
+	GaHandleParam_Pitch,    /**< Pitch/speed multiplier (normal -> 1.0). Floating-point parameter. \ingroup handleParams */
+	GaHandleParam_Gain,     /**< Gain/volume (silent -> 0.0, normal -> 1.0). Floating-point parameter. \ingroup handleParams */
+} GaHandleParam;
 
 /** Enumerated parameter values for ga_handle_tell().
  *
  *  Used in ga_handle_tell() to specify which value to return.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \defgroup tellParams Tell Parameters
  */
-#define GA_TELL_PARAM_CURRENT 0 /**< Current playback position (in samples). \ingroup tellParams */
-#define GA_TELL_PARAM_TOTAL 1 /**< Total samples in this handle's sample source. \ingroup tellParams */
+typedef enum {
+	GaTellParam_Current,  /**< Current playback position (in samples). \ingroup tellParams */
+	GaTellParam_Total,    /**< Total samples in this handle's sample source. \ingroup tellParams */
+} GaTellParam;
 
 /** Prototype for handle-finished-playback callback.
  *
@@ -833,14 +837,14 @@ typedef struct ga_Handle ga_Handle;
  *  does not generate this callback. Looping sample sources will never generate this
  *  callback.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param finishedHandle The handle that has finished playback.
  *  \param context The user-specified callback context.
  *  \warning This callback is thrown once the handle has finished playback,
  *           after which the handle can no longer be used except to destroy it.
  *  \todo Allow handles with GA_FLAG_SEEKABLE to be rewound/reused once finished.
  */
-typedef void (*ga_FinishCallback)(ga_Handle *finishedHandle, void *context);
+typedef void (*ga_FinishCallback)(GaHandle *finishedHandle, void *context);
 
 /** Creates an audio playback control handle.
  *
@@ -848,100 +852,100 @@ typedef void (*ga_FinishCallback)(ga_Handle *finishedHandle, void *context);
  *  call ga_handle_play(). Default gain is 1.0. Default pan is 0.0. Default
  *  pitch is 1.0.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param mixer The mixer that should mix the handle's sample data.
  *  \param sampleSrc The sample source from which to stream samples.
  *  \todo Provide a way to query handles for flags.
  */
-ga_Handle *ga_handle_create(ga_Mixer *mixer, ga_SampleSource *sampleSrc);
+GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *sampleSrc);
 
 /** Destroys an audio playback handle.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle object to destroy.
  *  \return Whether the mixer was successfully destroyed. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  *  \warning The client must never use a handle after calling ga_handle_destroy().
  */
-gc_result ga_handle_destroy(ga_Handle *handle);
+ga_result ga_handle_destroy(GaHandle *handle);
 
 /** Starts playback on an audio playback handle.
  *
  *  It is valid to call ga_handle_play() on a handle that is already playing.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle object to play.
  *  \return Whether the handle played successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  *  \warning You cannot play a handle that has finished playing. When in doubt, check
  *           ga_handle_finished() to verify this state prior to calling play.
  */
-gc_result ga_handle_play(ga_Handle *handle);
+ga_result ga_handle_play(GaHandle *handle);
 
 /** Stops playback of a playing audio playback handle.
  *
  *  It is valid to call ga_handle_stop() on a handle that is already stopped.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle object to stop.
  *  \return Whether the handle was stopped successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  *  \warning You cannot stop a handle that has finished playing. When in doubt, check
  *           ga_handle_finished() to verify this state prior to calling play.
  */
-gc_result ga_handle_stop(ga_Handle *handle);
+ga_result ga_handle_stop(GaHandle *handle);
 
 /** Checks whether a handle is currently playing.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle object to check.
  *  \return Whether the handle is currently playing.
  */
-gc_bool ga_handle_playing(ga_Handle *handle);
+gc_bool ga_handle_playing(GaHandle *handle);
 
 /** Checks whether a handle is currently stopped.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle object to check.
  *  \return Whether the handle is currently stopped.
  */
-gc_bool ga_handle_stopped(ga_Handle *handle);
+gc_bool ga_handle_stopped(GaHandle *handle);
 
 /** Checks whether a handle is currently finished.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle object to check.
  *  \return Whether the handle is currently finished.
  */
-gc_bool ga_handle_finished(ga_Handle *handle);
+gc_bool ga_handle_finished(GaHandle *handle);
 
 /** Checks whether a handle is currently destroyed.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle object to check.
  *  \return Whether the handle is currently destroyed.
  */
-gc_bool ga_handle_destroyed(ga_Handle *handle);
+gc_bool ga_handle_destroyed(GaHandle *handle);
 
 /** Sets the handle-finished-playback callback for a handle.
  *
  *  This callback will be called right before the handle enters the 'finished'
  *  playback state. The callback value is set to 0 internally once it triggers.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle object to set the callback for.
  *  \param callback Callback function pointer.
  *  \param context User-specified callback context.
  *  \return Whether the handle's callback was set successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-gc_result ga_handle_setCallback(ga_Handle *handle,
+ga_result ga_handle_setCallback(GaHandle *handle,
                                 ga_FinishCallback callback,
                                 void *context);
 
 /** Sets a floating-point parameter value on a handle.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle on which the parameter should be set
  *                   (see \ref handleParams).
  *  \param param Parameter to set (must be a floating-point value, see
@@ -950,13 +954,13 @@ gc_result ga_handle_setCallback(ga_Handle *handle,
  *  \return Whether the parameter was set successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-gc_result ga_handle_setParamf(ga_Handle *handle,
-                              gc_int32 param,
+ga_result ga_handle_setParamf(GaHandle *handle,
+                              GaHandleParam param,
                               gc_float32 value);
 
 /** Retrieves a floating-point parameter value from a handle.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle from which the parameter should be retrieved
  *                   (see \ref handleParams).
  *  \param param Parameter to retrieve (must be a floating-point value, see
@@ -966,13 +970,13 @@ gc_result ga_handle_setParamf(ga_Handle *handle,
  *  \return Whether the parameter was retrieved successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-gc_result ga_handle_getParamf(ga_Handle *handle,
-                              gc_int32 param,
+ga_result ga_handle_getParamf(GaHandle *handle,
+                              GaHandleParam param,
                               gc_float32 *value);
 
 /** Sets an integer parameter value on a handle.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle on which the parameter should be set (see \ref handleParams).
  *  \param param Parameter to set (must be an integer value, see
  *                  \ref handleParams).
@@ -981,13 +985,13 @@ gc_result ga_handle_getParamf(ga_Handle *handle,
  *  \return Whether the parameter was set successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-gc_result ga_handle_setParami(ga_Handle *handle,
-                              gc_int32 param,
+ga_result ga_handle_setParami(GaHandle *handle,
+                              GaHandleParam param,
                               gc_int32 value);
 
 /** Retrieves an integer parameter value from a handle.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle from which the parameter should be retrieved
  *                   (see \ref handleParams).
  *  \param param Parameter to retrieve (must be an integer value, see
@@ -997,54 +1001,54 @@ gc_result ga_handle_setParami(ga_Handle *handle,
  *  \return Whether the parameter was retrieved successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-gc_result ga_handle_getParami(ga_Handle *handle,
-                              gc_int32 param,
+ga_result ga_handle_getParami(GaHandle *handle,
+                              GaHandleParam param,
                               gc_int32 *value);
 
 /** Seek to an offset (in samples) within a handle.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle to seek within.
  *  \param sampleOffset Offset (in samples) from the start of the handle.
  *  \return If seek succeeds, returns 0, otherwise returns -1 (invalid seek request).
  *  \warning Only handles containing sample sources with GA_FLAG_SEEKABLE can
  *           have ga_handle_seek() called on them.
  */
-gc_result ga_handle_seek(ga_Handle *handle, gc_int32 sampleOffset);
+ga_result ga_handle_seek(GaHandle *handle, gc_int32 sampleOffset);
 
 /** Tells the current playback sample number or total samples of a handle.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle to query.
  *  \param param Tell value to retrieve (see \ref tellParams).
  *  \return The current handle playback sample number if param is set to
  *          GA_TELL_PARAM_CURRENT. The total number of samples in the handle
  *          if param is set to GA_TELL_PARAM_TOTAL.
  */
-gc_int32 ga_handle_tell(ga_Handle *handle, gc_int32 param);
+gc_int32 ga_handle_tell(GaHandle *handle, GaTellParam param);
 
 /** Checks whether a handle has at least a given number of available samples.
  *
  *  If the handle has fewer than numSamples samples left before it finishes,
  *  this function will returns GA_TRUE regardless of the number of samples.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle to check.
  *  \param numSamples The minimum number of samples required for the handle
  *                       to be considered ready.
  *  \return Whether the handle has at least a given number of available samples.
  */
-gc_bool ga_handle_ready(ga_Handle *handle, gc_int32 numSamples);
+gc_bool ga_handle_ready(GaHandle *handle, gc_int32 numSamples);
 
 /** Retrieves the PCM sample format for a handle.
  *
- *  \ingroup ga_Handle
+ *  \ingroup GaHandle
  *  \param handle Handle whose format should should be retrieved.
  *  \param format This value will be set to the same sample format
  *                    as samples streamed by the handle. Output parameter.
  *  \todo Either return a copy of the format, or make it a const* return value.
  */
-void ga_handle_format(ga_Handle *handle, ga_Format *format);
+void ga_handle_format(GaHandle *handle, GaFormat *format);
 
 
 /*****************************/
@@ -1052,7 +1056,7 @@ void ga_handle_format(ga_Handle *handle, ga_Format *format);
 /*****************************/
 /** Buffered-stream manager data structure and related functions.
  *
- *  \defgroup ga_StreamManager Buffered Stream Manager
+ *  \defgroup GaStreamManager Buffered Stream Manager
  *  \ingroup external
  */
 
@@ -1062,31 +1066,31 @@ void ga_handle_format(ga_Handle *handle, ga_Format *format);
  *  on a background thread, to allow filling the streams without causing
  *  real-time applications to stutter.
  *
- *  \ingroup ga_StreamManager
+ *  \ingroup GaStreamManager
  */
-typedef struct ga_StreamManager ga_StreamManager;
+typedef struct GaStreamManager GaStreamManager;
 
 /** Creates a buffered-stream manager.
  *
- *  \ingroup ga_StreamManager
+ *  \ingroup GaStreamManager
  *  \return Newly-created stream manager.
  */
-ga_StreamManager *ga_stream_manager_create(void);
+GaStreamManager *ga_stream_manager_create(void);
 
 /** Fills all buffers managed by a buffered-stream manager.
  *
- *  \ingroup ga_StreamManager
+ *  \ingroup GaStreamManager
  *  \param mgr The buffered-stream manager whose buffers are to be filled.
  */
-void ga_stream_manager_buffer(ga_StreamManager *mgr);
+void ga_stream_manager_buffer(GaStreamManager *mgr);
 
 /** Destroys a buffered-stream manager.
  *
- *  \ingroup ga_StreamManager
+ *  \ingroup GaStreamManager
  *  \param mgr The buffered-stream manager to be destroyed.
  *  \warning Never use a buffered-stream manager after it has been destroyed.
  */
-void ga_stream_manager_destroy(ga_StreamManager *mgr);
+void ga_stream_manager_destroy(GaStreamManager *mgr);
 
 
 /*********************/
@@ -1094,7 +1098,7 @@ void ga_stream_manager_destroy(ga_StreamManager *mgr);
 /*********************/
 /** Buffered stream data structure and related functions.
  *
- *  \defgroup ga_BufferedStream Buffered Stream
+ *  \defgroup GaBufferedStream Buffered Stream
  *  \ingroup external
  */
 
@@ -1105,13 +1109,13 @@ void ga_stream_manager_destroy(ga_StreamManager *mgr);
  *  albeit through a different interface. This is done to decouple the
  *  background-streaming logic from the audio-processing pipeline logic.
  *
- *  \ingroup ga_BufferedStream
+ *  \ingroup GaBufferedStream
  */
-typedef struct ga_BufferedStream ga_BufferedStream;
+typedef struct GaBufferedStream GaBufferedStream;
 
 /** Creates a buffered stream.
  *
- *  \ingroup ga_BufferedStream
+ *  \ingroup GaBufferedStream
  *  \param mgr Buffered-stream manager to manage the buffered stream
  *                (non-optional).
  *  \param sampleSrc Sample source to buffer samples from.
@@ -1121,37 +1125,37 @@ typedef struct ga_BufferedStream ga_BufferedStream;
  *  \todo Change bufferSize to bufferSamples for a more fault-resistant
  *        interface.
  */
-ga_BufferedStream *ga_stream_create(ga_StreamManager *mgr, ga_SampleSource *src, gc_size buffer_size);
+GaBufferedStream *ga_stream_create(GaStreamManager *mgr, GaSampleSource *src, gc_size buffer_size);
 
 /** Buffers samples from the sample source into the internal buffer (producer).
  *
  *  Can be called from a background thread.
  *
- *  \ingroup ga_BufferedStream
+ *  \ingroup GaBufferedStream
  *  \param stream Stream to produce samples.
  *  \warning This function should only ever be called by the buffered stream
  *           manager.
  */
-void ga_stream_produce(ga_BufferedStream *stream); /* Can be called from a secondary thread */
+void ga_stream_produce(GaBufferedStream *stream); /* Can be called from a secondary thread */
 
 /** Reads samples from a buffered stream.
  *
- *  \ingroup ga_BufferedStream
+ *  \ingroup GaBufferedStream
  *  \param stream Buffered stream from which to read.
  *  \param dst Destination buffer into which samples should be read. Must
  *                be at least (numSamples * sample size) bytes in size.
  *  \param numSamples Number of samples to read.
  *  \return Total number of bytes read into the destination buffer.
  */
-gc_size ga_stream_read(ga_BufferedStream *stream, void *dst, gc_size numSamples);
+gc_size ga_stream_read(GaBufferedStream *stream, void *dst, gc_size numSamples);
 
 /** Checks whether a buffered stream has reached the end of the stream.
  *
- *  \ingroup ga_BufferedStream
+ *  \ingroup GaBufferedStream
  *  \param stream Buffered stream to check.
  *  \return Whether the buffered stream has reached the end of the stream.
  */
-gc_bool ga_stream_end(ga_BufferedStream *stream);
+gc_bool ga_stream_end(GaBufferedStream *stream);
 
 /** Checks whether a buffered stream has at least a given number of available
  *  samples.
@@ -1160,66 +1164,66 @@ gc_bool ga_stream_end(ga_BufferedStream *stream);
  *  finishes, this function will returns GA_TRUE regardless of the number of
  *  samples.
  *
- *  \ingroup ga_BufferedStream
+ *  \ingroup GaBufferedStream
  *  \param stream Buffered stream to check.
  *  \param numSamples The minimum number of samples required for the
  *                       buffered stream to be considered ready.
  *  \return Whether the buffered stream has at least a given number of available
  *          samples.
  */
-gc_bool ga_stream_ready(ga_BufferedStream *stream, gc_size numSamples);
+gc_bool ga_stream_ready(GaBufferedStream *stream, gc_size numSamples);
 
 /** Seek to an offset (in samples) within a buffered stream.
  *
- *  \ingroup ga_BufferedStream
+ *  \ingroup GaBufferedStream
  *  \param stream Buffered stream to seek within.
  *  \param sampleOffset Offset (in samples) from the start of the contained
  *                         sample source.
- *  \return If seek succeeds, returns GC_SUCCESS, otherwise returns GC_ERROR_GENERIC (invalid seek
+ *  \return If seek succeeds, returns GA_OK, otherwise returns GA_ERR_GENERIC (invalid seek
  *          request).
  *  \warning Only buffered streams with GA_FLAG_SEEKABLE can have ga_stream_seek()
  *           called on them.
  */
-gc_result ga_stream_seek(ga_BufferedStream *stream, gc_size sampleOffset);
+ga_result ga_stream_seek(GaBufferedStream *stream, gc_size sampleOffset);
 
 /** Tells the current sample number of a buffered stream.
  *
- *  \ingroup ga_BufferedStream
+ *  \ingroup GaBufferedStream
  *  \param stream Buffered stream to tell the current sample number of.
  *  \param totalSamples If set, this value will be set to the total number of
  *                          samples in the contained sample source. Output parameter.
  *  \return The current sample source sample number.
  */
-gc_result ga_stream_tell(ga_BufferedStream *stream, gc_size *samples, gc_size *totalSamples);
+ga_result ga_stream_tell(GaBufferedStream *stream, gc_size *samples, gc_size *totalSamples);
 
 /** Returns the bitfield of flags set for a buffered stream (see \ref globDefs).
  *
- *  \ingroup ga_BufferedStream
+ *  \ingroup GaBufferedStream
  *  \param stream Buffered stream whose flags should be retrieved.
  *  \return The bitfield of flags set for the buffered stream.
  */
-gc_int32 ga_stream_flags(ga_BufferedStream *stream);
+GaDataAccessFlags ga_stream_flags(GaBufferedStream *stream);
 
 /** Acquire a reference for a buffered stream.
  *
  *  Increments the buffered stream's reference count by 1.
  *
- *  \ingroup ga_BufferedStream
+ *  \ingroup GaBufferedStream
  *  \param stream Buffered stream whose reference count should be incremented.
  *  \todo Either return a copy of the format, or make it a const* return value.
  */
-void ga_stream_acquire(ga_BufferedStream *stream);
+void ga_stream_acquire(GaBufferedStream *stream);
 
 /** Releases a reference for a buffered stream.
  *
  *  Decrements the buffered stream's reference count by 1. When the last reference is
  *  released, the buffered stream's resources will be deallocated.
  *
- *  \ingroup ga_BufferedStream
+ *  \ingroup GaBufferedStream
  *  \param stream Buffered stream whose reference count should be decremented.
  *  \warning A client must never use a buffered stream after releasing its reference.
  */
-void ga_stream_release(ga_BufferedStream *stream);
+void ga_stream_release(GaBufferedStream *stream);
 
 #ifdef __cplusplus
 } // extern "C"
