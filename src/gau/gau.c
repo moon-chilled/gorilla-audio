@@ -180,7 +180,7 @@ static gc_result gauX_data_source_file_seek(void *in_context, gc_ssize offset, G
 
 	gau_DataSourceFileContext* ctx = (gau_DataSourceFileContext*)in_context;
 	gc_mutex_lock(ctx->fileMutex);
-	gc_result ret = fseek(ctx->f, offset, fwhence) == -1 ? GC_SUCCESS : GC_ERROR_GENERIC;
+	gc_result ret = fseek(ctx->f, offset, fwhence) == -1 ? GC_ERROR_GENERIC : GC_SUCCESS;
 	gc_mutex_unlock(ctx->fileMutex);
 
 	return ret;
@@ -197,10 +197,9 @@ static void gauX_data_source_file_close(void* in_context) {
 	fclose(ctx->f);
 	gc_mutex_destroy(ctx->fileMutex);
 }
-static ga_DataSource* gauX_data_source_create_fp(FILE *fp) {
+static ga_DataSource *gauX_data_source_create_fp(FILE *fp) {
 	if (!fp) return NULL;
 
-	clearerr(fp);
 	rewind(fp);
 
 	gau_DataSourceFile* ret = gcX_ops->allocFunc(sizeof(gau_DataSourceFile));

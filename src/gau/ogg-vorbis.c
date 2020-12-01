@@ -13,14 +13,21 @@ static size_t gauX_sample_source_ogg_callback_read(void *ptr, size_t size, size_
 	return ga_data_source_read(ds, ptr, size, nmemb);
 }
 
-static gc_result gauX_sample_source_ogg_callback_seek(void *datasource, ogg_int64_t offset, int whence) {
+static int gauX_sample_source_ogg_callback_seek(void *datasource, ogg_int64_t offset, int whence) {
+	// concessions for 32-bit platforms
+	if (offset > GC_SSIZE_MAX) return -1;
+	gc_ssize off = offset;
+
 	ga_DataSource* ds = ((gau_OggDataSourceCallbackData*)datasource)->data_src;
+	gc_result res;
 	switch (whence) {
-		case SEEK_SET: return ga_data_source_seek(ds, (gc_int32)offset, GaSeekOrigin_Set);
-		case SEEK_CUR: return ga_data_source_seek(ds, (gc_int32)offset, GaSeekOrigin_Cur);
-		case SEEK_END: return ga_data_source_seek(ds, (gc_int32)offset, GaSeekOrigin_End);
-		default: return GC_ERROR_GENERIC;
+		case SEEK_SET: res = ga_data_source_seek(ds, off, GaSeekOrigin_Set); break;
+		case SEEK_CUR: res = ga_data_source_seek(ds, off, GaSeekOrigin_Cur); break;
+		case SEEK_END: res = ga_data_source_seek(ds, off, GaSeekOrigin_End); break;
+		default: res = GC_ERROR_GENERIC; break;
 	}
+
+	return res==GC_SUCCESS ? 0 : -1;
 }
 
 static long gauX_sample_source_ogg_callback_tell(void *datasource) {

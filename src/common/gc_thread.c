@@ -98,13 +98,13 @@ gc_Thread* gc_thread_create(gc_ThreadFunc in_threadFunc, void* in_context,
 	pthread_mutex_init(&threadData->suspendMutex, NULL);
 	pthread_mutex_lock(&threadData->suspendMutex);
 
-	if (pthread_attr_init(&threadData->attr) != 0) ; // report error
+	if (pthread_attr_init(&threadData->attr) != 0){} // report error
 #if defined(__APPLE__) || defined(__ANDROID__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 	param.sched_priority = priorityLut[in_priority];
 #elif defined(__linux__)
 	param.__sched_priority = priorityLut[in_priority];
 #endif /* __APPLE__ */
-	if (pthread_attr_setschedparam(&threadData->attr, &param) != 0) ; //report error
+	if (pthread_attr_setschedparam(&threadData->attr, &param) != 0){} //report error
 	if (pthread_create(&threadData->thread, &threadData->attr, StaticThreadWrapper, threadData) != 0) goto fail;
 
 	return ret;

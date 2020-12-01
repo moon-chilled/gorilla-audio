@@ -47,6 +47,8 @@ typedef size_t      gc_size;
 typedef ptrdiff_t   gc_ssize;
 typedef float       gc_float32;
 typedef double      gc_float64;
+#define GC_SSIZE_MAX PTRDIFF_MAX
+#define GC_SIZE_MAX SIZE_MAX
 
 /*********************/
 /**  Result Values  **/
