@@ -39,23 +39,23 @@ extern "C"
  *  error, zero if they terminate without error.
  *
  *  \ingroup gc_Thread
- *  \param in_context The user-specified thread context.
+ *  \param context The user-specified thread context.
  *  \return GC_SUCCESS if thread terminated without error. GC_ERROR_GENERIC
  *          if not.
  */
-typedef gc_int32 (*gc_ThreadFunc)(void* in_context);
+typedef gc_int32 (*gc_ThreadFunc)(void* context);
 
 /** Thread data structure [\ref SINGLE_CLIENT].
  *
  *  \ingroup gc_Thread
  */
-typedef struct gc_Thread {
-  gc_ThreadFunc threadFunc;
-  void* threadObj;
-  void* context;
-  gc_int32 id;
-  gc_int32 priority;
-  gc_int32 stackSize;
+typedef struct {
+	gc_ThreadFunc thread_func;
+	void *thread_obj;
+	void *context;
+	gc_int32 id;
+	gc_int32 priority;
+	gc_uint32 stack_size;
 } gc_Thread;
 
 /** Creates a new thread.
@@ -64,20 +64,20 @@ typedef struct gc_Thread {
  *
  *  \ingroup gc_Thread
  */
-gc_Thread* gc_thread_create(gc_ThreadFunc in_threadFunc, void* in_context,
-                            gc_int32 in_priority, gc_int32 in_stackSize);
+gc_Thread* gc_thread_create(gc_ThreadFunc thread_func, void *context,
+                            gc_int32 priority, gc_uint32 stack_size);
 
 /** Runs a thread.
  *
  *  \ingroup gc_Thread
  */
-void gc_thread_run(gc_Thread* in_thread);
+void gc_thread_run(gc_Thread *thread);
 
 /** Joins a thread with the current thread.
  *
  *  \ingroup gc_Thread
  */
-void gc_thread_join(gc_Thread* in_thread);
+void gc_thread_join(gc_Thread *thread);
 
 /** Signals a thread to wait for a specified time interval.
  *
@@ -88,7 +88,7 @@ void gc_thread_join(gc_Thread* in_thread);
  *
  *  \ingroup gc_Thread
  */
-void gc_thread_sleep(gc_uint32 in_ms);
+void gc_thread_sleep(gc_uint32 ms);
 
 /** Destroys a thread object.
  *
@@ -97,7 +97,7 @@ void gc_thread_sleep(gc_uint32 in_ms);
  *           successfully joined with another thread.
  *  \warning Never use a thread after it has been destroyed.
  */
-void gc_thread_destroy(gc_Thread* in_thread);
+void gc_thread_destroy(gc_Thread *thread);
 
 /***********/
 /*  Mutex  */
@@ -113,14 +113,14 @@ void gc_thread_destroy(gc_Thread* in_thread);
  *  \ingroup gc_Mutex
  */
 typedef struct gc_Mutex {
-  void* mutex;
+	void *mutex;
 } gc_Mutex;
 
 /** Creates a mutex.
  *
  *  \ingroup gc_Mutex
  */
-gc_Mutex* gc_mutex_create();
+gc_Mutex *gc_mutex_create(void);
 
 /** Locks a mutex.
  *
@@ -129,14 +129,14 @@ gc_Mutex* gc_mutex_create();
  *  \ingroup gc_Mutex
  *  \warning Do not lock a mutex on the same thread without first unlocking.
  */
-void gc_mutex_lock(gc_Mutex* in_mutex);
+void gc_mutex_lock(gc_Mutex *mutex);
 
 /** Unlocks a mutex.
  *
  *  \ingroup gc_Mutex
  *  \warning Do not unlock a mutex without first locking it.
  */
-void gc_mutex_unlock(gc_Mutex* in_mutex);
+void gc_mutex_unlock(gc_Mutex *mutex);
 
 /** Destroys a mutex.
  *
@@ -144,7 +144,7 @@ void gc_mutex_unlock(gc_Mutex* in_mutex);
  *  \warning Make sure the mutex is no longer in use before destroying it.
  *  \warning Never use a mutex after it has been destroyed.
  */
-void gc_mutex_destroy(gc_Mutex* in_mutex);
+void gc_mutex_destroy(gc_Mutex *mutex);
 
 #ifdef __cplusplus
 }

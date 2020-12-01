@@ -60,8 +60,8 @@ gau_Manager* gau_manager_create(void);
 */
 gau_Manager* gau_manager_create_custom(GaDeviceType *dev_type,
                                        GauThreadPolicy thread_policy,
-                                       gc_int32 *num_buffers,
-                                       gc_int32 *num_samples);
+                                       gc_uint32 *num_buffers,
+                                       gc_uint32 *num_samples);
 
 /** Updates an audio manager.
  *
@@ -79,7 +79,7 @@ ga_Mixer* gau_manager_mixer(gau_Manager* in_mgr);
  *
  *  \ingroup gau_Manager
  */
-ga_StreamManager* gau_manager_streamManager(gau_Manager* in_mgr);
+ga_StreamManager* gau_manager_stream_manager(gau_Manager* in_mgr);
 
 /** Retrieves the internal device object from an audio manager.
  *

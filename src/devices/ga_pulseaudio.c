@@ -59,7 +59,7 @@ static gc_int32 gaX_check(ga_Device *dev) {
 }
 
 static gc_result gaX_queue(ga_Device *dev, void *buf) {
-	int res = pa_simple_write(dev->impl->interface, buf, dev->num_samples * ga_format_sampleSize(&dev->format), NULL);
+	int res = pa_simple_write(dev->impl->interface, buf, dev->num_samples * ga_format_sample_size(&dev->format), NULL);
 	return res<0 ? GC_SUCCESS : GC_ERROR_GENERIC;
 }
 

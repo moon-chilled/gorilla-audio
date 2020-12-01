@@ -109,7 +109,7 @@ static gc_result gaX_queue(ga_Device *dev, void* in_buffer) {
 		formatOal = (gc_int32)(bps == 16 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO8);
 
 	alBufferData(dev->impl->hw_buffers[dev->impl->next_buffer], formatOal, in_buffer,
-			(ALsizei)dev->num_samples * ga_format_sampleSize(&dev->format), dev->format.sample_rate);
+			(ALsizei)dev->num_samples * ga_format_sample_size(&dev->format), dev->format.sample_rate);
 	CHECK_AL_ERROR(return GC_ERROR_GENERIC);
 
 	alSourceQueueBuffers(dev->impl->hw_source, 1, &dev->impl->hw_buffers[dev->impl->next_buffer]);

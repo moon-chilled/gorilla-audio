@@ -16,39 +16,37 @@
 #include <windows.h>
 
 static gc_int32 priorityLut[] = {
-  0, -1, 1, 2
+	[GC_THREAD_PRIORITY_NORMAL] = 0,
+	[GC_THREAD_PRIORITY_LOW] = -1,
+	[GC_THREAD_PRIORITY_HIGH] = 1,
+	[GC_THREAD_PRIORITY_HIGHEST] = 2,
 };
 
-gc_Thread* gc_thread_create(gc_ThreadFunc in_threadFunc, void* in_context,
-                            gc_int32 in_priority, gc_int32 in_stackSize)
-{
-  gc_Thread* ret = gcX_ops->allocFunc(sizeof(gc_Thread));
-  ret->threadObj = gcX_ops->allocFunc(sizeof(HANDLE));
-  ret->threadFunc = in_threadFunc;
-  ret->context = in_context;
-  ret->priority = in_priority;
-  ret->stackSize = in_stackSize;
-  *(HANDLE*)ret->threadObj = CreateThread(0, in_stackSize, (LPTHREAD_START_ROUTINE)in_threadFunc, in_context, CREATE_SUSPENDED, (LPDWORD)&ret->id);
-  SetThreadPriority(*(HANDLE*)ret->threadObj, priorityLut[in_priority]);
-  return ret;
+gc_Thread* gc_thread_create(gc_ThreadFunc thread_func, void* context,
+                            gc_int32 priority, gc_uint32 stack_size) {
+	gc_Thread* ret = gcX_ops->allocFunc(sizeof(gc_Thread));
+	ret->thread_obj = gcX_ops->allocFunc(sizeof(HANDLE));
+	ret->thread_func = thread_func;
+	ret->context = context;
+	ret->priority = priority;
+	ret->stack_size = stack_size;
+	*(HANDLE*)ret->thread_obj = CreateThread(0, stack_size, (LPTHREAD_START_ROUTINE)thread_func, context, CREATE_SUSPENDED, (LPDWORD)&ret->id);
+	SetThreadPriority(*(HANDLE*)ret->thread_obj, priorityLut[priority]);
+	return ret;
 }
-void gc_thread_run(gc_Thread* in_thread)
-{
-  ResumeThread(*(HANDLE*)in_thread->threadObj);
+void gc_thread_run(gc_Thread *thread) {
+	ResumeThread(*(HANDLE*)thread->thread_obj);
 }
-void gc_thread_join(gc_Thread* in_thread)
-{
-  WaitForSingleObject(*(HANDLE*)in_thread->threadObj, INFINITE);
+void gc_thread_join(gc_Thread *thread) {
+	WaitForSingleObject(*(HANDLE*)thread->thread_obj, INFINITE);
 }
-void gc_thread_sleep(gc_uint32 in_ms)
-{
-  Sleep(in_ms);
+void gc_thread_sleep(gc_uint32 in_ms) {
+	Sleep(in_ms);
 }
-void gc_thread_destroy(gc_Thread* in_thread)
-{
-  CloseHandle(*(HANDLE*)in_thread->threadObj);
-  gcX_ops->freeFunc(in_thread->threadObj);
-  gcX_ops->freeFunc(in_thread);
+void gc_thread_destroy(gc_Thread *thread) {
+	CloseHandle(*(HANDLE*)thread->thread_obj);
+	gcX_ops->freeFunc(thread->thread_obj);
+	gcX_ops->freeFunc(thread);
 }
 
 #elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
@@ -62,80 +60,76 @@ static gc_int32 priorityLut[] = {
 	[GC_THREAD_PRIORITY_HIGHEST] = -20
 };
 
-typedef struct LinuxThreadData {
-  pthread_t thread;
-  pthread_attr_t attr;
-  pthread_mutex_t suspendMutex;
-  gc_ThreadFunc threadFunc;
-  void* context;
+typedef struct {
+	pthread_t thread;
+	pthread_attr_t attr;
+	pthread_mutex_t suspend_mutex;
+	gc_ThreadFunc thread_func;
+	void *context;
 } LinuxThreadData;
 
-static void* StaticThreadWrapper(void* in_context)
-{
-  LinuxThreadData* threadData = (LinuxThreadData*)in_context;
-  pthread_mutex_lock(&threadData->suspendMutex);
-  threadData->threadFunc(threadData->context);
-  pthread_mutex_unlock(&threadData->suspendMutex);
-  return 0;
+static void *StaticThreadWrapper(void *context) {
+	LinuxThreadData* thread_data = (LinuxThreadData*)context;
+	pthread_mutex_lock(&thread_data->suspend_mutex);
+	thread_data->thread_func(thread_data->context);
+	pthread_mutex_unlock(&thread_data->suspend_mutex);
+	return 0;
 }
 
-gc_Thread* gc_thread_create(gc_ThreadFunc in_threadFunc, void* in_context,
-                            gc_int32 in_priority, gc_int32 in_stackSize) {
+gc_Thread* gc_thread_create(gc_ThreadFunc thread_func, void* context,
+                            gc_int32 priority, gc_uint32 stack_size) {
 	struct sched_param param;
 	gc_Thread* ret = gcX_ops->allocFunc(sizeof(gc_Thread));
 	if (!ret) goto fail;
-	LinuxThreadData* threadData = (LinuxThreadData*)gcX_ops->allocFunc(sizeof(LinuxThreadData));
-	if (!threadData) goto fail;
-	threadData->threadFunc = in_threadFunc;
-	threadData->context = in_context;
+	LinuxThreadData* thread_data = (LinuxThreadData*)gcX_ops->allocFunc(sizeof(LinuxThreadData));
+	if (!thread_data) goto fail;
+	thread_data->thread_func = thread_func;
+	thread_data->context = context;
 
-	ret->threadObj = threadData;
-	ret->threadFunc = in_threadFunc;
-	ret->context = in_context;
-	ret->priority = in_priority;
-	ret->stackSize = in_stackSize;
+	ret->thread_obj = thread_data;
+	ret->thread_func = thread_func;
+	ret->context = context;
+	ret->priority = priority;
+	ret->stack_size = stack_size;
 
-	pthread_mutex_init(&threadData->suspendMutex, NULL);
-	pthread_mutex_lock(&threadData->suspendMutex);
+	pthread_mutex_init(&thread_data->suspend_mutex, NULL);
+	pthread_mutex_lock(&thread_data->suspend_mutex);
 
-	if (pthread_attr_init(&threadData->attr) != 0){} // report error
+	if (pthread_attr_init(&thread_data->attr) != 0){} // report error
 #if defined(__APPLE__) || defined(__ANDROID__) || defined(__FreeBSD__) || defined(__OpenBSD__)
-	param.sched_priority = priorityLut[in_priority];
+	param.sched_priority = priorityLut[priority];
 #elif defined(__linux__)
-	param.__sched_priority = priorityLut[in_priority];
+	param.__sched_priority = priorityLut[priority];
 #endif /* __APPLE__ */
-	if (pthread_attr_setschedparam(&threadData->attr, &param) != 0){} //report error
-	if (pthread_create(&threadData->thread, &threadData->attr, StaticThreadWrapper, threadData) != 0) goto fail;
+	if (pthread_attr_setschedparam(&thread_data->attr, &param) != 0){} //report error
+	if (pthread_attr_setstacksize(&thread_data->attr, stack_size) != 0){} //report error
+	if (pthread_create(&thread_data->thread, &thread_data->attr, StaticThreadWrapper, thread_data) != 0) goto fail;
 
 	return ret;
 fail:
-	if (ret) gcX_ops->freeFunc(ret->threadObj);
+	if (ret) gcX_ops->freeFunc(ret->thread_obj);
 	gcX_ops->freeFunc(ret);
 	return NULL;
 }
-void gc_thread_run(gc_Thread* in_thread)
-{
-  LinuxThreadData* threadData = (LinuxThreadData*)in_thread->threadObj;
-  pthread_mutex_unlock(&threadData->suspendMutex);
+void gc_thread_run(gc_Thread *thread) {
+	LinuxThreadData* thread_data = (LinuxThreadData*)thread->thread_obj;
+	pthread_mutex_unlock(&thread_data->suspend_mutex);
 }
-void gc_thread_join(gc_Thread* in_thread)
-{
-  LinuxThreadData* threadData = (LinuxThreadData*)in_thread->threadObj;
-  pthread_join(threadData->thread, 0);
+void gc_thread_join(gc_Thread *thread) {
+	LinuxThreadData* thread_data = (LinuxThreadData*)thread->thread_obj;
+	pthread_join(thread_data->thread, 0);
 }
-void gc_thread_sleep(gc_uint32 in_ms)
-{
-  usleep(in_ms * 1000);
+void gc_thread_sleep(gc_uint32 in_ms) {
+	usleep(in_ms * 1000);
 }
-void gc_thread_destroy(gc_Thread* in_thread)
-{
-  LinuxThreadData* threadData = (LinuxThreadData*)in_thread->threadObj;
-  pthread_cancel(threadData->thread);
-  pthread_join(threadData->thread, NULL);
-  pthread_mutex_destroy(&threadData->suspendMutex);
-  pthread_attr_destroy(&threadData->attr);
-  gcX_ops->freeFunc(threadData);
-  gcX_ops->freeFunc(in_thread);
+void gc_thread_destroy(gc_Thread *thread) {
+	LinuxThreadData* thread_data = (LinuxThreadData*)thread->thread_obj;
+	pthread_cancel(thread_data->thread);
+	pthread_join(thread_data->thread, NULL);
+	pthread_mutex_destroy(&thread_data->suspend_mutex);
+	pthread_attr_destroy(&thread_data->attr);
+	gcX_ops->freeFunc(thread_data);
+	gcX_ops->freeFunc(thread);
 }
 
 #else
@@ -150,52 +144,44 @@ void gc_thread_destroy(gc_Thread* in_thread)
 
 #include <windows.h>
 
-gc_Mutex* gc_mutex_create()
-{
-  gc_Mutex* ret = gcX_ops->allocFunc(sizeof(gc_Mutex));
-  ret->mutex = gcX_ops->allocFunc(sizeof(CRITICAL_SECTION));
-  InitializeCriticalSection((CRITICAL_SECTION*)ret->mutex);
-  return ret;
+gc_Mutex *gc_mutex_create() {
+	gc_Mutex* ret = gcX_ops->allocFunc(sizeof(gc_Mutex));
+	ret->mutex = gcX_ops->allocFunc(sizeof(CRITICAL_SECTION));
+	InitializeCriticalSection((CRITICAL_SECTION*)ret->mutex);
+	return ret;
 }
-void gc_mutex_destroy(gc_Mutex* in_mutex)
-{
-  DeleteCriticalSection((CRITICAL_SECTION*)in_mutex->mutex);
-  gcX_ops->freeFunc(in_mutex->mutex);
-  gcX_ops->freeFunc(in_mutex);
+void gc_mutex_destroy(gc_Mutex *mutex) {
+	DeleteCriticalSection((CRITICAL_SECTION*)mutex->mutex);
+	gcX_ops->freeFunc(mutex->mutex);
+	gcX_ops->freeFunc(mutex);
 }
-void gc_mutex_lock(gc_Mutex* in_mutex)
-{
-  EnterCriticalSection((CRITICAL_SECTION*)in_mutex->mutex);
+void gc_mutex_lock(gc_Mutex *mutex) {
+	EnterCriticalSection((CRITICAL_SECTION*)mutex->mutex);
 }
-void gc_mutex_unlock(gc_Mutex* in_mutex)
-{
-  LeaveCriticalSection((CRITICAL_SECTION*)in_mutex->mutex);
+void gc_mutex_unlock(gc_Mutex *mutex) {
+	LeaveCriticalSection((CRITICAL_SECTION*)mutex->mutex);
 }
 
 #elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 
 #include <pthread.h>
 
-gc_Mutex* gc_mutex_create()
-{
-  gc_Mutex* ret = gcX_ops->allocFunc(sizeof(gc_Mutex));
-  ret->mutex = gcX_ops->allocFunc(sizeof(pthread_mutex_t));
-  pthread_mutex_init((pthread_mutex_t*)ret->mutex, NULL);
-  return ret;
+gc_Mutex* gc_mutex_create() {
+	gc_Mutex* ret = gcX_ops->allocFunc(sizeof(gc_Mutex));
+	ret->mutex = gcX_ops->allocFunc(sizeof(pthread_mutex_t));
+	pthread_mutex_init((pthread_mutex_t*)ret->mutex, NULL);
+	return ret;
 }
-void gc_mutex_destroy(gc_Mutex* in_mutex)
-{
-  pthread_mutex_destroy((pthread_mutex_t*)in_mutex->mutex);
-  gcX_ops->freeFunc(in_mutex->mutex);
-  gcX_ops->freeFunc(in_mutex);
+void gc_mutex_destroy(gc_Mutex *mutex) {
+	pthread_mutex_destroy((pthread_mutex_t*)mutex->mutex);
+	gcX_ops->freeFunc(mutex->mutex);
+	gcX_ops->freeFunc(mutex);
 }
-void gc_mutex_lock(gc_Mutex* in_mutex)
-{
-  pthread_mutex_lock((pthread_mutex_t*)in_mutex->mutex);
+void gc_mutex_lock(gc_Mutex *mutex) {
+	pthread_mutex_lock((pthread_mutex_t*)mutex->mutex);
 }
-void gc_mutex_unlock(gc_Mutex* in_mutex)
-{
-  pthread_mutex_unlock((pthread_mutex_t*)in_mutex->mutex);
+void gc_mutex_unlock(gc_Mutex *mutex) {
+	pthread_mutex_unlock((pthread_mutex_t*)mutex->mutex);
 }
 
 #else

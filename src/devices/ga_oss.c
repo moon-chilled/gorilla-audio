@@ -74,7 +74,7 @@ static gc_int32 gaX_check(ga_Device *dev) {
 }
 
 static gc_result gaX_queue(ga_Device *dev, void *buf) {
-	gc_ssize sz = dev->num_samples * ga_format_sampleSize(&dev->format);
+	gc_ssize sz = dev->num_samples * ga_format_sample_size(&dev->format);
 	gc_ssize written = write((int)(gc_size)dev->impl, buf, sz);
 	return sz==written ? GC_SUCCESS : GC_ERROR_GENERIC;
 }

@@ -147,7 +147,7 @@ typedef struct {
  *  \param format Format of the PCM data
  *  \return Sample size (in bytes) of the specified format
  */
-gc_uint32 ga_format_sampleSize(ga_Format *format);
+gc_uint32 ga_format_sample_size(ga_Format *format);
 
 /** Converts a discrete number of PCM samples into the duration (in seconds) it
  *  will take to play back.
@@ -157,7 +157,7 @@ gc_uint32 ga_format_sampleSize(ga_Format *format);
  *  \param samples Number of PCM samples
  *  \return Duration (in seconds) it will take to play back
  */
-gc_float32 ga_format_toSeconds(ga_Format *format, gc_int32 samples);
+gc_float32 ga_format_to_seconds(ga_Format *format, gc_size samples);
 
 /** Converts a duration (in seconds) into the discrete number of PCM samples it
  *  will take to play for that long.
@@ -167,7 +167,7 @@ gc_float32 ga_format_toSeconds(ga_Format *format, gc_int32 samples);
  *  \param seconds Duration (in seconds)
  *  \return Number of PCM samples it will take to play back for the given time
  */
-gc_int32 ga_format_toSamples(ga_Format *format, gc_float32 seconds);
+gc_int32 ga_format_to_samples(ga_Format *format, gc_float32 seconds);
 
 
 /************/
@@ -226,8 +226,8 @@ typedef struct ga_Device ga_Device;
  *           reasonable default will be chosen.
  */
 ga_Device *ga_device_open(GaDeviceType *type,
-                          gc_int32 *num_buffers,
-                          gc_int32 *num_samples,
+                          gc_uint32 *num_buffers,
+                          gc_uint32 *num_samples,
                           ga_Format *format);
 
 /** Checks the number of free (unqueued) buffers.
@@ -388,21 +388,21 @@ typedef struct ga_SampleSource ga_SampleSource;
  *  \param delta The signed distance from the old position to the new position.
  *  \param seekContext The user-specified context provided in ga_sample_source_read().
  */
-typedef void (*tOnSeekFunc)(gc_int32 sample, gc_int32 delta, void *seekContext);
+typedef void (*GaCbOnSeek)(gc_int32 sample, gc_int32 delta, void *seekContext);
 
 /** Reads samples from a samples source.
  *
  *  \ingroup ga_SampleSource
  *  \param sampleSrc Sample source from which to read.
  *  \param dst Destination buffer into which samples should be read. Must
- *                be at least (numSamples * sample-size) bytes in size.
- *  \param numSamples Number of samples to read.
+ *                be at least (num_samples * sample-size) bytes in size.
+ *  \param num_samples Number of samples to read.
  *  \param onSeekFunc The on-seek callback function for this read operation.
  *  \param seekContext User-specified context for the on-seek function.
  *  \return Total number of bytes read into the destination buffer.
  */
-gc_size ga_sample_source_read(ga_SampleSource *sampleSrc, void *dst, gc_size numSamples,
-                               tOnSeekFunc onSeekFunc, void *seekContext);
+gc_size ga_sample_source_read(ga_SampleSource *sample_src, void *dst, gc_size num_samples,
+                               GaCbOnSeek onseek, void *seek_ctx);
 
 /** Checks whether a sample source has reached the end of the stream.
  *
@@ -415,18 +415,18 @@ gc_bool ga_sample_source_end(ga_SampleSource *sampleSrc);
 /** Checks whether a sample source has at least a given number of available
  *  samples.
  *
- *  If the sample source has fewer than numSamples samples left before it
+ *  If the sample source has fewer than num_samples samples left before it
  *  finishes, this function will returns GA_TRUE regardless of the number of
  *  samples.
  *
  *  \ingroup ga_SampleSource
  *  \param sampleSrc Sample source to check.
- *  \param numSamples The minimum number of samples required for the sample
+ *  \param num_samples The minimum number of samples required for the sample
  *                       source to be considered ready.
  *  \return Whether the sample source has at least a given number of available
  *          samples.
  */
-gc_bool ga_sample_source_ready(ga_SampleSource *sampleSrc, gc_size numSamples);
+gc_bool ga_sample_source_ready(ga_SampleSource *sampleSrc, gc_size num_samples);
 
 /** Seek to an offset (in samples) within a sample source.
  *
@@ -652,7 +652,7 @@ gc_size ga_sound_size(ga_Sound *sound);
  *  \param sound Sound object whose number of samples should be retrieved.
  *  \return Number of samples in the sound object's stored PCM data.
  */
-gc_size ga_sound_numSamples(ga_Sound *sound);
+gc_size ga_sound_num_samples(ga_Sound *sound);
 
 /** Retrieves the PCM sample format for a sound.
  *
@@ -713,12 +713,12 @@ typedef struct ga_Mixer ga_Mixer;
  *
  *  \ingroup ga_Mixer
  *  \param format Format for the PCM samples produced by the buffer.
- *  \param numSamples Number of samples to be mixed at a time (must be a power-of-two).
+ *  \param num_samples Number of samples to be mixed at a time (must be a power-of-two).
  *  \return Newly-created mixer object.
  *  \warning The number of samples must be a power-of-two.
  *  \todo Remove the requirement that the buffer be a power-of-two in size.
  */
-ga_Mixer *ga_mixer_create(ga_Format *format, gc_int32 numSamples);
+ga_Mixer *ga_mixer_create(ga_Format *format, gc_int32 num_samples);
 
 /** Retrieves the PCM sample format for a mixer object.
  *
@@ -736,7 +736,7 @@ ga_Format *ga_mixer_format(ga_Mixer *mixer);
  *  \param mixer Mixer object whose number of samples should be retrieved.
  *  \return Number of samples in a mixer object's mix buffer.
  */
-gc_int32 ga_mixer_numSamples(ga_Mixer *mixer);
+gc_int32 ga_mixer_num_samples(ga_Mixer *mixer);
 
 /** Mixes samples from all ready handles into a single output buffer.
  *
@@ -1121,7 +1121,7 @@ typedef struct ga_BufferedStream ga_BufferedStream;
  *  \todo Change bufferSize to bufferSamples for a more fault-resistant
  *        interface.
  */
-ga_BufferedStream *ga_stream_create(ga_StreamManager *mgr, ga_SampleSource *sampleSrc, gc_int32 bufferSize);
+ga_BufferedStream *ga_stream_create(ga_StreamManager *mgr, ga_SampleSource *src, gc_size buffer_size);
 
 /** Buffers samples from the sample source into the internal buffer (producer).
  *

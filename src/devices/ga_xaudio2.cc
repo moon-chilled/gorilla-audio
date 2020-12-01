@@ -15,7 +15,7 @@ struct ga_DeviceImpl {
 	struct IXAudio2* xa;
 	struct IXAudio2MasteringVoice* master;
 	struct IXAudio2SourceVoice* source;
-	gc_int32 sampleSize;
+	gc_uint32 sample_size;
 	gc_uint32 nextBuffer;
 	void** buffers;
 };
@@ -26,7 +26,7 @@ static gc_result gaX_open(ga_Device *dev) {
 	WAVEFORMATEX fmt;
 	gc_int32 i;
 	dev->impl = gcX_ops->allocFunc(sizeof(gaX_DeviceImpl));
-	dev->impl->sampleSize = ga_format_sampleSize(&dev->format);
+	dev->impl->sample_size = ga_format_sample_size(&dev->format);
 	dev->impl->nextBuffer = 0;
 	dev->impl->xa = 0;
 	dev->impl->master = 0;
@@ -59,7 +59,7 @@ static gc_result gaX_open(ga_Device *dev) {
 
 	dev->impl->buffers = (void**)gcX_ops->allocFunc(dev->num_buffers * sizeof(void*));
 	for(i = 0; i < dev->num_buffers; ++i)
-		dev->impl->buffers[i] = gcX_ops->allocFunc(dev->num_samples * dev->impl->sampleSize);
+		dev->impl->buffers[i] = gcX_ops->allocFunc(dev->num_samples * dev->impl->sample_size);
 
 	return GC_SUCCESS;
 
@@ -110,7 +110,7 @@ static gc_result gaX_queue(ga_Device *dev, void *in_buffer) {
 	XAUDIO2_BUFFER buf;
 	void* data;
 	ZeroMemory(&buf, sizeof(XAUDIO2_BUFFER));
-	buf.AudioBytes = dev->num_samples * dev->impl->sampleSize;
+	buf.AudioBytes = dev->num_samples * dev->impl->sample_size;
 	data = dev->impl->buffers[in_device->nextBuffer++];
 	dev->impl->nextBuffer %= dev->num_buffers;
 	memcpy(data, in_buffer, buf.AudioBytes);

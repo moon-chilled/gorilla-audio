@@ -44,7 +44,7 @@ static gc_result gaX_open(ga_Device *dev) {
         acheck(snd_pcm_hw_params_set_format(dev->impl->interface, params, fmt));
 
         acheck(snd_pcm_hw_params_set_channels(dev->impl->interface, params, dev->format.num_channels));
-        acheck(snd_pcm_hw_params_set_buffer_size(dev->impl->interface, params, dev->num_samples * ga_format_sampleSize(&dev->format)));
+        acheck(snd_pcm_hw_params_set_buffer_size(dev->impl->interface, params, dev->num_samples * ga_format_sample_size(&dev->format)));
 	// this can transparently change the sample rate from under the user
 	// TODO: should we let them pass an option to error if they can't get exactly the desired sample rate?
 	acheck(snd_pcm_hw_params_set_rate_near(dev->impl->interface, params, &dev->format.sample_rate, NULL));

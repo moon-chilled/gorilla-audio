@@ -75,16 +75,15 @@ static gc_result gauX_sample_source_wav_load_header(ga_DataSource *data_src, GaW
 
 	/* TODO: Make this work with non-blocking reads? Need to get this data... */
 	gc_int32 data_offset = 0;
-	char id[5];
-	id[4] = 0;
-	ga_data_source_read(data_src, &id[0], sizeof(char), 4); /* 'RIFF' */
+	char id[4];
+	ga_data_source_read(data_src, &id[0], 1, 4); /* 'RIFF' */
 	data_offset += 4;
-	if (strcmp(id, "RIFF")) return GC_ERROR_GENERIC;
+	if (memcmp(id, "RIFF", 4)) return GC_ERROR_GENERIC;
 
 	ga_data_source_read(data_src, &wav_data->file_size, sizeof(gc_int32), 1);
-	ga_data_source_read(data_src, &id[0], sizeof(char), 4); /* 'WAVE' */
+	ga_data_source_read(data_src, &id[0], 1, 4); /* 'WAVE' */
 	data_offset += 8;
-	if (strcmp(id, "WAVE")) return GC_ERROR_GENERIC;
+	if (memcmp(id, "WAVE", 4)) return GC_ERROR_GENERIC;
 	gc_int32 dataFound = 0;
 	gc_int32 hdrFound = 0;
 	do {
@@ -93,7 +92,7 @@ static gc_result gauX_sample_source_wav_load_header(ga_DataSource *data_src, GaW
 		ga_data_source_read(data_src, &chunkSize, sizeof(gc_int32), 1);
 		data_offset += 8;
 		/* 'fmt ' */
-		if (!hdrFound && !strcmp(id, "fmt ")) {
+		if (!hdrFound && !memcmp(id, "fmt ", 4)) {
 			wav_data->fmt_size = chunkSize;
 			ga_data_source_read(data_src, &wav_data->fmt_tag, sizeof(gc_int16), 1);
 			ga_data_source_read(data_src, &wav_data->channels, sizeof(gc_int16), 1);
@@ -104,7 +103,7 @@ static gc_result gauX_sample_source_wav_load_header(ga_DataSource *data_src, GaW
 			gauX_data_source_advance(data_src, chunkSize - 16);
 			hdrFound = 1;
 		/* 'data' */
-		} else if (!dataFound && !strcmp(id, "data")) {
+		} else if (!dataFound && !memcmp(id, "data", 4)) {
 			wav_data->data_size = chunkSize;
 			wav_data->data_offset = data_offset;
 			dataFound = 1;
@@ -131,7 +130,7 @@ typedef struct gau_SampleSourceWav {
 } gau_SampleSourceWav;
 
 static gc_size gauX_sample_source_wav_read(void *context, void *dst, gc_size numSamples,
-                                            tOnSeekFunc onSeekFunc, void *seekContext) {
+                                            GaCbOnSeek onseek, void *seek_ctx) {
 	gau_SampleSourceWavContext *ctx = &((gau_SampleSourceWav*)context)->context;
 	gc_size numRead = 0;
 	gc_size totalSamples = ctx->wav_header.data_size / ctx->sample_size;
@@ -175,13 +174,13 @@ ga_SampleSource *gau_sample_source_create_wav(ga_DataSource *data_src) {
 	ga_sample_source_init(&ret->sample_src);
 	ret->sample_src.flags = GaDataAccessFlag_Threadsafe;
 	if (seekable) ret->sample_src.flags |= GaDataAccessFlag_Seekable;
-	ret->sample_src.readFunc = &gauX_sample_source_wav_read;
-	ret->sample_src.endFunc = &gauX_sample_source_wav_end;
+	ret->sample_src.read = &gauX_sample_source_wav_read;
+	ret->sample_src.end = &gauX_sample_source_wav_end;
 	if (seekable) {
-		ret->sample_src.seekFunc = &gauX_sample_source_wav_seek;
-		ret->sample_src.tellFunc = &gauX_sample_source_wav_tell;
+		ret->sample_src.seek = &gauX_sample_source_wav_seek;
+		ret->sample_src.tell = &gauX_sample_source_wav_tell;
 	}
-	ret->sample_src.closeFunc = &gauX_sample_source_wav_close;
+	ret->sample_src.close = &gauX_sample_source_wav_close;
 	ctx->pos = 0;
 	ga_data_source_acquire(data_src);
 	ctx->data_src = data_src;
@@ -191,7 +190,7 @@ ga_SampleSource *gau_sample_source_create_wav(ga_DataSource *data_src) {
 		ret->sample_src.format.num_channels = ctx->wav_header.channels;
 		ret->sample_src.format.bits_per_sample = ctx->wav_header.bits_per_sample;
 		ret->sample_src.format.sample_rate = ctx->wav_header.sample_rate;
-		ctx->sample_size = ga_format_sampleSize(&ret->sample_src.format);
+		ctx->sample_size = ga_format_sample_size(&ret->sample_src.format);
 	} else {
 		ga_data_source_release(data_src);
 		gcX_ops->freeFunc(ret);

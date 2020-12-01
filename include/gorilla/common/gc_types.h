@@ -9,16 +9,8 @@
 #define _GORILLA_GC_TYPES_H
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif /* __cplusplus */
-
-/*
-  WARNING: Do not typedef char or bool!
-  (also, note that char != signed char != unsigned char)
-  typedef char         char;
-  typedef bool         bool;
-*/
+extern "C" {
+#endif
 
 /****************************/
 /**  Primitive Data Types  **/
@@ -65,7 +57,7 @@ typedef gc_int32 gc_result; /**< Return type for the result of an operation. \in
 #define GC_ERROR_GENERIC -1 /**< Operation failed with an unspecified error. \ingroup results */
 
 #ifdef __cplusplus
-}
-#endif /* __cplusplus */
+} // extern "C"
+#endif
 
 #endif /* _GORILLA_GC_TYPES_H */
