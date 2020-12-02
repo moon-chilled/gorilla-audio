@@ -166,9 +166,9 @@ set(GORILLA_SRC
   ${SRC_DIR}/gau/ogg-vorbis.c ${SRC_DIR}/gau/wav.c)
 
 set(GORILLA_COMMON_INCLUDE
-  ${INCLUDE_DIR}/gorilla/common/gc_common.h
-  ${INCLUDE_DIR}/gorilla/common/gc_thread.h
-  ${INCLUDE_DIR}/gorilla/common/gc_types.h)
+  ${INCLUDE_DIR}/gorilla/common/ga_common.h
+  ${INCLUDE_DIR}/gorilla/common/ga_thread.h
+  ${INCLUDE_DIR}/gorilla/common/ga_types.h)
 
 set(GORILLA_COMMON_SRC
   ${SRC_DIR}/common/gc_common.c

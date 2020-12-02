@@ -721,6 +721,23 @@ typedef struct GaMixer GaMixer;
  */
 GaMixer *ga_mixer_create(GaFormat *format, gc_uint32 num_samples);
 
+/** Suspends the mixer, preventing it from consuming any of its inputs.  If you
+ ** attempt to mix from it in this state, it will produce all zeroes
+ *
+ *  \ingroup GaMixer
+ *  \param mixer The mixer to be suspended
+ *  \return GA_OK iff the mixer was not already suspended
+ */
+ga_result ga_mixer_suspend(GaMixer *mixer);
+
+/** Unsuspends the mixer, allowing it to consume all of its inputs again
+ *
+ *  \ingroup GaMixer
+ *  \param mixer The mixer to be unsuspended
+ *  \return GA_OK iff the mixer was already suspended
+ */
+ga_result ga_mixer_unsuspend(GaMixer *mixer);
+
 /** Retrieves the PCM sample format for a mixer object.
  *
  *  \ingroup GaMixer
@@ -845,7 +862,7 @@ typedef enum {
  *           after which the handle can no longer be used except to destroy it.
  *  \todo Allow handles with GaDataAccessFlag_Seekable to be rewound/reused once finished.
  */
-typedef void (*ga_FinishCallback)(GaHandle *finishedHandle, void *context);
+typedef void (*GaCbHandleFinish)(GaHandle *finishedHandle, void *context);
 
 /** Creates an audio playback control handle.
  *
@@ -940,8 +957,8 @@ gc_bool ga_handle_destroyed(GaHandle *handle);
  *  \return Whether the handle's callback was set successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-ga_result ga_handle_setCallback(GaHandle *handle,
-                                ga_FinishCallback callback,
+ga_result ga_handle_set_callback(GaHandle *handle,
+                                GaCbHandleFinish callback,
                                 void *context);
 
 /** Sets a floating-point parameter value on a handle.
@@ -955,7 +972,7 @@ ga_result ga_handle_setCallback(GaHandle *handle,
  *  \return Whether the parameter was set successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-ga_result ga_handle_setParamf(GaHandle *handle,
+ga_result ga_handle_set_paramf(GaHandle *handle,
                               GaHandleParam param,
                               gc_float32 value);
 
@@ -971,7 +988,7 @@ ga_result ga_handle_setParamf(GaHandle *handle,
  *  \return Whether the parameter was retrieved successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-ga_result ga_handle_getParamf(GaHandle *handle,
+ga_result ga_handle_get_paramf(GaHandle *handle,
                               GaHandleParam param,
                               gc_float32 *value);
 
@@ -986,7 +1003,7 @@ ga_result ga_handle_getParamf(GaHandle *handle,
  *  \return Whether the parameter was set successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-ga_result ga_handle_setParami(GaHandle *handle,
+ga_result ga_handle_set_parami(GaHandle *handle,
                               GaHandleParam param,
                               gc_int32 value);
 
@@ -1002,7 +1019,7 @@ ga_result ga_handle_setParami(GaHandle *handle,
  *  \return Whether the parameter was retrieved successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-ga_result ga_handle_getParami(GaHandle *handle,
+ga_result ga_handle_get_parami(GaHandle *handle,
                               GaHandleParam param,
                               gc_int32 *value);
 

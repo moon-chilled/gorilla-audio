@@ -227,7 +227,7 @@ typedef enum {
 
 struct GaHandle {
 	GaMixer* mixer;
-	ga_FinishCallback callback;
+	GaCbHandleFinish callback;
 	void* context;
 	GaHandleState state;
 	gc_float32 gain;
@@ -252,6 +252,7 @@ struct GaMixer {
 	GaMutex *dispatch_mutex;
 	GaLink mix_list;
 	GaMutex *mix_mutex;
+	gc_bool suspended;
 };
 
 

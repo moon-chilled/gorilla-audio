@@ -463,14 +463,14 @@ gc_bool ga_handle_destroyed(GaHandle *handle) {
 	return handle->state >= GaHandleState_Destroyed;
 }
 
-ga_result ga_handle_setCallback(GaHandle *handle, ga_FinishCallback callback, void *context) {
+ga_result ga_handle_set_callback(GaHandle *handle, GaCbHandleFinish callback, void *context) {
 	/* Does not need mutex because it can only be called from the dispatch thread */
 	handle->callback = callback;
 	handle->context = context;
 	return GA_OK;
 }
 
-ga_result ga_handle_setParamf(GaHandle *handle, GaHandleParam param, gc_float32 value) {
+ga_result ga_handle_set_paramf(GaHandle *handle, GaHandleParam param, gc_float32 value) {
 	switch (param) {
 		case GaHandleParam_Gain:
 			ga_mutex_lock(handle->mutex);
@@ -491,7 +491,7 @@ ga_result ga_handle_setParamf(GaHandle *handle, GaHandleParam param, gc_float32 
 	}
 }
 
-ga_result ga_handle_getParamf(GaHandle *handle, GaHandleParam param, gc_float32 *value) {
+ga_result ga_handle_get_paramf(GaHandle *handle, GaHandleParam param, gc_float32 *value) {
 	switch (param) {
 		case GaHandleParam_Gain:  *value = handle->gain;  return GA_OK;
 		case GaHandleParam_Pan:   *value = handle->pan;   return GA_OK;
@@ -500,7 +500,7 @@ ga_result ga_handle_getParamf(GaHandle *handle, GaHandleParam param, gc_float32 
 	}
 }
 
-ga_result ga_handle_setParami(GaHandle *handle, GaHandleParam param, gc_int32 value) {
+ga_result ga_handle_set_parami(GaHandle *handle, GaHandleParam param, gc_int32 value) {
 	/*
 	   switch(param)
 	   {
@@ -513,7 +513,7 @@ ga_result ga_handle_setParami(GaHandle *handle, GaHandleParam param, gc_int32 va
 	return GA_ERR_GENERIC;
 }
 
-ga_result ga_handle_getParami(GaHandle *handle, GaHandleParam param, gc_int32 *value) {
+ga_result ga_handle_get_parami(GaHandle *handle, GaHandleParam param, gc_int32 *value) {
 	/*
 	   switch(param)
 	   {
@@ -556,6 +556,19 @@ GaMixer *ga_mixer_create(GaFormat *format, gc_uint32 num_samples) {
 	ret->mix_buffer = gcX_ops->allocFunc(num_samples * ga_format_sample_size(&ret->mix_format));
 	ret->dispatch_mutex = ga_mutex_create();
 	ret->mix_mutex = ga_mutex_create();
+	ret->suspended = gc_false;
+	return ret;
+}
+
+ga_result ga_mixer_suspend(GaMixer *m) {
+	ga_result ret = m->suspended ? GA_ERR_GENERIC : GA_OK;
+	m->suspended = gc_true;
+	return ret;
+}
+
+ga_result ga_mixer_unsuspend(GaMixer *m) {
+	ga_result ret = m->suspended ? GA_OK : GA_ERR_GENERIC;
+	m->suspended = gc_false;
 	return ret;
 }
 
@@ -657,9 +670,14 @@ void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, gc_size num_samples)
 }
 
 ga_result ga_mixer_mix(GaMixer *m, void *buffer) {
-	GaLink* link;
 	gc_size end = m->num_samples * m->format.num_channels;
-	GaFormat* fmt = &m->format;
+
+	if (m->suspended) {
+		memset(buffer, 0, end * m->format.bits_per_sample);
+		return GA_OK;
+	}
+
+	GaLink* link;
 	memset(m->mix_buffer, 0, m->num_samples * ga_format_sample_size(&m->mix_format));
 
 	link = m->mix_list.next;
@@ -676,7 +694,7 @@ ga_result ga_mixer_mix(GaMixer *m, void *buffer) {
 	}
 
 	/* mix_buffer will already be correct bps */
-	switch (fmt->bits_per_sample) {
+	switch (m->format.bits_per_sample) {
 		case 8:
 			for (gc_size i = 0; i < end; ++i) {
 				gc_int32 sample = m->mix_buffer[i];

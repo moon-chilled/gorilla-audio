@@ -253,7 +253,7 @@ GaSound* gau_load_sound_file(const char* in_filename, GauAudioType in_format);
  *  \ingroup createHelper
  */
 GaHandle* gau_create_handle_memory(GaMixer* in_mixer, GaMemory* in_memory, GauAudioType in_format,
-                                    ga_FinishCallback in_callback, void* in_context,
+                                    GaCbHandleFinish in_callback, void* in_context,
                                     GauSampleSourceLoop** out_loopSrc);
 
 /** Create a handle to play a sound object.
@@ -261,7 +261,7 @@ GaHandle* gau_create_handle_memory(GaMixer* in_mixer, GaMemory* in_memory, GauAu
  *  \ingroup createHelper
  */
 GaHandle* gau_create_handle_sound(GaMixer* in_mixer, GaSound* in_sound,
-                                   ga_FinishCallback in_callback, void* in_context,
+                                   GaCbHandleFinish in_callback, void* in_context,
                                    GauSampleSourceLoop** out_loopSrc);
 
 /** Create a handle to play a background-buffered stream from a data source.
@@ -270,7 +270,7 @@ GaHandle* gau_create_handle_sound(GaMixer* in_mixer, GaSound* in_sound,
  */
 GaHandle* gau_create_handle_buffered_data(GaMixer* in_mixer, GaStreamManager* in_streamMgr,
                                            GaDataSource* in_dataSrc, GauAudioType in_format,
-                                           ga_FinishCallback in_callback, void* in_context,
+                                           GaCbHandleFinish in_callback, void* in_context,
                                            GauSampleSourceLoop** out_loopSrc);
 
 /** Create a handle to play a background-buffered stream from a file.
@@ -279,7 +279,7 @@ GaHandle* gau_create_handle_buffered_data(GaMixer* in_mixer, GaStreamManager* in
  */
 GaHandle* gau_create_handle_buffered_file(GaMixer* in_mixer, GaStreamManager* in_streamMgr,
                                            const char* in_filename, GauAudioType in_format,
-                                           ga_FinishCallback in_callback, void* in_context,
+                                           GaCbHandleFinish in_callback, void* in_context,
                                            GauSampleSourceLoop** out_loopSrc);
 
 #ifdef __cplusplus
