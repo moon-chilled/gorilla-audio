@@ -388,17 +388,17 @@ typedef struct GaSampleSource GaSampleSource;
  *  \param delta The signed distance from the old position to the new position.
  *  \param seekContext The user-specified context provided in ga_sample_source_read().
  */
-typedef void (*GaCbOnSeek)(gc_int32 sample, gc_int32 delta, void *seekContext);
+typedef void (*GaCbOnSeek)(gc_int32 sample, gc_int32 delta, void *seekContext); //todo delta → ssize
 
 /** Reads samples from a samples source.
  *
  *  \ingroup GaSampleSource
- *  \param sampleSrc Sample source from which to read.
+ *  \param sample_src Sample source from which to read.
  *  \param dst Destination buffer into which samples should be read. Must
  *                be at least (num_samples * sample-size) bytes in size.
  *  \param num_samples Number of samples to read.
- *  \param onSeekFunc The on-seek callback function for this read operation.
- *  \param seekContext User-specified context for the on-seek function.
+ *  \param onseek The on-seek callback function for this read operation.
+ *  \param seek_ctx User-specified context for the on-seek function.
  *  \return Total number of bytes read into the destination buffer.
  */
 gc_size ga_sample_source_read(GaSampleSource *sample_src, void *dst, gc_size num_samples,
@@ -407,10 +407,10 @@ gc_size ga_sample_source_read(GaSampleSource *sample_src, void *dst, gc_size num
 /** Checks whether a sample source has reached the end of the stream.
  *
  *  \ingroup GaSampleSource
- *  \param sampleSrc Sample source to check.
+ *  \param sample_src Sample source to check.
  *  \return Whether the sample source has reached the end of the stream.
  */
-gc_bool ga_sample_source_end(GaSampleSource *sampleSrc);
+gc_bool ga_sample_source_end(GaSampleSource *sample_src);
 
 /** Checks whether a sample source has at least a given number of available
  *  samples.
@@ -420,61 +420,62 @@ gc_bool ga_sample_source_end(GaSampleSource *sampleSrc);
  *  samples.
  *
  *  \ingroup GaSampleSource
- *  \param sampleSrc Sample source to check.
+ *  \param sample_src Sample source to check.
  *  \param num_samples The minimum number of samples required for the sample
  *                       source to be considered ready.
  *  \return Whether the sample source has at least a given number of available
  *          samples.
  */
-gc_bool ga_sample_source_ready(GaSampleSource *sampleSrc, gc_size num_samples);
+gc_bool ga_sample_source_ready(GaSampleSource *sample_src, gc_size num_samples);
 
 /** Seek to an offset (in samples) within a sample source.
  *
  *  \ingroup GaSampleSource
- *  \param sampleSrc Sample source to seek within.
- *  \param sampleOffset Offset (in samples) from the start of the sample stream.
+ *  \param sample_src Sample source to seek within.
+ *  \param sample_offset Offset (in samples) from the start of the sample stream.
  *  \return If seek succeeds, returns GA_OK, otherwise returns GA_ERR_GENERIC (invalid seek request).
- *  \warning Only sample sources with GA_FLAG_SEEKABLE can have ga_sample_source_seek()
+ *  \warning Only sample sources with GaDataAccessFlag_Seekable can have ga_sample_source_seek()
  *           called on them.
  */
-ga_result ga_sample_source_seek(GaSampleSource *sampleSrc, gc_size sampleOffset);
+ga_result ga_sample_source_seek(GaSampleSource *sample_src, gc_size sample_offset);
 
 /** Tells the current sample number of a sample source.
  *
  *  \ingroup GaSampleSource
- *  \param sampleSrc Sample source to tell the current sample number of.
- *  \param totalSamples If set, this value will be set to the total number of
- *                          samples in the sample source. Output parameter.
- *  \return The current sample source sample number.
+ *  \param sample_src Sample source to tell the current sample number of.
+ *  \param samples If set, the current sample source number will be stored here.
+ *  \param total_samples If set, the total number of samples in the sample
+ *         source will be stored here.
+ *  \return GA_OK iff the telling was successful.
  */
-ga_result ga_sample_source_tell(GaSampleSource *sampleSrc, gc_size *samples, gc_size *totalSamples);
+ga_result ga_sample_source_tell(GaSampleSource *sample_src, gc_size *samples, gc_size *total_samples);
 
 /** Returns the bitfield of flags set for a sample source (see \ref globDefs).
  *
  *  \ingroup GaSampleSource
- *  \param sampleSrc Sample source whose flags should be retrieved.
+ *  \param sample_src Sample source whose flags should be retrieved.
  *  \return The bitfield of flags set for the sample source.
  */
-GaDataAccessFlags ga_sample_source_flags(GaSampleSource *sampleSrc);
+GaDataAccessFlags ga_sample_source_flags(GaSampleSource *sample_src);
 
 /** Retrieves the PCM sample format for a sample source.
  *
  *  \ingroup GaSampleSource
- *  \param sampleSrc Sample source whose format should should be retrieved.
+ *  \param sample_src Sample source whose format should should be retrieved.
  *  \param format This value will be set to the same sample format
  *                    as samples in the sample source. Output parameter.
  *  \todo Either return a copy of the format, or make it a const* return value.
  */
-void ga_sample_source_format(GaSampleSource *sampleSrc, GaFormat *format);
+void ga_sample_source_format(GaSampleSource *sample_src, GaFormat *format);
 
 /** Acquires a reference for a sample source.
  *
  *  Increments the sample source's reference count by 1.
  *
  *  \ingroup GaSampleSource
- *  \param sampleSrc Sample source whose reference count should be incremented.
+ *  \param sample_src Sample source whose reference count should be incremented.
  */
-void ga_sample_source_acquire(GaSampleSource *sampleSrc);
+void ga_sample_source_acquire(GaSampleSource *sample_src);
 
 /** Releases a reference for a sample source.
  *
@@ -482,10 +483,10 @@ void ga_sample_source_acquire(GaSampleSource *sampleSrc);
  *  released, the sample source's resources will be deallocated.
  *
  *  \ingroup GaSampleSource
- *  \param sampleSrc Sample source whose reference count should be decremented.
+ *  \param sample_src Sample source whose reference count should be decremented.
  *  \warning A client must never use a sample source after releasing its reference.
  */
-void ga_sample_source_release(GaSampleSource *sampleSrc);
+void ga_sample_source_release(GaSampleSource *sample_src);
 
 
 /************/
@@ -623,11 +624,11 @@ GaSound *ga_sound_create(GaMemory *memory, GaFormat *format);
  *  The returned sound object has an initial reference count of 1.
  *
  *  \ingroup GaSound
- *  \param sampleSrc Sample source to be read into an internal data buffer.
+ *  \param sample_src Sample source to be read into an internal data buffer.
  *  \return Newly-allocated memory object, containing an internal copy of the
  *          full contents of the provided data source.
  */
-GaSound *ga_sound_create_sample_source(GaSampleSource *sampleSrc);
+GaSound *ga_sound_create_sample_source(GaSampleSource *sample_src);
 
 /** Retrieve a pointer to a sound object's stored data.
  *
@@ -718,7 +719,7 @@ typedef struct GaMixer GaMixer;
  *  \warning The number of samples must be a power-of-two.
  *  \todo Remove the requirement that the buffer be a power-of-two in size.
  */
-GaMixer *ga_mixer_create(GaFormat *format, gc_int32 num_samples);
+GaMixer *ga_mixer_create(GaFormat *format, gc_uint32 num_samples);
 
 /** Retrieves the PCM sample format for a mixer object.
  *
@@ -736,7 +737,7 @@ GaFormat *ga_mixer_format(GaMixer *mixer);
  *  \param mixer Mixer object whose number of samples should be retrieved.
  *  \return Number of samples in a mixer object's mix buffer.
  */
-gc_int32 ga_mixer_num_samples(GaMixer *mixer);
+gc_uint32 ga_mixer_num_samples(GaMixer *mixer);
 
 /** Mixes samples from all ready handles into a single output buffer.
  *
@@ -842,7 +843,7 @@ typedef enum {
  *  \param context The user-specified callback context.
  *  \warning This callback is thrown once the handle has finished playback,
  *           after which the handle can no longer be used except to destroy it.
- *  \todo Allow handles with GA_FLAG_SEEKABLE to be rewound/reused once finished.
+ *  \todo Allow handles with GaDataAccessFlag_Seekable to be rewound/reused once finished.
  */
 typedef void (*ga_FinishCallback)(GaHandle *finishedHandle, void *context);
 
@@ -854,10 +855,10 @@ typedef void (*ga_FinishCallback)(GaHandle *finishedHandle, void *context);
  *
  *  \ingroup GaHandle
  *  \param mixer The mixer that should mix the handle's sample data.
- *  \param sampleSrc The sample source from which to stream samples.
+ *  \param sample_src The sample source from which to stream samples.
  *  \todo Provide a way to query handles for flags.
  */
-GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *sampleSrc);
+GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *sample_src);
 
 /** Destroys an audio playback handle.
  *
@@ -1009,36 +1010,35 @@ ga_result ga_handle_getParami(GaHandle *handle,
  *
  *  \ingroup GaHandle
  *  \param handle Handle to seek within.
- *  \param sampleOffset Offset (in samples) from the start of the handle.
+ *  \param sample_offset Offset (in samples) from the start of the handle.
  *  \return If seek succeeds, returns 0, otherwise returns -1 (invalid seek request).
- *  \warning Only handles containing sample sources with GA_FLAG_SEEKABLE can
+ *  \warning Only handles containing sample sources with GaDataAccessFlag_Seekable can
  *           have ga_handle_seek() called on them.
  */
-ga_result ga_handle_seek(GaHandle *handle, gc_int32 sampleOffset);
+ga_result ga_handle_seek(GaHandle *handle, gc_size sample_offset);
 
 /** Tells the current playback sample number or total samples of a handle.
  *
  *  \ingroup GaHandle
  *  \param handle Handle to query.
- *  \param param Tell value to retrieve (see \ref tellParams).
- *  \return The current handle playback sample number if param is set to
- *          GA_TELL_PARAM_CURRENT. The total number of samples in the handle
- *          if param is set to GA_TELL_PARAM_TOTAL.
+ *  \param param Tell value to retrieve.
+ *  \param out The result is stored here if the parameters were valid.
+ *  \return GA_OK iff the parameters were valid.
  */
-gc_int32 ga_handle_tell(GaHandle *handle, GaTellParam param);
+ga_result ga_handle_tell(GaHandle *handle, GaTellParam param, gc_size *out);
 
 /** Checks whether a handle has at least a given number of available samples.
  *
- *  If the handle has fewer than numSamples samples left before it finishes,
+ *  If the handle has fewer than num_samples samples left before it finishes,
  *  this function will returns GA_TRUE regardless of the number of samples.
  *
  *  \ingroup GaHandle
  *  \param handle Handle to check.
- *  \param numSamples The minimum number of samples required for the handle
+ *  \param num_samples The minimum number of samples required for the handle
  *                       to be considered ready.
  *  \return Whether the handle has at least a given number of available samples.
  */
-gc_bool ga_handle_ready(GaHandle *handle, gc_int32 numSamples);
+gc_bool ga_handle_ready(GaHandle *handle, gc_size num_samples);
 
 /** Retrieves the PCM sample format for a handle.
  *
@@ -1118,11 +1118,11 @@ typedef struct GaBufferedStream GaBufferedStream;
  *  \ingroup GaBufferedStream
  *  \param mgr Buffered-stream manager to manage the buffered stream
  *                (non-optional).
- *  \param sampleSrc Sample source to buffer samples from.
- *  \param bufferSize Size of the internal data buffer (in bytes). Must be
+ *  \param src Sample source to buffer samples from.
+ *  \param buffer_size Size of the internal data buffer (in bytes). Must be
  *         a multiple of sample size.
  *  \return Newly-created buffered stream.
- *  \todo Change bufferSize to bufferSamples for a more fault-resistant
+ *  \todo Change buffer_size to buffer_samples for a more fault-resistant
  *        interface.
  */
 GaBufferedStream *ga_stream_create(GaStreamManager *mgr, GaSampleSource *src, gc_size buffer_size);
@@ -1143,11 +1143,11 @@ void ga_stream_produce(GaBufferedStream *stream); /* Can be called from a second
  *  \ingroup GaBufferedStream
  *  \param stream Buffered stream from which to read.
  *  \param dst Destination buffer into which samples should be read. Must
- *                be at least (numSamples * sample size) bytes in size.
- *  \param numSamples Number of samples to read.
+ *                be at least (num_samples * sample size) bytes in size.
+ *  \param num_samples Number of samples to read.
  *  \return Total number of bytes read into the destination buffer.
  */
-gc_size ga_stream_read(GaBufferedStream *stream, void *dst, gc_size numSamples);
+gc_size ga_stream_read(GaBufferedStream *stream, void *dst, gc_size num_samples);
 
 /** Checks whether a buffered stream has reached the end of the stream.
  *
@@ -1160,41 +1160,43 @@ gc_bool ga_stream_end(GaBufferedStream *stream);
 /** Checks whether a buffered stream has at least a given number of available
  *  samples.
  *
- *  If the sample source has fewer than numSamples samples left before it
+ *  If the sample source has fewer than num_samples samples left before it
  *  finishes, this function will returns GA_TRUE regardless of the number of
  *  samples.
  *
  *  \ingroup GaBufferedStream
  *  \param stream Buffered stream to check.
- *  \param numSamples The minimum number of samples required for the
+ *  \param num_samples The minimum number of samples required for the
  *                       buffered stream to be considered ready.
  *  \return Whether the buffered stream has at least a given number of available
  *          samples.
  */
-gc_bool ga_stream_ready(GaBufferedStream *stream, gc_size numSamples);
+gc_bool ga_stream_ready(GaBufferedStream *stream, gc_size num_samples);
 
 /** Seek to an offset (in samples) within a buffered stream.
  *
  *  \ingroup GaBufferedStream
  *  \param stream Buffered stream to seek within.
- *  \param sampleOffset Offset (in samples) from the start of the contained
+ *  \param sample_offset Offset (in samples) from the start of the contained
  *                         sample source.
  *  \return If seek succeeds, returns GA_OK, otherwise returns GA_ERR_GENERIC (invalid seek
  *          request).
- *  \warning Only buffered streams with GA_FLAG_SEEKABLE can have ga_stream_seek()
+ *  \warning Only buffered streams with GaDataAccessFlag_Seekable can have ga_stream_seek()
  *           called on them.
  */
-ga_result ga_stream_seek(GaBufferedStream *stream, gc_size sampleOffset);
+ga_result ga_stream_seek(GaBufferedStream *stream, gc_size sample_offset);
 
 /** Tells the current sample number of a buffered stream.
  *
  *  \ingroup GaBufferedStream
  *  \param stream Buffered stream to tell the current sample number of.
- *  \param totalSamples If set, this value will be set to the total number of
- *                          samples in the contained sample source. Output parameter.
- *  \return The current sample source sample number.
+ *
+ *  \param samples If set, the current sample source sample number will be stored here.
+ *  \param total_samples If set, the total number of samples in the contained sample
+ *         source will be stored here.
+ *  \return GA_OK iff the telling was successful
  */
-ga_result ga_stream_tell(GaBufferedStream *stream, gc_size *samples, gc_size *totalSamples);
+ga_result ga_stream_tell(GaBufferedStream *stream, gc_size *samples, gc_size *total_samples);
 
 /** Returns the bitfield of flags set for a buffered stream (see \ref globDefs).
  *

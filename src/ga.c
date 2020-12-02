@@ -523,22 +523,19 @@ ga_result ga_handle_getParami(GaHandle *handle, GaHandleParam param, gc_int32 *v
 	return GA_ERR_GENERIC;
 }
 
-ga_result ga_handle_seek(GaHandle *handle, gc_int32 sampleOffset) {
-	ga_sample_source_seek(handle->sample_src, sampleOffset);
+ga_result ga_handle_seek(GaHandle *handle, gc_size sample_offset) {
+	ga_sample_source_seek(handle->sample_src, sample_offset);
 	return GA_OK;
 }
 
-gc_int32 ga_handle_tell(GaHandle *handle, GaTellParam param) {
-	ga_result res;
-	gc_size ret;
-	if (param == GaTellParam_Current) res = ga_sample_source_tell(handle->sample_src, &ret, NULL);
-	else if (param == GaTellParam_Total) res = ga_sample_source_tell(handle->sample_src, NULL, &ret);
-	else return -1;
-	if (res != GA_OK) return -1;
-	return ret;
+ga_result ga_handle_tell(GaHandle *handle, GaTellParam param, gc_size *out) {
+	if (!out) return GA_ERR_GENERIC;
+	if (param == GaTellParam_Current) return ga_sample_source_tell(handle->sample_src, out, NULL);
+	else if (param == GaTellParam_Total) return ga_sample_source_tell(handle->sample_src, NULL, out);
+	else return GA_ERR_GENERIC;
 }
 
-gc_bool ga_handle_ready(GaHandle *handle, gc_int32 num_samples) {
+gc_bool ga_handle_ready(GaHandle *handle, gc_size num_samples) {
 	return ga_sample_source_ready(handle->sample_src, num_samples);
 }
 
@@ -547,7 +544,7 @@ void ga_handle_format(GaHandle *handle, GaFormat *format) {
 }
 
 /* Mixer Functions */
-GaMixer *ga_mixer_create(GaFormat *format, gc_int32 num_samples) {
+GaMixer *ga_mixer_create(GaFormat *format, gc_uint32 num_samples) {
 	GaMixer *ret = gcX_ops->allocFunc(sizeof(GaMixer));
 	ga_list_head(&ret->dispatch_list);
 	ga_list_head(&ret->mix_list);
@@ -566,7 +563,7 @@ GaFormat *ga_mixer_format(GaMixer *mixer) {
 	return &mixer->format;
 }
 
-gc_int32 ga_mixer_num_samples(GaMixer *mixer) {
+gc_uint32 ga_mixer_num_samples(GaMixer *mixer) {
 	return mixer->num_samples;
 }
 

@@ -120,8 +120,8 @@ typedef gc_size (*GaCbDataSource_Read)(void *context, void *dst, gc_size size, g
  *  \param offset Offset (in bytes) from the specified seek origin.
  *  \param origin Seek origin (see [\ref globDefs]).
  *  \return If seek succeeds, the callback should return GA_OK, otherwise it should return GA_ERR_GENERIC.
- *  \warning Data sources with GA_FLAG_SEEKABLE should always provide a seek callback.
- *  \warning Data sources with GA_FLAG_SEEKABLE set should only return -1 in the case of
+ *  \warning Data sources with GaDataAccessFlag_Seekable should always provide a seek callback.
+ *  \warning Data sources with GaDataAccessFlag_Seekable set should only return an error in the case of
  *           an invalid seek request.
  *  \todo Define a less-confusing contract for extending/defining this function.
  */
@@ -246,7 +246,7 @@ struct GaHandle {
 struct GaMixer {
 	GaFormat format;
 	GaFormat mix_format;
-	gc_size num_samples;
+	gc_uint32 num_samples;
 	gc_int32 *mix_buffer;
 	GaLink dispatch_list;
 	GaMutex *dispatch_mutex;
