@@ -271,12 +271,20 @@ install(FILES ${GORILLA_COMMON_INCLUDE} DESTINATION include/gorilla/common)
 
 if(ENABLE_XAUDIO2)
   target_link_libraries(gorilla ${DIRECTX_XAUDIO2_LIBRARY})
+  target_link_libraries(gorilla_static ${DIRECTX_XAUDIO2_LIBRARY})
+endif()
+
+if(ENABLE_PULSEAUDIO)
+  target_link_libraries(gorilla "pulse-simple")
+  target_link_libraries(gorilla_static "pulse-simple")
 endif()
 
 if(ENABLE_ALSA)
   target_link_libraries(gorilla ${ALSA_LIBRARY})
+  target_link_libraries(gorilla_static ${ALSA_LIBRARY})
 endif()
 
 if(ENABLE_OPENAL)
   target_link_libraries(gorilla ${OPENAL_LIBRARY})
+  target_link_libraries(gorilla_static ${OPENAL_LIBRARY})
 endif()
