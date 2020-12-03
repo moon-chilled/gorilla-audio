@@ -47,7 +47,7 @@ endif()
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 set(DEBUG_CONFIGURATIONS "Debug")
 
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address,undefined,unsigned-integer-overflow,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change")
+#set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address,undefined,unsigned-integer-overflow,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change")
 #set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address,undefined")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUNICODE -D_UNICODE")
@@ -264,6 +264,10 @@ set(ALL_SRC
 add_library(gorilla SHARED ${ALL_SRC})
 add_library(gorilla_static STATIC ${ALL_SRC})
 set_target_properties(gorilla_static PROPERTIES OUTPUT_NAME gorilla)
+
+install(TARGETS gorilla gorilla_static DESTINATION lib)
+install(FILES ${GORILLA_INCLUDE} DESTINATION include/gorilla)
+install(FILES ${GORILLA_COMMON_INCLUDE} DESTINATION include/gorilla/common)
 
 if(ENABLE_XAUDIO2)
   target_link_libraries(gorilla ${DIRECTX_XAUDIO2_LIBRARY})
