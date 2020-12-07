@@ -69,8 +69,6 @@ extern "C" {
  *
  *  For example: `assert(ga_version_compatible(GA_VERSION_MAJOR, GA_VERSION_MINOR, GA_VERSION_REV)`
  */
-//TODO it would probably be more useful if this returned true if specified *matched* api
-//(that is, if specified major=api major; specified minor≤api minor)
 gc_bool ga_version_check(gc_int32 major, gc_int32 minor, gc_int32 rev);
 
 
