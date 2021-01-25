@@ -16,6 +16,8 @@
 
 const char *devicetypename(GaDeviceType type) {
 	switch (type) {
+		case GaDeviceType_Dummy: return "dummy";
+		case GaDeviceType_WAV: return "wav";
 		case GaDeviceType_OSS: return "oss";
 		case GaDeviceType_XAudio2: return "xaudio2";
 		case GaDeviceType_PulseAudio: return "pulse";
@@ -37,6 +39,7 @@ int main(int argc, char **argv) {
 
 	ga_initialize_systemops(NULL);
 	GauManager *mgr = check(gau_manager_create_custom(&(GaDeviceType){GaDeviceType_Default}, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
+	//GauManager *mgr = check(gau_manager_create_custom(&(GaDeviceType){GaDeviceType_WAV}, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
 	GaMixer *mixer = check(gau_manager_mixer(mgr), "Unable to get mixer from manager");
 	GaStreamManager *smgr = gau_manager_stream_manager(mgr);
 
@@ -50,10 +53,10 @@ int main(int argc, char **argv) {
 	GaDevice *dev = gau_manager_device(mgr);
 	GaFormat hfmt;
 	ga_handle_format(handle, &hfmt);
-	printf("gaplay [%s %i -> %iHz %i -> %ich] %s\n", devicetypename(dev->dev_type), hfmt.sample_rate, dev->format.sample_rate, hfmt.num_channels, dev->format.num_channels, argv[1]);
+	printf("gaplay [%iHz %ich -> %s (%iHz %ich)] %s\n", hfmt.sample_rate, hfmt.num_channels, devicetypename(dev->dev_type), dev->format.sample_rate, dev->format.num_channels, argv[1]);
 
-	gc_bool can_progress;
-	gc_size cur, dur;
+	bool can_progress;
+	ga_usize cur, dur;
 	can_progress = ga_isok(ga_handle_tell(handle, GaTellParam_Total, &dur));
 	can_progress &= ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur));
 	if (can_progress) {

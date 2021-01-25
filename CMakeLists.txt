@@ -64,8 +64,11 @@ if(MSVC)
   string(REPLACE "/MDd" "/MTd" CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
   string(REPLACE "/MDd" "/MTd" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
 else()
-  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -Wextra -Wno-unused-parameter")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wno-unused-parameter -fdiagnostics-color=always")
+  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Werror")
 endif()
+
+set(CMAKE_POSITION_INDEPENDENT_CODE On)
 
 if(MSVC OR CYGWIN)
   set(ENABLE_XAUDIO2 "1" CACHE STRING "Enable XAudio2 device")
@@ -154,25 +157,23 @@ set(GORILLA_INCLUDE_DIR ${INCLUDE_DIR})
 include_directories(${INCLUDE_DIR})
 
 set(GORILLA_INCLUDE
-  ${INCLUDE_DIR}/gorilla/ga.h
-  ${INCLUDE_DIR}/gorilla/gau.h
-  ${INCLUDE_DIR}/gorilla/ga_internal.h)
+  ${INCLUDE_DIR}/gorilla/ga_internal.h
+  ${INCLUDE_DIR}/gorilla/ga.h ${INCLUDE_DIR}/gorilla/ga_system.h ${INCLUDE_DIR}/gorilla/ga_types.h
+  ${INCLUDE_DIR}/gorilla/gau.h)
 
 set(GORILLA_SRC
-  ${SRC_DIR}/ga.c
-  ${SRC_DIR}/devices/ga_dummy.c
-  ${SRC_DIR}/ga_stream.c
+  ${SRC_DIR}/ga/ga.c
+  ${SRC_DIR}/ga/devices/dummy.c ${SRC_DIR}/ga/devices/wav.c
+  ${SRC_DIR}/ga/stream.c
+  ${SRC_DIR}/ga/memory.c ${SRC_DIR}/ga/system.c
   ${SRC_DIR}/gau/gau.c
-  ${SRC_DIR}/gau/ogg-vorbis.c ${SRC_DIR}/gau/wav.c)
+  ${SRC_DIR}/gau/datasrc/file.c ${SRC_DIR}/gau/datasrc/memory.c
+  ${SRC_DIR}/gau/samplesrc/loop.c ${SRC_DIR}/gau/samplesrc/sound ${SRC_DIR}/gau/samplesrc/stream.c ${SRC_DIR}/gau/samplesrc/ogg-vorbis.c ${SRC_DIR}/gau/samplesrc/wav.c)
 
 set(GORILLA_COMMON_INCLUDE
   ${INCLUDE_DIR}/gorilla/common/ga_common.h
   ${INCLUDE_DIR}/gorilla/common/ga_thread.h
   ${INCLUDE_DIR}/gorilla/common/ga_types.h)
-
-set(GORILLA_COMMON_SRC
-  ${SRC_DIR}/common/gc_common.c
-  ${SRC_DIR}/common/gc_thread.c)
 
 # OGG/Vorbis
 set(LIBOGGDIR ext/libogg)
@@ -215,23 +216,23 @@ set(OGGVORBIS_SRC
   ${LIBVORBISDIR}/lib/window.c)
 
 if(ENABLE_OSS)
-  list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_oss.c)
+  list(APPEND GORILLA_SRC ${SRC_DIR}/ga/devices/oss.c)
 endif()
 
 if(ENABLE_XAUDIO2)
-  list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_xaudio2.cc)
+  list(APPEND GORILLA_SRC ${SRC_DIR}/ga/devices/xaudio2.cc)
 endif()
 
 if(ENABLE_PULSEAUDIO)
-  list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_pulseaudio.c)
+  list(APPEND GORILLA_SRC ${SRC_DIR}/ga/devices/pulseaudio.c)
 endif()
 
 if(ENABLE_ALSA)
-  list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_alsa.c)
+  list(APPEND GORILLA_SRC ${SRC_DIR}/ga/devices/alsa.c)
 endif()
 
 if(ENABLE_OPENAL)
-  list(APPEND GORILLA_SRC ${SRC_DIR}/devices/ga_openal.c)
+  list(APPEND GORILLA_SRC ${SRC_DIR}/ga/devices/openal.c)
 endif()
 
 set(INCLUDE_INTTYPES_H 0)
@@ -248,15 +249,15 @@ configure_file(ext/libogg/include/ogg/config_types.h.in ${CMAKE_SOURCE_DIR}/ext/
 
 source_group("include" FILES ${GORILLA_INCLUDE})
 source_group("src" FILES ${GORILLA_SRC})
-source_group("include\\common" FILES ${GORILLA_COMMON_INCLUDE})
-source_group("src\\common" FILES ${GORILLA_COMMON_SRC})
+#source_group("include\\common" FILES ${GORILLA_COMMON_INCLUDE})
+#source_group("src\\common" FILES ${GORILLA_COMMON_SRC})
 source_group("include\\oggvorbis" FILES ${OGGVORBIS_INCLUDE})
 source_group("src\\oggvorbis" FILES ${OGGVORBIS_SRC})
 
 set(ALL_SRC
   ${GORILLA_INCLUDE}
   ${GORILLA_SRC}
-  ${GORILLA_COMMON_INCLUDE}
+  #${GORILLA_COMMON_INCLUDE}
   ${GORILLA_COMMON_SRC}
   ${OGGVORBIS_INCLUDE}
   ${OGGVORBIS_SRC})

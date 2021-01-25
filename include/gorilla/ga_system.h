@@ -1,23 +1,83 @@
-/** Threads and Synchronization.
+/** Gorilla System API.
  *
- *  \file ga_thread.h
+ *  A collection of non-audio-specific classes for interacting with the system.
+ *
+ *  \file ga_system.h
  */
 
-#ifndef _GORILLA_GA_THREAD_H
-#define _GORILLA_GA_THREAD_H
+/** Data structures and functions for interacting with an external system.
+ *
+ *  \defgroup system System API
+ */
+
+#ifndef _GORILLA_GA_SYSTEM_H
+#define _GORILLA_GA_SYSTEM_H
 
 #include "ga_types.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
+
+/*************************/
+/**  System Operations  **/
+/*************************/
+/** System operations.
+ *
+ *  \ingroup system
+ *  \defgroup GaSystemOps System Operations
+ */
+
+/** System allocation policies [\ref POD].
+ *
+ *  \ingroup GcSystemOps
+ */
+typedef struct {
+	void *(*alloc)(ga_usize size);
+	void *(*realloc)(void *ptr, ga_usize size);
+	void (*free)(void *ptr);
+} GaSystemOps;
+
+void *ga_alloc(ga_usize size);
+void *ga_realloc(void *ptr, ga_usize size);
+void ga_free(void *ptr);
+
+
+/** Initialize the Gorilla library.
+ *
+ *  \ingroup GaSystemOps
+ *  \param callbacks You may (optionally) pass in a GaSystemOps structure
+ *                      to define custom allocation functions.  If you do not,
+ *                      Gorilla will use standard ANSI C malloc/realloc/free
+ *                      functions.
+ *  \return GA_OK if library initialized successfully. GA_ERR_GENERIC
+ *          if not.
+ */
+ga_result ga_initialize_systemops(GaSystemOps *callbacks);
+
+/** Shutdown the Gorilla library.
+ *
+ *  Call this once you are finished using the library. After calling it,
+ *  do not call any functions in the library.
+ *
+ *  \ingroup GaSystemOps
+ *  \return GA_OK if the library shut down successfully. GA_ERR_GENERIC
+ *          if not.
+ */
+ga_result ga_shutdown_systemops(void);
+
+ga_uint16 ga_endian_tobe2(ga_uint16 x);
+ga_uint32 ga_endian_tobe4(ga_uint32 x);
+ga_uint16 ga_endian_tole2(ga_uint16 x);
+ga_uint32 ga_endian_tole4(ga_uint32 x);
+
 
 /************/
 /*  Thread  */
 /************/
 /** Thread data structure and associated functions.
  *
- *  \ingroup common
+ *  \ingroup system
  *  \defgroup GaThread Thread
  */
 
@@ -41,10 +101,11 @@ typedef enum {
  *
  *  \ingroup GaThread
  *  \param context The user-specified thread context.
- *  \return GA_OK if thread terminated without error. GA_ERR_GENERIC
- *          if not.
+ *  \return GA_OK iff thread terminated without error.
  */
-typedef gc_int32 (*GaCbThreadFunc)(void* context);
+typedef ga_result (*GaCbThreadFunc)(void *context);
+
+typedef struct GaThreadObj GaThreadObj;
 
 /** Thread data structure [\ref SINGLE_CLIENT].
  *
@@ -52,27 +113,21 @@ typedef gc_int32 (*GaCbThreadFunc)(void* context);
  */
 typedef struct {
 	GaCbThreadFunc thread_func;
-	void *thread_obj;
+	GaThreadObj *thread_obj;
 	void *context;
-	gc_int32 id;
-	gc_int32 priority;
-	gc_uint32 stack_size;
+	ga_sint32 id;
+	GaThreadPriority priority;
+	ga_uint32 stack_size;
 } GaThread;
 
 /** Creates a new thread.
  *
- *  The created thread will not run until ga_thread_run() is called on it.
+ *  The created thread will begin running immediately.
  *
  *  \ingroup GaThread
  */
-GaThread* ga_thread_create(GaCbThreadFunc thread_func, void *context,
-                            gc_int32 priority, gc_uint32 stack_size);
-
-/** Runs a thread.
- *
- *  \ingroup GaThread
- */
-void ga_thread_run(GaThread *thread);
+GaThread *ga_thread_create(GaCbThreadFunc thread_func, void *context,
+                            GaThreadPriority priority, ga_uint32 stack_size);
 
 /** Joins a thread with the current thread.
  *
@@ -89,7 +144,7 @@ void ga_thread_join(GaThread *thread);
  *
  *  \ingroup GaThread
  */
-void ga_thread_sleep(gc_uint32 ms);
+void ga_thread_sleep(ga_uint32 ms);
 
 /** Destroys a thread object.
  *
@@ -105,7 +160,7 @@ void ga_thread_destroy(GaThread *thread);
 /***********/
 /** Mutual exclusion lock data structure and associated functions.
  *
- *  \ingroup common
+ *  \ingroup system
  *  \defgroup GaMutex Mutex
  */
 
@@ -113,7 +168,7 @@ void ga_thread_destroy(GaThread *thread);
  *
  *  \ingroup GaMutex
  */
-typedef struct GaMutex {
+typedef struct {
 	void *mutex;
 } GaMutex;
 
@@ -121,7 +176,7 @@ typedef struct GaMutex {
  *
  *  \ingroup GaMutex
  */
-GaMutex *ga_mutex_create(void);
+ga_result ga_mutex_create(GaMutex *res);
 
 /** Locks a mutex.
  *
@@ -130,14 +185,14 @@ GaMutex *ga_mutex_create(void);
  *  \ingroup GaMutex
  *  \warning Do not lock a mutex on the same thread without first unlocking.
  */
-void ga_mutex_lock(GaMutex *mutex);
+void ga_mutex_lock(GaMutex mutex);
 
 /** Unlocks a mutex.
  *
  *  \ingroup GaMutex
  *  \warning Do not unlock a mutex without first locking it.
  */
-void ga_mutex_unlock(GaMutex *mutex);
+void ga_mutex_unlock(GaMutex mutex);
 
 /** Destroys a mutex.
  *
@@ -145,10 +200,10 @@ void ga_mutex_unlock(GaMutex *mutex);
  *  \warning Make sure the mutex is no longer in use before destroying it.
  *  \warning Never use a mutex after it has been destroyed.
  */
-void ga_mutex_destroy(GaMutex *mutex);
+void ga_mutex_destroy(GaMutex mutex);
 
 #ifdef __cplusplus
-} // extern "C"
+} //extern "C"
 #endif
 
-#endif // _GORILLA_GA_THREAD_H
+#endif /* _GORILLA_GA_SYSTEM_H */

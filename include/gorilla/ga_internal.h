@@ -12,18 +12,13 @@
 #ifndef _GORILLA_GA_INTERNAL_H
 #define _GORILLA_GA_INTERNAL_H
 
-#include <stdatomic.h>
-#include <assert.h>
-
-#include "gorilla/common/ga_common.h"
+#include "gorilla/ga.h"
+#include "gorilla/ga_system.h"
+#include "gorilla/ga_u_internal.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-typedef _Atomic gc_int32 gc_atomic_int32;
-typedef _Atomic gc_uint32 gc_atomic_uint32;
-typedef _Atomic gc_size gc_atomic_size;
 
 /************/
 /*  Device  */
@@ -40,12 +35,13 @@ typedef _Atomic gc_size gc_atomic_size;
  */
 typedef struct {
 	ga_result (*open)(GaDevice *dev);
-	gc_int32 (*check)(GaDevice *dev);
+	s32 (*check)(GaDevice *dev);
 	ga_result (*queue)(GaDevice *dev, void *buffer);
 	ga_result (*close)(GaDevice *device);
 } GaXDeviceProcs;
 
 extern GaXDeviceProcs gaX_deviceprocs_dummy;
+extern GaXDeviceProcs gaX_deviceprocs_WAV;
 
 #ifdef ENABLE_OSS
 extern GaXDeviceProcs gaX_deviceprocs_OSS;
@@ -84,8 +80,8 @@ typedef struct GaXDeviceImpl GaXDeviceImpl;
  */
 struct GaDevice {
 	GaDeviceType dev_type;
-	gc_uint32 num_buffers;
-	gc_uint32 num_samples;
+	u32 num_buffers;
+	u32 num_samples;
 	GaFormat format;
 
 	GaXDeviceProcs procs;
@@ -111,7 +107,7 @@ struct GaDevice {
  *  \param count Number of elements to read.
  *  \return Total number of bytes read into the destination buffer.
  */
-typedef gc_size (*GaCbDataSource_Read)(void *context, void *dst, gc_size size, gc_size count);
+typedef usz (*GaCbDataSource_Read)(void *context, void *dst, usz size, usz count);
 
 /** Data source seek callback prototype.
  *
@@ -125,7 +121,7 @@ typedef gc_size (*GaCbDataSource_Read)(void *context, void *dst, gc_size size, g
  *           an invalid seek request.
  *  \todo Define a less-confusing contract for extending/defining this function.
  */
-typedef ga_result (*GaCbDataSource_Seek)(void *context, gc_ssize offset, GaSeekOrigin whence);
+typedef ga_result (*GaCbDataSource_Seek)(void *context, ssz offset, GaSeekOrigin whence);
 
 /** Data source tell callback prototype.
  *
@@ -133,7 +129,7 @@ typedef ga_result (*GaCbDataSource_Seek)(void *context, gc_ssize offset, GaSeekO
  *  \param context User context (pointer to the first byte after the data source).
  *  \return The current data source read position.
  */
-typedef gc_size (*GaCbDataSource_Tell)(void *context);
+typedef usz (*GaCbDataSource_Tell)(void *context);
 
 /** Data source close callback prototype.
  *
@@ -152,12 +148,12 @@ typedef void (*GaCbDataSource_Close)(void *context);
  *  \todo Design a clearer/better system for easily extending this data type.
  */
 struct GaDataSource {
-	GaCbDataSource_Read read; /**< Internal read callback. */
-	GaCbDataSource_Seek seek; /**< Internal seek callback (optional). */
-	GaCbDataSource_Tell tell; /**< Internal tell callback (optional). */
+	GaCbDataSource_Read read;   /**< Internal read callback. */
+	GaCbDataSource_Seek seek;   /**< Internal seek callback (optional). */
+	GaCbDataSource_Tell tell;   /**< Internal tell callback (optional). */
 	GaCbDataSource_Close close; /**< Internal close callback (optional). */
-	gc_atomic_uint32 refCount; /**< Reference count. */
-	GaDataAccessFlags flags; /**< Flags defining which functionality this data source supports (see [\ref globDefs]). */
+	RC refCount;                /**< Reference count. */
+	GaDataAccessFlags flags;    /**< Flags defining which functionality this data source supports (see [\ref globDefs]). */
 };
 
 /** Initializes the reference count and other default values.
@@ -172,45 +168,36 @@ void ga_data_source_init(GaDataSource *data_src);
 /*******************/
 /*  Sample Source  */
 /*******************/
-typedef gc_size (*GaCbSampleSource_Read)(void *context, void *dst, gc_size num_samples,
-                                           GaCbOnSeek onseek, void *seek_ctx);
-typedef gc_bool (*GaCbSampleSource_End)(void *context);
-typedef gc_bool (*GaCbSampleSource_Ready)(void *context, gc_size num_samples);
-typedef ga_result (*GaCbSampleSource_Seek)(void *context, gc_size sample_offset);
-typedef ga_result (*GaCbSampleSource_Tell)(void *context, gc_size *samples, gc_size *total_samples);
-typedef void (*GaCbSampleSource_Close)(void *context);
-
 struct GaSampleSource {
 	GaCbSampleSource_Read read;
 	GaCbSampleSource_End end;
-	GaCbSampleSource_Ready ready;
-	GaCbSampleSource_Seek seek; /* OPTIONAL */
-	GaCbSampleSource_Tell tell; /* OPTIONAL */
-	GaCbSampleSource_Close close; /* OPTIONAL */
+	GaCbSampleSource_Ready ready; // OPTIONAL
+	GaCbSampleSource_Seek seek;   // OPTIONAL
+	GaCbSampleSource_Tell tell;   // OPTIONAL
+	GaCbSampleSource_Close close; // OPTIONAL
+	GaSampleSourceContext *context;
 	GaFormat format;
-	gc_atomic_uint32 refCount;
 	GaDataAccessFlags flags;
+	RC refCount;
 };
-
-void ga_sample_source_init(GaSampleSource *sample_src);
 
 /************/
 /*  Memory  */
 /************/
 struct GaMemory {
 	void *data;
-	gc_size size;
-	gc_atomic_uint32 refCount;
+	usz size;
+	RC refCount;
 };
 
 /***********/
 /*  Sound  */
 /***********/
 struct GaSound {
-	GaMemory* memory;
+	GaMemory *memory;
 	GaFormat format;
-	gc_size num_samples;
-	gc_atomic_uint32 refCount;
+	usz num_samples;
+	RC refCount;
 };
 
 /************/
@@ -226,18 +213,17 @@ typedef enum {
 } GaHandleState;
 
 struct GaHandle {
-	GaMixer* mixer;
+	GaMixer *mixer;
 	GaCbHandleFinish callback;
-	void* context;
+	void *context;
 	GaHandleState state;
-	gc_float32 gain;
-	gc_float32 pitch;
-	gc_float32 pan;
+	f32 gain;
+	f32 pitch;
+	f32 pan;
 	GaLink dispatch_link;
 	GaLink mix_link;
-	GaMutex *mutex;
+	GaMutex mutex;
 	GaSampleSource *sample_src;
-	volatile gc_int32 finished;
 };
 
 /************/
@@ -246,47 +232,38 @@ struct GaHandle {
 struct GaMixer {
 	GaFormat format;
 	GaFormat mix_format;
-	gc_uint32 num_samples;
-	gc_int32 *mix_buffer;
+	u32 num_samples;
+	s32 *mix_buffer;
 	GaLink dispatch_list;
-	GaMutex *dispatch_mutex;
+	GaMutex dispatch_mutex;
 	GaLink mix_list;
-	GaMutex *mix_mutex;
-	gc_bool suspended;
+	GaMutex mix_mutex;
+	ga_bool suspended;
 };
 
 
 struct GaStreamManager {
 	GaLink stream_list;
-	GaMutex *mutex;
+	GaMutex mutex;
 };
 
 struct GaBufferedStream {
 	GaLink *stream_link;
 	GaSampleSource *inner_src;
 	GaCircBuffer *buffer;
-	GaMutex *produce_mutex;
-	GaMutex *seek_mutex;
-	GaMutex *read_mutex;
-	gc_atomic_uint32 refCount;
+	GaMutex produce_mutex;
+	GaMutex seek_mutex;
+	GaMutex read_mutex;
+	RC refCount;
 	GaLink tell_jumps;
 	GaFormat format;
-	gc_size buffer_size;
-	gc_int32 seek;
-	gc_int32 tell;
-	gc_int32 next_sample;
-	gc_int32 end;
+	usz buffer_size;
+	s32 seek;
+	s32 tell;
+	s32 next_sample;
+	s32 end;
 	GaDataAccessFlags flags;
 };
-
-static inline gc_bool gcX_decref(gc_atomic_uint32 *count) {
-	gc_atomic_uint32 old = atomic_fetch_sub(count, 1);
-	assert(old);
-	return old == 1;
-}
-
-#define min(x, y) ((x) < (y) ? (x) : (y))
-#define max(x, y) ((x) > (y) ? (x) : (y))
 
 #ifdef __cplusplus
 }

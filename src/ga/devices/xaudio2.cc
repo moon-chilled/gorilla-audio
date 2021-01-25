@@ -12,11 +12,11 @@
 
 
 struct ga_DeviceImpl {
-	struct IXAudio2* xa;
-	struct IXAudio2MasteringVoice* master;
-	struct IXAudio2SourceVoice* source;
-	gc_uint32 sample_size;
-	gc_uint32 next_buffer;
+	struct IXAudio2 *xa;
+	struct IXAudio2MasteringVoice *master;
+	struct IXAudio2SourceVoice *source;
+	ga_uint32 sample_size;
+	ga_uint32 next_buffer;
 	void** buffers;
 };
 
@@ -24,8 +24,8 @@ extern "C" {
 static ga_result gaX_open(ga_Device *dev) {
 	HRESULT result;
 	WAVEFORMATEX fmt;
-	gc_int32 i;
-	dev->impl = gcX_ops->allocFunc(sizeof(gaX_DeviceImpl));
+	ga_sint32 i;
+	dev->impl = ga_alloc(sizeof(gaX_DeviceImpl));
 	dev->impl->sample_size = ga_format_sample_size(&dev->format);
 	dev->impl->next_buffer = 0;
 	dev->impl->xa = 0;
@@ -57,9 +57,9 @@ static ga_result gaX_open(ga_Device *dev) {
 	result = dev->impl->source->Start(0, XAUDIO2_COMMIT_NOW);
 	if (FAILED(result)) goto cleanup;
 
-	dev->impl->buffers = (void**)gcX_ops->allocFunc(dev->num_buffers * sizeof(void*));
+	dev->impl->buffers = (void**)ga_alloc(dev->num_buffers * sizeof(void*));
 	for(i = 0; i < dev->num_buffers; ++i)
-		dev->impl->buffers[i] = gcX_ops->allocFunc(dev->num_samples * dev->impl->sample_size);
+		dev->impl->buffers[i] = ga_alloc(dev->num_samples * dev->impl->sample_size);
 
 	return GA_OK;
 
@@ -73,12 +73,12 @@ cleanup:
 	if (dev->impl->master) dev->impl->master->DestroyVoice();
 	if (dev->impl->xa) dev->impl->xa->Release();
 	CoUninitialize();
-	gcX_ops->freeFunc(dev->impl);
+	ga_free(dev->impl);
 	return GA_ERR_GENERIC;
 }
 
 static ga_result gaX_close(ga_Device *dev) {
-	gc_int32 i;
+	ga_sint32 i;
 	if(dev->impl->source) {
 		dev->impl->source->Stop(0, XAUDIO2_COMMIT_NOW);
 		dev->impl->source->FlushSourceBuffers();
@@ -93,14 +93,14 @@ static ga_result gaX_close(ga_Device *dev) {
 	CoUninitialize();
 
 	for(i = 0; i < dev->num_buffers; ++i)
-		gcX_ops->freeFunc(dev->impl->buffers[i]);
-	gcX_ops->freeFunc(in_device->buffers);
-	gcX_ops->freeFunc(in_device);
+		ga_free(dev->impl->buffers[i]);
+	ga_free(in_device->buffers);
+	ga_free(in_device);
 	return GA_OK;
 }
 
-static gc_int32 gaX_check(ga_Device *dev) {
-	gc_int32 ret = 0;
+static ga_sint32 gaX_check(ga_Device *dev) {
+	ga_sint32 ret = 0;
 	XAUDIO2_VOICE_STATE state = { 0 };
 	dev->impl->source->GetState(&state);
 	return dev->num_buffers - state.BuffersQueued;
@@ -108,7 +108,7 @@ static gc_int32 gaX_check(ga_Device *dev) {
 
 static ga_result gaX_queue(ga_Device *dev, void *in_buffer) {
 	XAUDIO2_BUFFER buf;
-	void* data;
+	void *data;
 	ZeroMemory(&buf, sizeof(XAUDIO2_BUFFER));
 	buf.AudioBytes = dev->num_samples * dev->impl->sample_size;
 	data = dev->impl->buffers[in_device->next_buffer++];

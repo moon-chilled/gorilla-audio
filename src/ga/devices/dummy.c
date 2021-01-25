@@ -5,7 +5,7 @@ static ga_result gaX_open(GaDevice *dev) { return GA_OK; }
 
 static ga_result gaX_close(GaDevice *dev) { return GA_OK; }
 
-static gc_int32 gaX_check(GaDevice *dev) { return dev->num_buffers; }
+static s32 gaX_check(GaDevice *dev) { return dev->num_buffers; }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) { return GA_OK; }
 

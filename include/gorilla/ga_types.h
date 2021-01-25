@@ -1,76 +1,77 @@
-/** Gorilla Common API.
+/** Types.
  *
- *  A collection of non-audio-specific classes that are common to most libraries.
+ *  Core type definitions.
  *
- *  \file ga_common.h
+ *  \file ga_types.h
+ *  \defgroup types Core types
  */
 
-/** Common data structures and functions.
- *
- *  \defgroup common Common API (GC)
- */
+#ifndef _GORILLA_GA_TYPES_H
+#define _GORILLA_GA_TYPES_H
 
-#ifndef _GORILLA_GA_COMMON_H
-#define _GORILLA_GA_COMMON_H
-
-#include "ga_types.h"
-#include "ga_thread.h"
+#include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/*************************/
-/**  System Operations  **/
-/*************************/
-/** System operations.
+/****************************/
+/**  Primitive Data Types  **/
+/****************************/
+/** Data Types
  *
- *  \ingroup common
- *  \defgroup GaSystemOps System Operations
+ *  \ingroup types
+ *  \defgroup primitiveTypes Primitive Types
  */
 
-/** System allocation policies [\ref POD].
- *
- *  \ingroup GcSystemOps
- */
-typedef struct {
-	void* (*allocFunc)(gc_size size);
-	void* (*reallocFunc)(void *ptr, gc_size size);
-	void (*freeFunc)(void *ptr);
-} GaSystemOps;
-extern GaSystemOps* gcX_ops;
+typedef uint8_t          ga_uint8;
+typedef uint16_t         ga_uint16;
+typedef uint32_t         ga_uint32;
+typedef uint64_t         ga_uint64;
+typedef int8_t           ga_sint8;
+typedef int16_t          ga_sint16;
+typedef int32_t          ga_sint32;
+typedef int64_t          ga_sint64;
 
-/** Initialize the Gorilla library.
- *
- *  This must be called before any other functions in the library.
- *
- *  \ingroup GaSystemOps
- *  \param callbacks You may (optionally) pass in a GaSystemOps structure
- *                      to define custom allocation functions.  If you do not,
- *                      Gorilla will use standard ANSI C malloc/realloc/free
- *                      functions.
- *  \return GA_OK if library initialized successfully. GA_ERR_GENERIC
- *          if not.
- */
-ga_result ga_initialize_systemops(GaSystemOps *callbacks);
+typedef _Bool            ga_bool;
+#define ga_true          ((ga_bool)1)
+#define ga_false         ((ga_bool)0)
 
-/** Shutdown the Gorilla library.
+typedef size_t           ga_usize;
+typedef ptrdiff_t        ga_ssize;
+typedef _Atomic size_t   ga_atomic_usize;
+typedef float            ga_float32;
+typedef double           ga_float64;
+#define GA_SSIZE_MAX PTRDIFF_MAX
+#define GA_USIZE_MAX SIZE_MAX
+
+/*********************/
+/**  Result Values  **/
+/*********************/
+/** Result Values
  *
- *  Call this once you are finished using the library. After calling it,
- *  do not call any functions in the library.
- *
- *  \ingroup GaSystemOps
- *  \return GA_OK if the library shut down successfully. GA_ERR_GENERIC
- *          if not.
+ *  \ingroup types
+ *  \defgroup results Result Values
  */
-ga_result ga_shutdown_systemops(void);
+
+/**< Return type for the result of an operation. */
+typedef enum {
+	GA_OK = 0,       /**< Operation completed successfully.  Keep this at 0 so precocious callers can use !res to see if res was successful */
+	GA_ERR_GENERIC,  /**< Operation failed with an unspecified error. */
+} ga_result;
+
+static inline ga_bool ga_isok(ga_result res) {
+	return res == GA_OK;
+}
+
 
 /***********************/
 /**  Circular Buffer  **/
 /***********************/
 /** Circular Buffer.
  *
- *  \ingroup common
+ *  \ingroup types
  *  \defgroup GaCircBuffer Circular Buffer
  */
 
@@ -88,35 +89,35 @@ ga_result ga_shutdown_systemops(void);
  *           thread.
  */
 typedef struct {
-	gc_uint8 *data;
-	gc_size data_size;
-	_Atomic gc_size next_avail;
-	_Atomic gc_size next_free;
+	ga_uint8 *data;
+	ga_usize data_size;
+	ga_atomic_usize next_avail;
+	ga_atomic_usize next_free;
 } GaCircBuffer;
 
 /** Create a circular buffer object.
  *
  *  \ingroup GaCircBuffer
  */
-GaCircBuffer* ga_buffer_create(gc_size size);
+GaCircBuffer *ga_buffer_create(ga_usize size);
 
 /** Destroy a circular buffer object.
  *
  *  \ingroup GaCircBuffer
  */
-ga_result ga_buffer_destroy(GaCircBuffer* buffer);
+ga_result ga_buffer_destroy(GaCircBuffer *buffer);
 
 /** Retrieve number of available bytes to read from a circular buffer object.
  *
  *  \ingroup GaCircBuffer
  */
-gc_size ga_buffer_bytesAvail(GaCircBuffer* buffer);
+ga_usize ga_buffer_bytes_avail(GaCircBuffer *buffer);
 
 /** Retrieve number of free bytes to write to a circular buffer object.
  *
  *  \ingroup GaCircBuffer
  */
-gc_size ga_buffer_bytesFree(GaCircBuffer* buffer);
+ga_usize ga_buffer_bytes_free(GaCircBuffer *buffer);
 
 /** Retrieve write buffer(s) of free data in a circular buffer object.
  *
@@ -125,9 +126,9 @@ gc_size ga_buffer_bytesFree(GaCircBuffer* buffer);
  *           bytes you wrote to it.
  *  \return the number of buffers gotten (0, 1, or 2)
  */
-gc_uint8 ga_buffer_getFree(GaCircBuffer *buffer, gc_size num_bytes,
-                           void **data1, gc_size *size1,
-                           void **data2, gc_size *size2);
+ga_uint8 ga_buffer_get_free(GaCircBuffer *buffer, ga_usize num_bytes,
+                            void **data1, ga_usize *size1,
+                            void **data2, ga_usize *size2);
 
 /** Write data to the circular buffer.
  *
@@ -137,7 +138,7 @@ gc_uint8 ga_buffer_getFree(GaCircBuffer *buffer, gc_size num_bytes,
  *  \warning You must call ga_buffer_produce() to tell the buffer how many
  *           bytes you wrote to it.
  */
-ga_result ga_buffer_write(GaCircBuffer *buffer, void *data, gc_size num_bytes);
+ga_result ga_buffer_write(GaCircBuffer *buffer, void *data, ga_usize num_bytes);
 
 /** Retrieve read buffer(s) of available data in a circular buffer object.
  *
@@ -146,9 +147,9 @@ ga_result ga_buffer_write(GaCircBuffer *buffer, void *data, gc_size num_bytes);
  *           bytes you read from it.
  *  \return same as ga_buffer_getFree
  */
-gc_uint8 ga_buffer_getAvail(GaCircBuffer *buffer, gc_size num_bytes,
-                             void **data1, gc_size *out_size1,
-                             void **data2, gc_size *out_size2);
+ga_uint8 ga_buffer_get_avail(GaCircBuffer *buffer, ga_usize num_bytes,
+                             void **data1, ga_usize *out_size1,
+                             void **data2, ga_usize *out_size2);
 
 /** Read data from the circular buffer.
  *
@@ -158,26 +159,26 @@ gc_uint8 ga_buffer_getAvail(GaCircBuffer *buffer, gc_size num_bytes,
  *  \warning You must call ga_buffer_consume() to tell the buffer how many
  *           bytes you read from it.
  */
-void ga_buffer_read(GaCircBuffer *buffer, void *data, gc_size num_bytes);
+void ga_buffer_read(GaCircBuffer *buffer, void *data, ga_usize num_bytes);
 
 /** Tell the buffer that bytes have been written to it.
  *
  *  \ingroup GaCircBuffer
  */
-void ga_buffer_produce(GaCircBuffer *buffer, gc_size num_bytes);
+void ga_buffer_produce(GaCircBuffer *buffer, ga_usize num_bytes);
 
 /** Tell the buffer that bytes have been read from it.
  *
  *  \ingroup GaCircBuffer
  */
-void ga_buffer_consume(GaCircBuffer *buffer, gc_size num_bytes);
+void ga_buffer_consume(GaCircBuffer *buffer, ga_usize num_bytes);
 
 /***********************/
-/**  Linked List  **/
+/**    Linked List    **/
 /***********************/
 /** Linked list data structure and associated functions.
  *
- *  \ingroup common
+ *  \ingroup types
  *  \defgroup GaLink Linked List
  */
 
@@ -216,7 +217,7 @@ void ga_list_link(GaLink *head, GaLink *link, void *data);
 void ga_list_unlink(GaLink *link);
 
 #ifdef __cplusplus
-} //extern "C"
+} // extern "C"
 #endif
 
-#endif /* _GORILLA_GA_COMMON_H */
+#endif /* _GORILLA_GA_TYPES_H */

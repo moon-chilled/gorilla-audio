@@ -56,7 +56,7 @@ static ga_result gaX_open(GaDevice *dev) {
 		default: goto cleanup;
 	}
 	if (ioctl(fd, SNDCTL_DSP_SETFMT, &(int){fmt}) == -1) goto cleanup;
-	dev->impl = (void*)(gc_size)fd;
+	dev->impl = (void*)(usz)fd;
 
 	return GA_OK;
 
@@ -66,16 +66,16 @@ cleanup:
 }
 
 static ga_result gaX_close(GaDevice *dev) {
-	return close((int)(gc_size)dev->impl) ? GA_ERR_GENERIC : GA_OK;
+	return close((int)(usz)dev->impl) ? GA_ERR_GENERIC : GA_OK;
 }
 
-static gc_int32 gaX_check(GaDevice *dev) {
+static s32 gaX_check(GaDevice *dev) {
 	return dev->num_buffers; //TODO is this right?
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
-	gc_ssize sz = dev->num_samples * ga_format_sample_size(&dev->format);
-	gc_ssize written = write((int)(gc_size)dev->impl, buf, sz);
+	ssz sz = dev->num_samples * ga_format_sample_size(&dev->format);
+	ssz written = write((int)(usz)dev->impl, buf, sz);
 	return sz==written ? GA_OK : GA_ERR_GENERIC;
 }
 

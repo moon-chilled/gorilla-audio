@@ -8,31 +8,34 @@
 #include <stdatomic.h>
 
 /* Version Functions */
-gc_bool ga_version_compatible(gc_int32 major, gc_int32 minor, gc_int32 rev) {
-	return major == GA_VERSION_MAJOR && minor <= GA_VERSION_MINOR;
+bool ga_version_compatible(s32 major, s32 minor, s32 rev) {
+	return major == GA_VERSION_MAJOR
+	   // until 1.0, minor version changes are breaking
+	   && (major != 0 || minor == GA_VERSION_MINOR)
+	   && (minor <= GA_VERSION_MINOR);
 }
 
 /* Format Functions */
-gc_uint32 ga_format_sample_size(GaFormat *format) {
+u32 ga_format_sample_size(GaFormat *format) {
 	return (format->bits_per_sample >> 3) * format->num_channels;
 }
 
-gc_float32 ga_format_to_seconds(GaFormat *format, gc_size samples) {
-	return samples / (gc_float32)format->sample_rate;
+f32 ga_format_to_seconds(GaFormat *format, usz samples) {
+	return samples / (f32)format->sample_rate;
 }
 
-gc_int32 ga_format_to_samples(GaFormat *format, gc_float32 seconds) {
+s32 ga_format_to_samples(GaFormat *format, f32 seconds) {
 	return seconds * format->sample_rate;
 }
 
 /* Device Functions */
-GaDevice* ga_device_open(GaDeviceType *type,
-                          gc_uint32 *num_buffers,
-                          gc_uint32 *num_samples,
+GaDevice *ga_device_open(GaDeviceType *type,
+                          u32 *num_buffers,
+                          u32 *num_samples,
 			  GaFormat *format) {
 	if (!type) type = &(GaDeviceType){GaDeviceType_Default};
-	if (!num_buffers) num_buffers = &(gc_uint32){4};
-       	if (!num_samples) num_samples = &(gc_uint32){512};
+	if (!num_buffers) num_buffers = &(u32){4};
+       	if (!num_samples) num_samples = &(u32){512};
 	if (!format) format = &(GaFormat){.bits_per_sample=16, .num_channels=2, .sample_rate=44100};
 
 	// todo allow overriding with an environment variable
@@ -59,7 +62,7 @@ GaDevice* ga_device_open(GaDeviceType *type,
 		return NULL;
 	}
 
-	GaDevice *ret = gcX_ops->allocFunc(sizeof(GaDevice));
+	GaDevice *ret = ga_alloc(sizeof(GaDevice));
 	ret->dev_type = *type;
 	ret->num_buffers = *num_buffers;
 	ret->num_samples = *num_samples;
@@ -67,6 +70,7 @@ GaDevice* ga_device_open(GaDeviceType *type,
 
 	switch (*type) {
 		case GaDeviceType_Dummy: ret->procs = gaX_deviceprocs_dummy; break;
+		case GaDeviceType_WAV: ret->procs = gaX_deviceprocs_WAV; break;
 #ifdef ENABLE_OSS
 		case GaDeviceType_OSS: ret->procs = gaX_deviceprocs_OSS; break;
 #endif
@@ -94,7 +98,7 @@ GaDevice* ga_device_open(GaDeviceType *type,
 
 fail:
 	*type = GaDeviceType_Unknown;
-	gcX_ops->freeFunc(ret);
+	ga_free(ret);
 	return NULL;
 }
 
@@ -104,7 +108,7 @@ ga_result ga_device_close(GaDevice *device) {
 	return ret;
 }
 
-gc_int32 ga_device_check(GaDevice *device) {
+s32 ga_device_check(GaDevice *device) {
 	return device->procs.check ? device->procs.check(device) : GA_ERR_GENERIC;
 }
 
@@ -114,7 +118,7 @@ ga_result ga_device_queue(GaDevice *device, void *buffer) {
 
 /* Data Source Structure */
 void ga_data_source_init(GaDataSource *dataSrc) {
-	dataSrc->refCount = 1;
+	dataSrc->refCount = rc_new();
 	dataSrc->read = NULL;
 	dataSrc->seek = NULL;
 	dataSrc->tell = NULL;
@@ -122,19 +126,19 @@ void ga_data_source_init(GaDataSource *dataSrc) {
 	dataSrc->flags = 0;
 }
 
-gc_size ga_data_source_read(GaDataSource *src, void *dst, gc_size size, gc_size count) {
-	char* context = (char*)src + sizeof(GaDataSource); //todo this probably doesn't work well with padding
+usz ga_data_source_read(GaDataSource *src, void *dst, usz size, usz count) {
+	char *context = (char*)src + sizeof(GaDataSource); //todo this probably doesn't work well with padding
 	return src->read(context, dst, size, count);
 }
 
-ga_result ga_data_source_seek(GaDataSource *src, gc_ssize offset, GaSeekOrigin whence) {
-	char* context = (char*)src + sizeof(GaDataSource);
+ga_result ga_data_source_seek(GaDataSource *src, ssz offset, GaSeekOrigin whence) {
+	char *context = (char*)src + sizeof(GaDataSource);
 	if (src->seek && (src->flags & GaDataAccessFlag_Seekable)) return src->seek(context, offset, whence);
 	else return GA_ERR_GENERIC;
 }
 
-gc_size ga_data_source_tell(GaDataSource *dataSrc) {
-	char* context = (char*)dataSrc + sizeof(GaDataSource);
+usz ga_data_source_tell(GaDataSource *dataSrc) {
+	char *context = (char*)dataSrc + sizeof(GaDataSource);
 	return dataSrc->tell(context);
 }
 
@@ -145,48 +149,57 @@ GaDataAccessFlags ga_data_source_flags(GaDataSource *dataSrc) {
 void gaX_data_source_destroy(GaDataSource *dataSrc) {
 	GaCbDataSource_Close func = dataSrc->close;
 	char *context = (char*)dataSrc + sizeof(GaDataSource);
-	assert(dataSrc->refCount == 0);
+	assert(dataSrc->refCount.rc == 0);
 	if(func)
 		func(context);
-	gcX_ops->freeFunc(dataSrc);
+	ga_free(dataSrc);
 }
 
 void ga_data_source_acquire(GaDataSource *dataSrc) {
-	atomic_fetch_add(&dataSrc->refCount, 1);
+	incref(&dataSrc->refCount);
 }
 
 void ga_data_source_release(GaDataSource *dataSrc) {
-	if (gcX_decref(&dataSrc->refCount)) gaX_data_source_destroy(dataSrc);
+	if (decref(&dataSrc->refCount)) gaX_data_source_destroy(dataSrc);
 }
 
 /* Sample Source Structure */
-void ga_sample_source_init(GaSampleSource *src) {
-	src->refCount = 1;
-	src->read = NULL;
-	src->end = NULL;
-	src->ready = NULL;
-	src->seek = NULL;
-	src->tell = NULL;
-	src->close = NULL;
-	src->flags = 0;
+GaSampleSource *ga_sample_source_create(const GaSampleSourceCreationMinutiae *m) {
+	if (!m->read || !m->end) return NULL;
+	GaSampleSource *ret = ga_alloc(sizeof(GaSampleSource));
+	if (!ret) return NULL;
+	ret->refCount = rc_new();
+	ret->read = m->read;
+	ret->end = m->end;
+	ret->ready = m->ready;
+	ret->seek = m->seek;
+	ret->tell = m->tell;
+	ret->close = m->close;
+	ret->context = m->context;
+	ret->format = m->format;
+	ret->flags = (m->seek ? GaDataAccessFlag_Seekable : 0)
+	           | (m->threadsafe ? GaDataAccessFlag_Threadsafe : 0);
+	return ret;
 }
 
-gc_size ga_sample_source_read(GaSampleSource *src, void *dst, gc_size num_samples, GaCbOnSeek onseek, void *seek_ctx) {
-	return src->read(src, dst, num_samples, onseek, seek_ctx);
+usz ga_sample_source_read(GaSampleSource *src, void *dst, usz num_samples, GaCbOnSeek onseek, void *seek_ctx) {
+	return src->read(src->context, dst, num_samples, onseek, seek_ctx);
 }
-
-gc_bool ga_sample_source_end(GaSampleSource *src) {
-	return src->end(src);
+bool ga_sample_source_end(GaSampleSource *src) {
+	return src->end(src->context);
 }
-
-ga_result ga_sample_source_seek(GaSampleSource *src, gc_size sampleOffset) {
-	return src->seek ? src->seek(src, sampleOffset) : GA_ERR_GENERIC;
+bool ga_sample_source_ready(GaSampleSource *src, usz num_samples) {
+	return src->ready ? src->ready(src->context, num_samples) : true;
 }
-
-ga_result ga_sample_source_tell(GaSampleSource *src, gc_size *samples, gc_size *totalSamples) {
-	if (!src->tell) return GA_ERR_GENERIC;
-
-	return src->tell(src, samples, totalSamples);
+ga_result ga_sample_source_seek(GaSampleSource *src, usz sampleOffset) {
+	return src->seek ? src->seek(src->context, sampleOffset) : GA_ERR_GENERIC;
+}
+ga_result ga_sample_source_tell(GaSampleSource *src, usz *samples, usz *totalSamples) {
+	return src->tell ? src->tell(src->context, samples, totalSamples) : GA_ERR_GENERIC;
+}
+static void gaX_sample_source_destroy(GaSampleSource *src) {
+	if (src->close) src->close(src->context);
+	ga_free(src);
 }
 
 GaDataAccessFlags ga_sample_source_flags(GaSampleSource *src) {
@@ -197,80 +210,71 @@ void ga_sample_source_format(GaSampleSource *src, GaFormat *format) {
 	*format = src->format;
 }
 
-void gaX_sample_source_destroy(GaSampleSource *src) {
-	if (src->close) src->close(src);
-	gcX_ops->freeFunc(src);
-}
-
 void ga_sample_source_acquire(GaSampleSource *src) {
-	atomic_fetch_add(&src->refCount, 1);
+	incref(&src->refCount);
 }
 
 void ga_sample_source_release(GaSampleSource *src) {
-	if (gcX_decref(&src->refCount)) gaX_sample_source_destroy(src);
-}
-
-gc_bool ga_sample_source_ready(GaSampleSource *src, gc_size num_samples) {
-	return src->ready(src, num_samples);
+	if (decref(&src->refCount)) gaX_sample_source_destroy(src);
 }
 
 /* Memory Functions */
-static GaMemory *gaX_memory_create(void *data, gc_size size, gc_bool copy) {
-	GaMemory *ret = gcX_ops->allocFunc(sizeof(GaMemory));
+static GaMemory *gaX_memory_create(void *data, usz size, bool copy) {
+	GaMemory *ret = ga_alloc(sizeof(GaMemory));
 	ret->size = size;
 	if (data) {
-		if (copy) ret->data = memcpy(gcX_ops->allocFunc(size), data, size);
+		if (copy) ret->data = memcpy(ga_alloc(size), data, size);
 		else ret->data = data;
 	} else {
-		ret->data = gcX_ops->allocFunc(size);
+		ret->data = ga_alloc(size);
 	}
-	ret->refCount = 1;
+	ret->refCount = rc_new();
 	return ret;
 }
 
-GaMemory *ga_memory_create(void *data, gc_size size) {
-	return gaX_memory_create(data, size, gc_true);
+GaMemory *ga_memory_create(void *data, usz size) {
+	return gaX_memory_create(data, size, ga_true);
 }
 
 GaMemory *ga_memory_create_data_source(GaDataSource *src) {
 	enum { BUFSZ = 4096 };
 	char *data;
-	gc_size len;
+	usz len;
 
 	if (ga_data_source_flags(src) & GaDataAccessFlag_Seekable) {
-		gc_size where = ga_data_source_tell(src);
+		usz where = ga_data_source_tell(src);
 		if (ga_data_source_seek(src, 0, GaSeekOrigin_End) != GA_OK)
-			return NULL; //GC_ERR_INTERNAL
-		gc_size tlen = ga_data_source_tell(src);
+			return NULL; //forward
+		usz tlen = ga_data_source_tell(src);
 		if (where > tlen || ga_data_source_seek(src, where, GaSeekOrigin_Set) != GA_OK)
-			return NULL; //ditto
+			return NULL; //forward
 		len = tlen - where;
-		data = gcX_ops->allocFunc(len);
-		if (!data) return NULL; //GC_ERR_MEMORY
-		gc_size read = ga_data_source_read(src, data, 1, len);
+		data = ga_alloc(len);
+		if (!data) return NULL; //GA_ERR_MEMORY
+		usz read = ga_data_source_read(src, data, 1, len);
 		if (read != len) {
-			gcX_ops->freeFunc(data);
+			ga_free(data);
 			return NULL;
 		}
 	} else {
 		len = 0;
-		gc_size bytes_read = 0;
+		usz bytes_read = 0;
 		data = NULL;
 		do {
-			data = gcX_ops->reallocFunc(data, len + BUFSZ);
+			data = ga_realloc(data, len + BUFSZ);
 			bytes_read = ga_data_source_read(src, data + len, 1, BUFSZ);
 			if (bytes_read < BUFSZ)
-				data = gcX_ops->reallocFunc(data, len + bytes_read);
+				data = ga_realloc(data, len + bytes_read);
 			len += bytes_read;
 		} while (bytes_read > 0);
 	}
 
-	GaMemory *ret = gaX_memory_create(data, len, gc_false);
-	if (!ret) gcX_ops->freeFunc(data);
+	GaMemory *ret = gaX_memory_create(data, len, ga_false);
+	if (!ret) ga_free(data);
 	return ret;
 }
 
-gc_size ga_memory_size(GaMemory *mem) {
+usz ga_memory_size(GaMemory *mem) {
 	return mem->size;
 }
 
@@ -279,89 +283,94 @@ void *ga_memory_data(GaMemory *mem) {
 }
 
 static void gaX_memory_destroy(GaMemory *mem) {
-	gcX_ops->freeFunc(mem->data);
-	gcX_ops->freeFunc(mem);
+	ga_free(mem->data);
+	ga_free(mem);
 }
 
 void ga_memory_acquire(GaMemory *mem) {
-	atomic_fetch_add(&mem->refCount, 1);
+	incref(&mem->refCount);
 }
 
 void ga_memory_release(GaMemory *mem) {
-	if (gcX_decref(&mem->refCount)) gaX_memory_destroy(mem);
+	if (decref(&mem->refCount)) gaX_memory_destroy(mem);
 }
 
 
 /* Sound Functions */
 GaSound *ga_sound_create(GaMemory *memory, GaFormat *format) {
-	GaSound *ret = gcX_ops->allocFunc(sizeof(GaSound));
-	assert(ga_memory_size(memory) % ga_format_sample_size(format) == 0);
+	if (ga_memory_size(memory) % ga_format_sample_size(format)) return NULL;
+
+	GaSound *ret = ga_alloc(sizeof(GaSound));
+	if (!ret) return NULL;
+
 	ret->num_samples = ga_memory_size(memory) / ga_format_sample_size(format);
 	ret->format = *format;
 	ga_memory_acquire(memory);
 	ret->memory = memory;
-	ret->refCount = 1;
-	return (GaSound*)ret;
+	ret->refCount = rc_new();
+
+	return ret;
 }
 
 GaSound *ga_sound_create_sample_source(GaSampleSource *src) {
-	GaSound* ret = 0;
 	GaFormat format;
-	gc_size total_samples;
-	gc_uint32 sample_size;
 	ga_sample_source_format(src, &format);
-	sample_size = ga_format_sample_size(&format);
+	u32 sample_size = ga_format_sample_size(&format);
+	usz total_samples;
 	ga_result told = ga_sample_source_tell(src, NULL, &total_samples);
 
 	/* Known total samples*/
-	if (told == GA_OK) {
-		char* data;
-		GaMemory* memory;
-		gc_size data_size = sample_size * total_samples;
-		data = gcX_ops->allocFunc(data_size);
+	if (ga_isok(told)) {
+		char *data;
+		GaMemory *memory;
+		usz data_size = sample_size * total_samples;
+		data = ga_alloc(data_size);
 		ga_sample_source_read(src, data, total_samples, 0, 0);
 		memory = gaX_memory_create(data, data_size, 0);
 		if (memory) {
-			ret = ga_sound_create(memory, &format);
+			GaSound *ret = ga_sound_create(memory, &format);
 			if (!ret) ga_memory_release(memory);
+			return ret;
 		} else {
-			gcX_ops->freeFunc(data);
+			ga_free(data);
+			return NULL;
 		}
 	/* Unknown total samples */
 	} else {
-		gc_int32 BUFFER_SAMPLES = format.sample_rate * 2;
-		char* data = 0;
-		GaMemory* memory;
+		s32 BUFFER_SAMPLES = format.sample_rate * 2;
+		char *data = 0;
+		GaMemory *memory;
 		total_samples = 0;
 		while (!ga_sample_source_end(src)) {
-			gc_int32 num_samples_read;
-			data = gcX_ops->reallocFunc(data, (total_samples + BUFFER_SAMPLES) * sample_size);
+			s32 num_samples_read;
+			data = ga_realloc(data, (total_samples + BUFFER_SAMPLES) * sample_size);
 			num_samples_read = ga_sample_source_read(src, data + (total_samples * sample_size), BUFFER_SAMPLES, 0, 0);
 			if (num_samples_read < BUFFER_SAMPLES) {
-				data = gcX_ops->reallocFunc(data, (total_samples + num_samples_read) * sample_size);
+				data = ga_realloc(data, (total_samples + num_samples_read) * sample_size);
 			}
 			total_samples += num_samples_read;
 		}
 		memory = gaX_memory_create(data, total_samples * sample_size, 0);
 		if (memory) {
-			ret = ga_sound_create(memory, &format);
+			GaSound *ret = ga_sound_create(memory, &format);
 			if (!ret) ga_memory_release(memory);
+			return ret;
 		} else {
-			gcX_ops->freeFunc(data);
+			ga_free(data);
+			return NULL;
 		}
 	}
-	return ret;
 }
 
 void *ga_sound_data(GaSound *sound) {
 	return ga_memory_data(sound->memory);
 }
 
-gc_size ga_sound_size(GaSound *sound) {
+usz ga_sound_size(GaSound *sound) {
 	return ga_memory_size(sound->memory);
 }
 
-gc_size ga_sound_num_samples(GaSound *sound) {
+usz ga_sound_num_samples(GaSound *sound) {
 	return ga_memory_size(sound->memory) / ga_format_sample_size(&sound->format);
 }
 
@@ -371,34 +380,33 @@ void ga_sound_format(GaSound *sound, GaFormat *format) {
 
 static void gaX_sound_destroy(GaSound *sound) {
 	ga_memory_release(sound->memory);
-	gcX_ops->freeFunc(sound);
+	ga_free(sound);
 }
 
 void ga_sound_acquire(GaSound *sound) {
-	atomic_fetch_add(&sound->refCount, 1);
+	incref(&sound->refCount);
 }
 
 void ga_sound_release(GaSound *sound) {
-	if (gcX_decref(&sound->refCount)) gaX_sound_destroy(sound);
+	if (decref(&sound->refCount)) gaX_sound_destroy(sound);
 }
 
 /* Handle Functions */
-void gaX_handle_init(GaHandle *handle, GaMixer *mixer) {
+static void gaX_handle_init(GaHandle *handle, GaMixer *mixer) {
 	handle->state = GaHandleState_Initial;
 	handle->mixer = mixer;
-	handle->callback = 0;
-	handle->context = 0;
+	handle->callback = NULL;
+	handle->context = NULL;
 	handle->gain = 1.0;
 	handle->pitch = 1.0;
 	handle->pan = 0.0;
-	handle->mutex = ga_mutex_create();
+	ga_mutex_create(&handle->mutex); //todo errhandle
 }
 
 GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *src) {
-	GaHandle* h = gcX_ops->allocFunc(sizeof(GaHandle));
+	GaHandle *h = ga_alloc(sizeof(GaHandle));
 	ga_sample_source_acquire(src);
 	h->sample_src = src;
-	h->finished = 0;
 	gaX_handle_init(h, mixer);
 
 	ga_mutex_lock(mixer->mix_mutex);
@@ -420,11 +428,11 @@ ga_result ga_handle_destroy(GaHandle *handle) {
 	return GA_OK;
 }
 
-ga_result gaX_handle_cleanup(GaHandle *handle) {
+static ga_result gaX_handle_cleanup(GaHandle *handle) {
 	/* May only be called from the dispatch thread */
 	ga_sample_source_release(handle->sample_src);
 	ga_mutex_destroy(handle->mutex);
-	gcX_ops->freeFunc(handle);
+	ga_free(handle);
 	return GA_OK;
 }
 
@@ -450,16 +458,16 @@ ga_result ga_handle_stop(GaHandle *handle) {
 	return GA_OK;
 }
 
-gc_bool ga_handle_playing(GaHandle *handle) {
+bool ga_handle_playing(GaHandle *handle) {
 	return handle->state == GaHandleState_Playing;
 }
-gc_bool ga_handle_stopped(GaHandle *handle) {
+bool ga_handle_stopped(GaHandle *handle) {
 	return handle->state == GaHandleState_Stopped;
 }
-gc_bool ga_handle_finished(GaHandle *handle) {
+bool ga_handle_finished(GaHandle *handle) {
 	return handle->state >= GaHandleState_Finished;
 }
-gc_bool ga_handle_destroyed(GaHandle *handle) {
+bool ga_handle_destroyed(GaHandle *handle) {
 	return handle->state >= GaHandleState_Destroyed;
 }
 
@@ -470,7 +478,7 @@ ga_result ga_handle_set_callback(GaHandle *handle, GaCbHandleFinish callback, vo
 	return GA_OK;
 }
 
-ga_result ga_handle_set_paramf(GaHandle *handle, GaHandleParam param, gc_float32 value) {
+ga_result ga_handle_set_paramf(GaHandle *handle, GaHandleParam param, f32 value) {
 	switch (param) {
 		case GaHandleParam_Gain:
 			ga_mutex_lock(handle->mutex);
@@ -491,7 +499,7 @@ ga_result ga_handle_set_paramf(GaHandle *handle, GaHandleParam param, gc_float32
 	}
 }
 
-ga_result ga_handle_get_paramf(GaHandle *handle, GaHandleParam param, gc_float32 *value) {
+ga_result ga_handle_get_paramf(GaHandle *handle, GaHandleParam param, f32 *value) {
 	switch (param) {
 		case GaHandleParam_Gain:  *value = handle->gain;  return GA_OK;
 		case GaHandleParam_Pan:   *value = handle->pan;   return GA_OK;
@@ -500,7 +508,7 @@ ga_result ga_handle_get_paramf(GaHandle *handle, GaHandleParam param, gc_float32
 	}
 }
 
-ga_result ga_handle_set_parami(GaHandle *handle, GaHandleParam param, gc_int32 value) {
+ga_result ga_handle_set_parami(GaHandle *handle, GaHandleParam param, s32 value) {
 	/*
 	   switch(param)
 	   {
@@ -513,7 +521,7 @@ ga_result ga_handle_set_parami(GaHandle *handle, GaHandleParam param, gc_int32 v
 	return GA_ERR_GENERIC;
 }
 
-ga_result ga_handle_get_parami(GaHandle *handle, GaHandleParam param, gc_int32 *value) {
+ga_result ga_handle_get_parami(GaHandle *handle, GaHandleParam param, s32 *value) {
 	/*
 	   switch(param)
 	   {
@@ -523,19 +531,19 @@ ga_result ga_handle_get_parami(GaHandle *handle, GaHandleParam param, gc_int32 *
 	return GA_ERR_GENERIC;
 }
 
-ga_result ga_handle_seek(GaHandle *handle, gc_size sample_offset) {
+ga_result ga_handle_seek(GaHandle *handle, usz sample_offset) {
 	ga_sample_source_seek(handle->sample_src, sample_offset);
 	return GA_OK;
 }
 
-ga_result ga_handle_tell(GaHandle *handle, GaTellParam param, gc_size *out) {
+ga_result ga_handle_tell(GaHandle *handle, GaTellParam param, usz *out) {
 	if (!out) return GA_ERR_GENERIC;
 	if (param == GaTellParam_Current) return ga_sample_source_tell(handle->sample_src, out, NULL);
 	else if (param == GaTellParam_Total) return ga_sample_source_tell(handle->sample_src, NULL, out);
 	else return GA_ERR_GENERIC;
 }
 
-gc_bool ga_handle_ready(GaHandle *handle, gc_size num_samples) {
+bool ga_handle_ready(GaHandle *handle, usz num_samples) {
 	return ga_sample_source_ready(handle->sample_src, num_samples);
 }
 
@@ -544,8 +552,11 @@ void ga_handle_format(GaHandle *handle, GaFormat *format) {
 }
 
 /* Mixer Functions */
-GaMixer *ga_mixer_create(GaFormat *format, gc_uint32 num_samples) {
-	GaMixer *ret = gcX_ops->allocFunc(sizeof(GaMixer));
+GaMixer *ga_mixer_create(GaFormat *format, u32 num_samples) {
+	GaMixer *ret = ga_alloc(sizeof(GaMixer));
+	if (!ret) return NULL;
+	if (!ga_isok(ga_mutex_create(&ret->dispatch_mutex))) goto fail;
+	if (!ga_isok(ga_mutex_create(&ret->mix_mutex))) goto fail;
 	ga_list_head(&ret->dispatch_list);
 	ga_list_head(&ret->mix_list);
 	ret->num_samples = num_samples;
@@ -553,45 +564,49 @@ GaMixer *ga_mixer_create(GaFormat *format, gc_uint32 num_samples) {
 	ret->mix_format.bits_per_sample = 32;
 	ret->mix_format.num_channels = format->num_channels;
 	ret->mix_format.sample_rate = format->sample_rate;
-	ret->mix_buffer = gcX_ops->allocFunc(num_samples * ga_format_sample_size(&ret->mix_format));
-	ret->dispatch_mutex = ga_mutex_create();
-	ret->mix_mutex = ga_mutex_create();
-	ret->suspended = gc_false;
+	ret->mix_buffer = ga_alloc(num_samples * ga_format_sample_size(&ret->mix_format));
+	ret->suspended = ga_false;
 	return ret;
+
+fail:
+	ga_mutex_destroy(ret->dispatch_mutex);
+	ga_mutex_destroy(ret->mix_mutex);
+	ga_free(ret);
+	return NULL;
 }
 
 ga_result ga_mixer_suspend(GaMixer *m) {
 	ga_result ret = m->suspended ? GA_ERR_GENERIC : GA_OK;
-	m->suspended = gc_true;
+	m->suspended = ga_true;
 	return ret;
 }
 
 ga_result ga_mixer_unsuspend(GaMixer *m) {
 	ga_result ret = m->suspended ? GA_OK : GA_ERR_GENERIC;
-	m->suspended = gc_false;
+	m->suspended = ga_false;
 	return ret;
 }
 
-GaFormat *ga_mixer_format(GaMixer *mixer) {
-	return &mixer->format;
+void ga_mixer_format(GaMixer *mixer, GaFormat *fmt) {
+	*fmt = mixer->format;
 }
 
-gc_uint32 ga_mixer_num_samples(GaMixer *mixer) {
+u32 ga_mixer_num_samples(GaMixer *mixer) {
 	return mixer->num_samples;
 }
 
-void gaX_mixer_mix_buffer(GaMixer *mixer,
-                          void *srcBuffer, gc_int32 srcSamples, GaFormat *srcFmt,
-                          gc_int32 *dst, gc_int32 dstSamples, GaFormat *dstFmt,
-			  gc_float32 gain, gc_float32 pan, gc_float32 pitch) {
-	gc_int32 mixerChannels = dstFmt->num_channels;
-	gc_int32 srcChannels = srcFmt->num_channels;
-	gc_float32 sampleScale = srcFmt->sample_rate / (gc_float32)dstFmt->sample_rate * pitch;
-	gc_float32 fj = 0.0f;
-	gc_int32 j = 0;
-	gc_int32 i = 0;
-	gc_float32 srcSamplesRead = 0.0f;
-	gc_uint32 sample_size = ga_format_sample_size(srcFmt);
+static void gaX_mixer_mix_buffer(GaMixer *mixer,
+                          void *srcBuffer, s32 srcSamples, GaFormat *srcFmt,
+                          s32 *dst, s32 dstSamples, GaFormat *dstFmt,
+			  f32 gain, f32 pan, f32 pitch) {
+	s32 mixerChannels = dstFmt->num_channels;
+	s32 srcChannels = srcFmt->num_channels;
+	f32 sampleScale = srcFmt->sample_rate / (f32)dstFmt->sample_rate * pitch;
+	f32 fj = 0.0f;
+	s32 j = 0;
+	s32 i = 0;
+	f32 srcSamplesRead = 0.0f;
+	u32 sample_size = ga_format_sample_size(srcFmt);
 	pan = (pan + 1.0f) / 2.0f;
 	pan = pan > 1.0f ? 1.0f : pan;
 	pan = pan < 0.0f ? 0.0f : pan;
@@ -599,18 +614,18 @@ void gaX_mixer_mix_buffer(GaMixer *mixer,
 	/* TODO: Support 8-bit/16-bit mono/stereo mixer format */
 	switch (srcFmt->bits_per_sample) {
 		case 16: {
-			gc_int32 srcBytes = srcSamples * sample_size;
-			const gc_int16 *src = srcBuffer;
-			while (i < dstSamples * (gc_int32)mixerChannels && srcBytes >= 2 * srcChannels) {
-				gc_int32 newJ, deltaSrcBytes;
+			s32 srcBytes = srcSamples * sample_size;
+			const s16 *src = srcBuffer;
+			while (i < dstSamples * (s32)mixerChannels && srcBytes >= 2 * srcChannels) {
+				s32 newJ, deltaSrcBytes;
 
-				dst[i] += (gc_int32)((gc_int32)src[j] * gain * (1.0f - pan) * 2);
-				dst[i + 1] += (gc_int32)((gc_int32)src[j + ((srcChannels == 1) ? 0 : 1)] * gain * pan * 2);
+				dst[i] += (s32)((s32)src[j] * gain * (1.0f - pan) * 2);
+				dst[i + 1] += (s32)((s32)src[j + ((srcChannels == 1) ? 0 : 1)] * gain * pan * 2);
 
 				i += mixerChannels;
 				fj += sampleScale * srcChannels;
 				srcSamplesRead += sampleScale * srcChannels;
-				newJ = (gc_uint32)fj & (srcChannels == 1 ? ~0u : ~0x1u);
+				newJ = (u32)fj & (srcChannels == 1 ? ~0u : ~1u);
 				deltaSrcBytes = (newJ - j) * 2;
 				j = newJ;
 				srcBytes -= deltaSrcBytes;
@@ -621,8 +636,8 @@ void gaX_mixer_mix_buffer(GaMixer *mixer,
 	}
 }
 
-void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, gc_size num_samples) {
-	GaSampleSource* ss = handle->sample_src;
+static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_samples) {
+	GaSampleSource *ss = handle->sample_src;
 	if (ga_sample_source_end(ss)) {
 		/* Stream is finished! */
 		ga_mutex_lock(handle->mutex);
@@ -635,49 +650,49 @@ void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, gc_size num_samples)
 	GaFormat handleFormat;
 	ga_sample_source_format(ss, &handleFormat);
 	/* Check if we have enough samples to stream a full buffer */
-	gc_uint32 srcSampleSize = ga_format_sample_size(&handleFormat);
-	gc_float32 oldPitch = handle->pitch;
-	gc_float32 dstToSrc = handleFormat.sample_rate / (gc_float32)mixer->format.sample_rate * oldPitch;
-	gc_size requested = num_samples * dstToSrc;
+	u32 srcSampleSize = ga_format_sample_size(&handleFormat);
+	f32 oldPitch = handle->pitch;
+	f32 dstToSrc = handleFormat.sample_rate / (f32)mixer->format.sample_rate * oldPitch;
+	usz requested = num_samples * dstToSrc;
 	requested = requested / dstToSrc < num_samples ? requested + 1 : requested;
 
 	if (requested <= 0 || !ga_sample_source_ready(ss, requested)) return;
 
 	ga_mutex_lock(handle->mutex);
-	gc_float32 gain = handle->gain;
-	gc_float32 pan = handle->pan;
-	gc_float32 pitch = handle->pitch;
+	f32 gain = handle->gain;
+	f32 pan = handle->pan;
+	f32 pitch = handle->pitch;
 	ga_mutex_unlock(handle->mutex);
 
 	/* We avoided a mutex lock by using pitch to check if buffer has enough dst samples */
 	/* If it has changed since then, we re-test to make sure we still have enough samples */
 	if (oldPitch != pitch) {
-		dstToSrc = handleFormat.sample_rate / (gc_float32)mixer->format.sample_rate * pitch;
-		requested = (gc_int32)(num_samples * dstToSrc);
+		dstToSrc = handleFormat.sample_rate / (f32)mixer->format.sample_rate * pitch;
+		requested = (s32)(num_samples * dstToSrc);
 		requested = requested / dstToSrc < num_samples ? requested + 1 : requested;
 		if (requested <= 0 || !ga_sample_source_ready(ss, requested)) return;
 	}
 
 	/* TODO: To optimize, we can refactor the _read() interface to be _mix(), avoiding this malloc/copy */
-	void *src = gcX_ops->allocFunc(requested * srcSampleSize);
-	gc_int32 numRead = 0;
+	void *src = ga_alloc(requested * srcSampleSize);
+	s32 numRead = 0;
 	numRead = ga_sample_source_read(ss, src, requested, 0, 0);
 	gaX_mixer_mix_buffer(mixer,
 			src, numRead, &handleFormat,
 			mixer->mix_buffer, num_samples, &mixer->format,
 			gain, pan, pitch);
-	gcX_ops->freeFunc(src);
+	ga_free(src);
 }
 
 ga_result ga_mixer_mix(GaMixer *m, void *buffer) {
-	gc_size end = m->num_samples * m->format.num_channels;
+	usz end = m->num_samples * m->format.num_channels;
 
 	if (m->suspended) {
 		memset(buffer, 0, end * m->format.bits_per_sample);
 		return GA_OK;
 	}
 
-	GaLink* link;
+	GaLink *link;
 	memset(m->mix_buffer, 0, m->num_samples * ga_format_sample_size(&m->mix_format));
 
 	link = m->mix_list.next;
@@ -694,17 +709,18 @@ ga_result ga_mixer_mix(GaMixer *m, void *buffer) {
 	}
 
 	/* mix_buffer will already be correct bps */
+	//todo this is wrong
 	switch (m->format.bits_per_sample) {
 		case 8:
-			for (gc_size i = 0; i < end; ++i) {
-				gc_int32 sample = m->mix_buffer[i];
-				((gc_int8*)buffer)[i] = sample > -128 ? (sample < 127 ? sample : 127) : -128;
+			for (usz i = 0; i < end; ++i) {
+				s32 sample = m->mix_buffer[i];
+				((s8*)buffer)[i] = sample > -128 ? (sample < 127 ? sample : 127) : -128;
 			}
 			break;
 		case 16:
-			for (gc_size i = 0; i < end; ++i) {
-			        gc_int32 sample = m->mix_buffer[i];
-			        ((gc_int16*)buffer)[i] = sample > -32768 ? (sample < 32767 ? sample : 32767) : -32768;
+			for (usz i = 0; i < end; ++i) {
+			        s32 sample = m->mix_buffer[i];
+			        ((s16*)buffer)[i] = sample > -32768 ? (sample < 32767 ? sample : 32767) : -32768;
 			}
 			break;
 		case 32:
@@ -753,7 +769,7 @@ ga_result ga_mixer_destroy(GaMixer *m) {
 	ga_mutex_destroy(m->dispatch_mutex);
 	ga_mutex_destroy(m->mix_mutex);
 
-	gcX_ops->freeFunc(m->mix_buffer);
-	gcX_ops->freeFunc(m);
+	ga_free(m->mix_buffer);
+	ga_free(m);
 	return GA_OK;
 }

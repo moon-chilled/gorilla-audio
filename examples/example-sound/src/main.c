@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 static void setFlagAndDestroyOnFinish(GaHandle *handle, void *context) {
-	*(gc_int32*)context = 1;
+	*(s32*)context = 1;
 	ga_handle_destroy(handle);
 }
 
@@ -15,8 +15,8 @@ int main(void) {
 	GaHandle *handle;
 	GauSampleSourceLoop *loopSrc = 0;
 	GauSampleSourceLoop **pLoopSrc = &loopSrc;
-	gc_int32 loop = 0;
-	gc_int32 quit = 0;
+	s32 loop = 0;
+	s32 quit = 0;
 
 	/* Initialize library + manager */
 	ga_initialize_systemops(0);

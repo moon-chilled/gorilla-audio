@@ -11,10 +11,10 @@
 struct GaXDeviceImpl {
 	struct ALCdevice *dev;
 	struct ALCcontext *context;
-	gc_uint32 *hw_buffers;
-	gc_uint32 hw_source;
-	gc_uint32 next_buffer;
-	gc_uint32 empty_buffers;
+	u32 *hw_buffers;
+	u32 hw_source;
+	u32 next_buffer;
+	u32 empty_buffers;
 };
 
 
@@ -30,7 +30,7 @@ const char *gaX_openAlErrorToString(ALuint error) {
 	}
 }
 
-static gc_int32 AUDIO_ERROR = 0;
+static s32 AUDIO_ERROR = 0;
 
 #define CHECK_AL_ERROR(dowhat) do { \
 	if ((AUDIO_ERROR = alGetError()) != AL_NO_ERROR) { \
@@ -40,7 +40,7 @@ static gc_int32 AUDIO_ERROR = 0;
 } while (0)
 
 static ga_result gaX_open(GaDevice *dev) {
-	dev->impl = gcX_ops->allocFunc(sizeof(GaXDeviceImpl));
+	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
 	memset(dev->impl, 0, sizeof(*dev->impl));
 
 	dev->impl->next_buffer = 0;
@@ -58,7 +58,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	alListener3f(AL_POSITION, 0.0f, 0.0f, 0.0f);
 	CHECK_AL_ERROR(goto cleanup);
 
-	dev->impl->hw_buffers = gcX_ops->allocFunc(sizeof(gc_uint32) * dev->num_buffers);
+	dev->impl->hw_buffers = ga_alloc(sizeof(u32) * dev->num_buffers);
 	alGenBuffers(dev->num_buffers, dev->impl->hw_buffers);
 	CHECK_AL_ERROR(goto cleanup);
 
@@ -68,10 +68,10 @@ static ga_result gaX_open(GaDevice *dev) {
 	return GA_OK;
 
 cleanup:
-	if (dev->impl->hw_buffers) gcX_ops->freeFunc(dev->impl->hw_buffers);
+	if (dev->impl->hw_buffers) ga_free(dev->impl->hw_buffers);
 	if (dev->impl->context) alcDestroyContext(dev->impl->context);
 	if (dev->impl->dev) alcCloseDevice(dev->impl->dev);
-	gcX_ops->freeFunc(dev->impl);
+	ga_free(dev->impl);
 	return GA_ERR_GENERIC;
 }
 
@@ -80,14 +80,14 @@ static ga_result gaX_close(GaDevice *dev) {
 	alDeleteBuffers(dev->num_buffers, dev->impl->hw_buffers);
 	alcDestroyContext(dev->impl->context);
 	alcCloseDevice(dev->impl->dev);
-	gcX_ops->freeFunc(dev->impl->hw_buffers);
-	gcX_ops->freeFunc(dev->impl);
+	ga_free(dev->impl->hw_buffers);
+	ga_free(dev->impl);
 	return GA_OK;
 }
 
-static gc_int32 gaX_check(GaDevice *dev) {
-	gc_int32 whichBuf = 0;
-	gc_int32 numProcessed = 0;
+static s32 gaX_check(GaDevice *dev) {
+	s32 whichBuf = 0;
+	s32 numProcessed = 0;
 	alGetSourcei(dev->impl->hw_source, AL_BUFFERS_PROCESSED, &numProcessed);
 	CHECK_AL_ERROR(;);
 	while (numProcessed--) {
@@ -98,15 +98,15 @@ static gc_int32 gaX_check(GaDevice *dev) {
 	return dev->impl->empty_buffers;
 }
 
-static ga_result gaX_queue(GaDevice *dev, void* in_buffer) {
-	gc_int32 formatOal;
+static ga_result gaX_queue(GaDevice *dev, void *in_buffer) {
+	s32 formatOal;
 	ALint state;
-	gc_int32 bps = dev->format.bits_per_sample;
+	s32 bps = dev->format.bits_per_sample;
 
 	if (dev->format.num_channels == 1)
-		formatOal = (gc_int32)(bps == 16 ? AL_FORMAT_MONO16 : AL_FORMAT_MONO8);
+		formatOal = (s32)(bps == 16 ? AL_FORMAT_MONO16 : AL_FORMAT_MONO8);
 	else
-		formatOal = (gc_int32)(bps == 16 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO8);
+		formatOal = (s32)(bps == 16 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO8);
 
 	alBufferData(dev->impl->hw_buffers[dev->impl->next_buffer], formatOal, in_buffer,
 			(ALsizei)dev->num_samples * ga_format_sample_size(&dev->format), dev->format.sample_rate);

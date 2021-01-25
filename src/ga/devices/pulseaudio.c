@@ -13,7 +13,7 @@ struct GaXDeviceImpl {
 };
 
 static ga_result gaX_open(GaDevice *dev) {
-	dev->impl = gcX_ops->allocFunc(sizeof(GaXDeviceImpl));
+	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_GENERIC;
 
 	pa_sample_spec spec;
@@ -44,17 +44,17 @@ static ga_result gaX_open(GaDevice *dev) {
 	return GA_OK;
 
 cleanup:
-	if (dev->impl) gcX_ops->freeFunc(dev->impl);
+	if (dev->impl) ga_free(dev->impl);
 	return GA_ERR_GENERIC;
 }
 
 static ga_result gaX_close(GaDevice *dev) {
 	pa_simple_free(dev->impl->interface);
-	gcX_ops->freeFunc(dev->impl);
+	ga_free(dev->impl);
 	return GA_OK;
 }
 
-static gc_int32 gaX_check(GaDevice *dev) {
+static s32 gaX_check(GaDevice *dev) {
 	return dev->num_buffers; //TODO is this right?
 }
 

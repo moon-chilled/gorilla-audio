@@ -19,11 +19,11 @@ struct GaXDeviceImpl {
 
 static ga_result gaX_open(GaDevice *dev) {
 #define acheck(expr) if ((expr) < 0) goto cleanup
-	dev->impl = gcX_ops->allocFunc(sizeof(GaXDeviceImpl));
+	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_GENERIC;
 
 	if (snd_pcm_open(&dev->impl->interface, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0) {
-		gcX_ops->freeFunc(dev->impl);
+		ga_free(dev->impl);
 		return GA_ERR_GENERIC;
 	}
 
@@ -57,14 +57,14 @@ static ga_result gaX_open(GaDevice *dev) {
 cleanup:
 	snd_pcm_drain(dev->impl->interface);
 	snd_pcm_close(dev->impl->interface);
-	gcX_ops->freeFunc(dev->impl);
+	ga_free(dev->impl);
 	return GA_ERR_GENERIC;
 }
 
 static ga_result gaX_close(GaDevice *dev) {
 	snd_pcm_drain(dev->impl->interface);
 	snd_pcm_close(dev->impl->interface);
-	gcX_ops->freeFunc(dev->impl);
+	ga_free(dev->impl);
 
 	snd_config_update_free_global();
 	// this just frees a global cache, that will be reinstated
@@ -74,7 +74,7 @@ static ga_result gaX_close(GaDevice *dev) {
 	return GA_OK;
 }
 
-static gc_int32 gaX_check(GaDevice *dev) {
+static s32 gaX_check(GaDevice *dev) {
 	snd_pcm_sframes_t avail = snd_pcm_avail(dev->impl->interface);
 	if (avail < 0) return 0;
 	return avail / dev->num_samples;

@@ -8,14 +8,14 @@
 int main(int argc, char** argv) {
 	GaFormat fmt;
 	GaDevice *dev;
-	gc_int16 *buf;
-	gc_int32 numSamples;
-	gc_int32 sampleSize;
-	gc_int32 numToQueue;
-	gc_int32 i;
-	gc_int16 sample;
-	gc_float32 pan = 1.0f;
-	gc_float32 t = 0.0f;
+	s16 *buf;
+	s32 numSamples;
+	s32 sampleSize;
+	s32 numToQueue;
+	s32 i;
+	s16 sample;
+	ga_float32 pan = 1.0f;
+	ga_float32 t = 0.0f;
 
 	/* Initialize library + device */
 	ga_initialize_systemops(0);
@@ -30,18 +30,18 @@ int main(int argc, char** argv) {
 		return 1;
 
 	/* Allocate buffer */
-	buf = (gc_int16*)malloc(numSamples * sampleSize);
+	buf = (s16*)malloc(numSamples * sampleSize);
 
 	/* Infinite mix loop */
 	while(1) {
 		numToQueue = ga_device_check(dev);
 		while(numToQueue--) {
 			for(i = 0; i < numSamples * 2; i = i + 2) {
-				sample = (gc_int16)(sin(t) * 32768);
+				sample = (s16)(sin(t) * 32768);
 				sample = (sample > -32768 ? (sample < 32767 ? sample : 32767) : -32768);
-				pan = (gc_float32)sin(t / 300) / 2.0f + 0.5f;
-				buf[i] = (gc_int16)(sample * pan);
-				buf[i + 1] = (gc_int16)(sample * (1.0f - pan));
+				pan = (ga_float32)sin(t / 300) / 2.0f + 0.5f;
+				buf[i] = (s16)(sample * pan);
+				buf[i + 1] = (s16)(sample * (1.0f - pan));
 				t = t + 0.03f;
 				if(t > 3.14159265f)
 					t -= 3.14159265f;

@@ -12,7 +12,8 @@
 #ifndef GORILLA_GA_H
 #define GORILLA_GA_H
 
-#include "gorilla/common/ga_common.h"
+#include "gorilla/ga_types.h"
+#include "gorilla/ga_system.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,7 +70,7 @@ extern "C" {
  *
  *  For example: `assert(ga_version_compatible(GA_VERSION_MAJOR, GA_VERSION_MINOR, GA_VERSION_REV)`
  */
-gc_bool ga_version_check(gc_int32 major, gc_int32 minor, gc_int32 rev);
+ga_bool ga_version_check(ga_sint32 major, ga_sint32 minor, ga_sint32 rev);
 
 
 /************************/
@@ -134,9 +135,9 @@ typedef enum {
  *  \ingroup GaFormat
  */
 typedef struct {
-	gc_uint32 sample_rate; /**< Sample rate (usually 44100) */
-	gc_uint32 bits_per_sample; /**< Bits per PCM sample (usually 16) */
-	gc_uint32 num_channels; /**< Number of audio channels (1 for mono, 2 for stereo) */
+	ga_uint32 sample_rate; /**< Sample rate (usually 44100) */
+	ga_uint32 bits_per_sample; /**< Bits per PCM sample (usually 16) */
+	ga_uint32 num_channels; /**< Number of audio channels (1 for mono, 2 for stereo) */
 } GaFormat;
 
 /** Retrieves the sample size (in bytes) of a specified format.
@@ -145,7 +146,7 @@ typedef struct {
  *  \param format Format of the PCM data
  *  \return Sample size (in bytes) of the specified format
  */
-gc_uint32 ga_format_sample_size(GaFormat *format);
+ga_uint32 ga_format_sample_size(GaFormat *format);
 
 /** Converts a discrete number of PCM samples into the duration (in seconds) it
  *  will take to play back.
@@ -155,7 +156,7 @@ gc_uint32 ga_format_sample_size(GaFormat *format);
  *  \param samples Number of PCM samples
  *  \return Duration (in seconds) it will take to play back
  */
-gc_float32 ga_format_to_seconds(GaFormat *format, gc_size samples);
+ga_float32 ga_format_to_seconds(GaFormat *format, ga_usize samples);
 
 /** Converts a duration (in seconds) into the discrete number of PCM samples it
  *  will take to play for that long.
@@ -165,7 +166,7 @@ gc_float32 ga_format_to_seconds(GaFormat *format, gc_size samples);
  *  \param seconds Duration (in seconds)
  *  \return Number of PCM samples it will take to play back for the given time
  */
-gc_int32 ga_format_to_samples(GaFormat *format, gc_float32 seconds);
+ga_sint32 ga_format_to_samples(GaFormat *format, ga_float32 seconds);
 
 
 /************/
@@ -177,14 +178,15 @@ gc_int32 ga_format_to_samples(GaFormat *format, gc_float32 seconds);
  *  \defgroup GaDevice Device
  */
 typedef enum {
-	GaDeviceType_Default    = -1, /**< Default device type (based on hard-coded priorities) \ingroup GaDevice */
-	GaDeviceType_Unknown,         /**< Unknown (invalid) device type \ingroup GaDevice */
-	GaDeviceType_Dummy,           /**< Dummy device, doesn't actually play anything \ingroup GaDevice */
-	GaDeviceType_OSS,             /**< OSS playback device (mainly FreeBSD) \ingroup GaDevice */
-	GaDeviceType_XAudio2,         /**< XAudio2 playback device (Windows-only) \ingroup GaDevice */
-	GaDeviceType_PulseAudio,      /**< PulseAudio playback device (cross-platform, mainly for linux) \ingroup GaDevice */
-	GaDeviceType_ALSA,            /**< ALSA playback device (mainly for linux) \ingroup GaDevice */
-	GaDeviceType_OpenAL,          /**< OpenAL playback device (cross-platform) \ingroup GaDevice */
+	GaDeviceType_Default    = -1, /**< Default device type (based on hard-coded priorities) */
+	GaDeviceType_Unknown,         /**< Unknown (invalid) device type */
+	GaDeviceType_Dummy,           /**< Dummy device, doesn't actually play anything */
+	GaDeviceType_WAV,             /**< Write audio to WAV file */
+	GaDeviceType_OSS,             /**< OSS playback device (mainly FreeBSD) */
+	GaDeviceType_XAudio2,         /**< XAudio2 playback device (Windows-only) */
+	GaDeviceType_PulseAudio,      /**< PulseAudio playback device (cross-platform, mainly for linux) */
+	GaDeviceType_ALSA,            /**< ALSA playback device (mainly for linux) */
+	GaDeviceType_OpenAL,          /**< OpenAL playback device (cross-platform) */
 } GaDeviceType;
 
 /** Hardware device abstract data structure [\ref SINGLE_CLIENT].
@@ -224,8 +226,8 @@ typedef struct GaDevice GaDevice;
  *           reasonable default will be chosen.
  */
 GaDevice *ga_device_open(GaDeviceType *type,
-                          gc_uint32 *num_buffers,
-                          gc_uint32 *num_samples,
+                          ga_uint32 *num_buffers,
+                          ga_uint32 *num_samples,
                           GaFormat *format);
 
 /** Checks the number of free (unqueued) buffers.
@@ -234,7 +236,7 @@ GaDevice *ga_device_open(GaDeviceType *type,
  *  \param device Device to check.
  *  \return Number of free (unqueued) buffers.
  */
-gc_int32 ga_device_check(GaDevice *device);
+ga_sint32 ga_device_check(GaDevice *device);
 
 /** Adds a buffer to a device's presentation queue.
  *
@@ -303,7 +305,7 @@ typedef enum {
  *  \param count Number of elements to read.
  *  \return Total number of bytes read into the destination buffer.
  */
-gc_size ga_data_source_read(GaDataSource *dataSrc, void *dst, gc_size size, gc_size count);
+ga_usize ga_data_source_read(GaDataSource *dataSrc, void *dst, ga_usize size, ga_usize count);
 
 /** Seek to an offset within a data source.
  *
@@ -314,7 +316,7 @@ gc_size ga_data_source_read(GaDataSource *dataSrc, void *dst, gc_size size, gc_s
  *  \return If seek succeeds, returns GA_OK, otherwise returns GA_ERR_GENERIC (invalid seek request).
  *  \warning Only data sources with GaDataAccessFlag_Seekable can have ga_data_source_seek() called on them.
 */
-ga_result ga_data_source_seek(GaDataSource *dataSrc, gc_ssize offset, GaSeekOrigin whence);
+ga_result ga_data_source_seek(GaDataSource *dataSrc, ga_ssize offset, GaSeekOrigin whence);
 
 /** Tells the current read position of a data source.
  *
@@ -322,7 +324,7 @@ ga_result ga_data_source_seek(GaDataSource *dataSrc, gc_ssize offset, GaSeekOrig
  *  \param dataSrc Data source to tell the read position of.
  *  \return The current data source read position.
  */
-gc_size ga_data_source_tell(GaDataSource *dataSrc);
+ga_usize ga_data_source_tell(GaDataSource *dataSrc);
 
 /** Returns the bitfield of flags set for a data source (see \ref globDefs).
  *
@@ -375,6 +377,9 @@ void ga_data_source_release(GaDataSource *dataSrc);
  */
 typedef struct GaSampleSource GaSampleSource;
 
+/** Abstract context for callers back */
+typedef struct GaSampleSourceContext GaSampleSourceContext;
+
 /** On-seek callback function.
  *
  *  A callback that gets called while reading a sample source, if the sample source
@@ -386,7 +391,39 @@ typedef struct GaSampleSource GaSampleSource;
  *  \param delta The signed distance from the old position to the new position.
  *  \param seekContext The user-specified context provided in ga_sample_source_read().
  */
-typedef void (*GaCbOnSeek)(gc_int32 sample, gc_int32 delta, void *seekContext); //todo delta → ssize
+typedef void (*GaCbOnSeek)(ga_sint32 sample, ga_sint32 delta, void *seekContext); //todo delta → ssz, sample → usz
+/** \ref ga_sample_source_read */
+typedef ga_usize (*GaCbSampleSource_Read)(GaSampleSourceContext *context, void *dst, ga_usize num_samples,
+				     GaCbOnSeek onseek, void *seek_ctx);
+/** \ref ga_sample_source_end */
+typedef ga_bool (*GaCbSampleSource_End)(GaSampleSourceContext *context);
+/** \ref ga_sample_source_ready */
+typedef ga_bool (*GaCbSampleSource_Ready)(GaSampleSourceContext *context, ga_usize num_samples);
+/** \ref ga_sample_source_seek */
+typedef ga_result (*GaCbSampleSource_Seek)(GaSampleSourceContext *context, ga_usize sample_offset);
+/** \ref ga_sample_source_tell */
+typedef ga_result (*GaCbSampleSource_Tell)(GaSampleSourceContext *context, ga_usize *samples, ga_usize *total_samples);
+/** \ref ga_sample_source_close */
+typedef void (*GaCbSampleSource_Close)(GaSampleSourceContext *context);
+
+/** Specifies the creation of a sample source */
+typedef struct {
+	GaCbSampleSource_Read read;
+	GaCbSampleSource_End end;
+	GaCbSampleSource_Ready ready;   // OPTIONAL
+	GaCbSampleSource_Seek seek;     // OPTIONAL
+	GaCbSampleSource_Tell tell;     // OPTIONAL
+	GaCbSampleSource_Close close;   // OPTIONAL
+	GaSampleSourceContext *context;
+	GaFormat format;
+	ga_bool threadsafe;
+} GaSampleSourceCreationMinutiae;
+
+/** Create a sample source
+ *
+ * \return The created sample source, or NULL if creation was unsuccessful
+ */
+GaSampleSource *ga_sample_source_create(const GaSampleSourceCreationMinutiae *minutiae);
 
 /** Reads samples from a samples source.
  *
@@ -399,7 +436,7 @@ typedef void (*GaCbOnSeek)(gc_int32 sample, gc_int32 delta, void *seekContext); 
  *  \param seek_ctx User-specified context for the on-seek function.
  *  \return Total number of bytes read into the destination buffer.
  */
-gc_size ga_sample_source_read(GaSampleSource *sample_src, void *dst, gc_size num_samples,
+ga_usize ga_sample_source_read(GaSampleSource *sample_src, void *dst, ga_usize num_samples,
                                GaCbOnSeek onseek, void *seek_ctx);
 
 /** Checks whether a sample source has reached the end of the stream.
@@ -408,7 +445,7 @@ gc_size ga_sample_source_read(GaSampleSource *sample_src, void *dst, gc_size num
  *  \param sample_src Sample source to check.
  *  \return Whether the sample source has reached the end of the stream.
  */
-gc_bool ga_sample_source_end(GaSampleSource *sample_src);
+ga_bool ga_sample_source_end(GaSampleSource *sample_src);
 
 /** Checks whether a sample source has at least a given number of available
  *  samples.
@@ -424,7 +461,7 @@ gc_bool ga_sample_source_end(GaSampleSource *sample_src);
  *  \return Whether the sample source has at least a given number of available
  *          samples.
  */
-gc_bool ga_sample_source_ready(GaSampleSource *sample_src, gc_size num_samples);
+ga_bool ga_sample_source_ready(GaSampleSource *sample_src, ga_usize num_samples);
 
 /** Seek to an offset (in samples) within a sample source.
  *
@@ -435,7 +472,7 @@ gc_bool ga_sample_source_ready(GaSampleSource *sample_src, gc_size num_samples);
  *  \warning Only sample sources with GaDataAccessFlag_Seekable can have ga_sample_source_seek()
  *           called on them.
  */
-ga_result ga_sample_source_seek(GaSampleSource *sample_src, gc_size sample_offset);
+ga_result ga_sample_source_seek(GaSampleSource *sample_src, ga_usize sample_offset);
 
 /** Tells the current sample number of a sample source.
  *
@@ -446,7 +483,7 @@ ga_result ga_sample_source_seek(GaSampleSource *sample_src, gc_size sample_offse
  *         source will be stored here.
  *  \return GA_OK iff the telling was successful.
  */
-ga_result ga_sample_source_tell(GaSampleSource *sample_src, gc_size *samples, gc_size *total_samples);
+ga_result ga_sample_source_tell(GaSampleSource *sample_src, ga_usize *samples, ga_usize *total_samples);
 
 /** Returns the bitfield of flags set for a sample source (see \ref globDefs).
  *
@@ -525,7 +562,7 @@ typedef struct GaMemory GaMemory;
  *          provided data buffer.  If the buffer is null, then the contents
  *          will be uninitialized instead.
  */
-GaMemory *ga_memory_create(void *data, gc_size size);
+GaMemory *ga_memory_create(void *data, ga_usize size);
 
 /** Create a shared memory object from the full contents of a data source.
  *
@@ -546,7 +583,7 @@ GaMemory *ga_memory_create_data_source(GaDataSource *dataSource);
  *  \param mem Memory object whose stored data size should be retrieved.
  *  \return Size (in bytes) of the memory object's stored data.
  */
-gc_size ga_memory_size(GaMemory *mem);
+ga_usize ga_memory_size(GaMemory *mem);
 
 /** Retrieve a pointer to a memory object's stored data.
  *
@@ -643,7 +680,7 @@ void *ga_sound_data(GaSound *sound);
  *  \param sound Sound object whose stored data size should be retrieved.
  *  \return Size (in bytes) of the sound object's stored data.
  */
-gc_size ga_sound_size(GaSound *sound);
+ga_usize ga_sound_size(GaSound *sound);
 
 /** Retrieve the number of samples in a sound object's stored PCM data.
  *
@@ -651,7 +688,7 @@ gc_size ga_sound_size(GaSound *sound);
  *  \param sound Sound object whose number of samples should be retrieved.
  *  \return Number of samples in the sound object's stored PCM data.
  */
-gc_size ga_sound_num_samples(GaSound *sound);
+ga_usize ga_sound_num_samples(GaSound *sound);
 
 /** Retrieves the PCM sample format for a sound.
  *
@@ -717,7 +754,7 @@ typedef struct GaMixer GaMixer;
  *  \warning The number of samples must be a power-of-two.
  *  \todo Remove the requirement that the buffer be a power-of-two in size.
  */
-GaMixer *ga_mixer_create(GaFormat *format, gc_uint32 num_samples);
+GaMixer *ga_mixer_create(GaFormat *format, ga_uint32 num_samples);
 
 /** Suspends the mixer, preventing it from consuming any of its inputs.  If you
  ** attempt to mix from it in this state, it will produce all zeroes
@@ -740,11 +777,9 @@ ga_result ga_mixer_unsuspend(GaMixer *mixer);
  *
  *  \ingroup GaMixer
  *  \param mixer Mixer whose format should should be retrieved.
- *  \return Pointer to the internal format structure used by this object.
- *  \warning Do not modify the contents of this pointer
- *  \todo Either return a copy of the format, or make it a const*.
+ *  \param fmt Location where the resultant format will be stored.
  */
-GaFormat *ga_mixer_format(GaMixer *mixer);
+void ga_mixer_format(GaMixer *mixer, GaFormat *fmt);
 
 /** Retrieve the number of samples in a mixer object's mix buffer.
  *
@@ -752,7 +787,7 @@ GaFormat *ga_mixer_format(GaMixer *mixer);
  *  \param mixer Mixer object whose number of samples should be retrieved.
  *  \return Number of samples in a mixer object's mix buffer.
  */
-gc_uint32 ga_mixer_num_samples(GaMixer *mixer);
+ga_uint32 ga_mixer_num_samples(GaMixer *mixer);
 
 /** Mixes samples from all ready handles into a single output buffer.
  *
@@ -917,7 +952,7 @@ ga_result ga_handle_stop(GaHandle *handle);
  *  \param handle Handle object to check.
  *  \return Whether the handle is currently playing.
  */
-gc_bool ga_handle_playing(GaHandle *handle);
+ga_bool ga_handle_playing(GaHandle *handle);
 
 /** Checks whether a handle is currently stopped.
  *
@@ -925,7 +960,7 @@ gc_bool ga_handle_playing(GaHandle *handle);
  *  \param handle Handle object to check.
  *  \return Whether the handle is currently stopped.
  */
-gc_bool ga_handle_stopped(GaHandle *handle);
+ga_bool ga_handle_stopped(GaHandle *handle);
 
 /** Checks whether a handle is currently finished.
  *
@@ -933,7 +968,7 @@ gc_bool ga_handle_stopped(GaHandle *handle);
  *  \param handle Handle object to check.
  *  \return Whether the handle is currently finished.
  */
-gc_bool ga_handle_finished(GaHandle *handle);
+ga_bool ga_handle_finished(GaHandle *handle);
 
 /** Checks whether a handle is currently destroyed.
  *
@@ -941,7 +976,7 @@ gc_bool ga_handle_finished(GaHandle *handle);
  *  \param handle Handle object to check.
  *  \return Whether the handle is currently destroyed.
  */
-gc_bool ga_handle_destroyed(GaHandle *handle);
+ga_bool ga_handle_destroyed(GaHandle *handle);
 
 /** Sets the handle-finished-playback callback for a handle.
  *
@@ -972,7 +1007,7 @@ ga_result ga_handle_set_callback(GaHandle *handle,
  */
 ga_result ga_handle_set_paramf(GaHandle *handle,
                               GaHandleParam param,
-                              gc_float32 value);
+                              ga_float32 value);
 
 /** Retrieves a floating-point parameter value from a handle.
  *
@@ -988,7 +1023,7 @@ ga_result ga_handle_set_paramf(GaHandle *handle,
  */
 ga_result ga_handle_get_paramf(GaHandle *handle,
                               GaHandleParam param,
-                              gc_float32 *value);
+                              ga_float32 *value);
 
 /** Sets an integer parameter value on a handle.
  *
@@ -1003,7 +1038,7 @@ ga_result ga_handle_get_paramf(GaHandle *handle,
  */
 ga_result ga_handle_set_parami(GaHandle *handle,
                               GaHandleParam param,
-                              gc_int32 value);
+                              ga_sint32 value);
 
 /** Retrieves an integer parameter value from a handle.
  *
@@ -1019,7 +1054,7 @@ ga_result ga_handle_set_parami(GaHandle *handle,
  */
 ga_result ga_handle_get_parami(GaHandle *handle,
                               GaHandleParam param,
-                              gc_int32 *value);
+                              ga_sint32 *value);
 
 /** Seek to an offset (in samples) within a handle.
  *
@@ -1030,7 +1065,7 @@ ga_result ga_handle_get_parami(GaHandle *handle,
  *  \warning Only handles containing sample sources with GaDataAccessFlag_Seekable can
  *           have ga_handle_seek() called on them.
  */
-ga_result ga_handle_seek(GaHandle *handle, gc_size sample_offset);
+ga_result ga_handle_seek(GaHandle *handle, ga_usize sample_offset);
 
 /** Tells the current playback sample number or total samples of a handle.
  *
@@ -1040,7 +1075,7 @@ ga_result ga_handle_seek(GaHandle *handle, gc_size sample_offset);
  *  \param out The result is stored here if the parameters were valid.
  *  \return GA_OK iff the parameters were valid.
  */
-ga_result ga_handle_tell(GaHandle *handle, GaTellParam param, gc_size *out);
+ga_result ga_handle_tell(GaHandle *handle, GaTellParam param, ga_usize *out);
 
 /** Checks whether a handle has at least a given number of available samples.
  *
@@ -1053,7 +1088,7 @@ ga_result ga_handle_tell(GaHandle *handle, GaTellParam param, gc_size *out);
  *                       to be considered ready.
  *  \return Whether the handle has at least a given number of available samples.
  */
-gc_bool ga_handle_ready(GaHandle *handle, gc_size num_samples);
+ga_bool ga_handle_ready(GaHandle *handle, ga_usize num_samples);
 
 /** Retrieves the PCM sample format for a handle.
  *
@@ -1140,7 +1175,7 @@ typedef struct GaBufferedStream GaBufferedStream;
  *  \todo Change buffer_size to buffer_samples for a more fault-resistant
  *        interface.
  */
-GaBufferedStream *ga_stream_create(GaStreamManager *mgr, GaSampleSource *src, gc_size buffer_size);
+GaBufferedStream *ga_stream_create(GaStreamManager *mgr, GaSampleSource *src, ga_usize buffer_size);
 
 /** Buffers samples from the sample source into the internal buffer (producer).
  *
@@ -1162,7 +1197,7 @@ void ga_stream_produce(GaBufferedStream *stream); /* Can be called from a second
  *  \param num_samples Number of samples to read.
  *  \return Total number of bytes read into the destination buffer.
  */
-gc_size ga_stream_read(GaBufferedStream *stream, void *dst, gc_size num_samples);
+ga_usize ga_stream_read(GaBufferedStream *stream, void *dst, ga_usize num_samples);
 
 /** Checks whether a buffered stream has reached the end of the stream.
  *
@@ -1170,7 +1205,7 @@ gc_size ga_stream_read(GaBufferedStream *stream, void *dst, gc_size num_samples)
  *  \param stream Buffered stream to check.
  *  \return Whether the buffered stream has reached the end of the stream.
  */
-gc_bool ga_stream_end(GaBufferedStream *stream);
+ga_bool ga_stream_end(GaBufferedStream *stream);
 
 /** Checks whether a buffered stream has at least a given number of available
  *  samples.
@@ -1186,7 +1221,7 @@ gc_bool ga_stream_end(GaBufferedStream *stream);
  *  \return Whether the buffered stream has at least a given number of available
  *          samples.
  */
-gc_bool ga_stream_ready(GaBufferedStream *stream, gc_size num_samples);
+ga_bool ga_stream_ready(GaBufferedStream *stream, ga_usize num_samples);
 
 /** Seek to an offset (in samples) within a buffered stream.
  *
@@ -1199,7 +1234,7 @@ gc_bool ga_stream_ready(GaBufferedStream *stream, gc_size num_samples);
  *  \warning Only buffered streams with GaDataAccessFlag_Seekable can have ga_stream_seek()
  *           called on them.
  */
-ga_result ga_stream_seek(GaBufferedStream *stream, gc_size sample_offset);
+ga_result ga_stream_seek(GaBufferedStream *stream, ga_usize sample_offset);
 
 /** Tells the current sample number of a buffered stream.
  *
@@ -1211,7 +1246,7 @@ ga_result ga_stream_seek(GaBufferedStream *stream, gc_size sample_offset);
  *         source will be stored here.
  *  \return GA_OK iff the telling was successful
  */
-ga_result ga_stream_tell(GaBufferedStream *stream, gc_size *samples, gc_size *total_samples);
+ga_result ga_stream_tell(GaBufferedStream *stream, ga_usize *samples, ga_usize *total_samples);
 
 /** Returns the bitfield of flags set for a buffered stream (see \ref globDefs).
  *
