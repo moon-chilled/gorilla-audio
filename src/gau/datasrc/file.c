@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "gorilla/gau.h"
-#include "gorilla/ga_internal.h"
+#include "gorilla/ga_u_internal.h"
 
 static usz read(GaDataSourceContext *ctx, void *dst, usz size, usz count) {
 	return fread(dst, size, count, (FILE*)ctx);

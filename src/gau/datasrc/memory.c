@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "gorilla/gau.h"
-#include "gorilla/ga_internal.h"
+#include "gorilla/ga_u_internal.h"
 
 struct GaDataSourceContext {
 	GaMemory *memory;

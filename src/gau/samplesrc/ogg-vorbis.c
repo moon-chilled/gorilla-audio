@@ -175,13 +175,13 @@ GaSampleSource *gau_sample_source_create_ogg(GaDataSource *data) {
 	/* 0 means "open" */
 	if (ov_open_callbacks(&ctx->data_src, &ctx->ogg_file, 0, 0, ogg_callbacks) != 0) goto fail;
 	ctx->ogg_info = ov_info(&ctx->ogg_file, -1);
-	ov_pcm_seek(&ctx->ogg_file, 0); /* Seek fixes some poorly-formatted OGGs. */
+	if (seekable) ov_pcm_seek(&ctx->ogg_file, 0); /* Seek fixes some poorly-formatted OGGs. */
 	bool is_valid_ogg = ctx->ogg_info->channels <= 2;
 	if (!is_valid_ogg) {
 		ov_clear(&ctx->ogg_file);
 		goto fail;
 	}
-	m.format.bits_per_sample = 2 * 8; //32 bytes/sample
+	m.format.bits_per_sample = 16;
 	m.format.num_channels = ctx->ogg_info->channels;
 	m.format.sample_rate = ctx->ogg_info->rate;
 

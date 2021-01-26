@@ -26,6 +26,7 @@ GaSampleSource *gau_sample_source_create_stream(GaStreamManager *mgr, GaSampleSo
 		.read = read,
 		.end = end,
 		.ready = ready,
+		.tell = tell,
 		.close = close,
 		.threadsafe = true,
 	};
@@ -33,10 +34,7 @@ GaSampleSource *gau_sample_source_create_stream(GaStreamManager *mgr, GaSampleSo
 
 	GaBufferedStream *stream = ga_stream_create(mgr, sample_src, buffer_samples * ga_format_sample_size(&m.format));
 	if (!stream) return NULL;
-	if (ga_stream_flags(stream) & GaDataAccessFlag_Seekable) {
-		m.seek = seek;
-		m.tell = tell;
-	}
+	if (ga_stream_flags(stream) & GaDataAccessFlag_Seekable) m.seek = seek;
 
 	m.context = (GaSampleSourceContext*)stream;
 

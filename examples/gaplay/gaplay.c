@@ -28,7 +28,8 @@ const char *devicetypename(GaDeviceType type) {
 }
 
 void printtime(int n) {
-	printf("%d:%02d", n/60, n%60);
+	if (n < 0) printf("???");
+	else printf("%d:%02d", n/60, n%60);
 }
 
 int main(int argc, char **argv) {
@@ -55,26 +56,24 @@ int main(int argc, char **argv) {
 	ga_handle_format(handle, &hfmt);
 	printf("gaplay [%iHz %ich -> %s (%iHz %ich)] %s\n", hfmt.sample_rate, hfmt.num_channels, devicetypename(dev->dev_type), dev->format.sample_rate, dev->format.num_channels, argv[1]);
 
-	bool can_progress;
 	ga_usize cur, dur;
-	can_progress = ga_isok(ga_handle_tell(handle, GaTellParam_Total, &dur));
-	can_progress &= ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur));
-	if (can_progress) {
+	assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
+	cur = ga_format_to_seconds(&dev->format, cur);
+	if (ga_isok(ga_handle_tell(handle, GaTellParam_Total, &dur))) {
 		dur = ga_format_to_seconds(&dev->format, dur);
-		cur = ga_format_to_seconds(&dev->format, cur);
+	} else {
+		dur = -1;
 	}
 
 	while (ga_handle_playing(handle)) {
 		gau_manager_update(mgr);
-		if (can_progress) {
-			assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
-			cur = ga_format_to_seconds(&dev->format, cur);
-			printtime(cur);
-			printf(" / ");
-			printtime(dur);
-			printf(" (%.0f%%)\r", 100*cur/(float)dur);
-			fflush(stdout);
-		}
+		assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
+		cur = ga_format_to_seconds(&dev->format, cur);
+		printtime(cur);
+		printf(" / ");
+		printtime(dur);
+		printf(" (%.0f%%)\r", 100*cur/(float)dur);
+		fflush(stdout);
 		ga_thread_sleep(1000);
 	}
 

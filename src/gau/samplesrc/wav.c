@@ -123,15 +123,13 @@ GaSampleSource *gau_sample_source_create_wav(GaDataSource *data_src) {
 		.read = ss_read,
 		.end = ss_end,
 		.ready = NULL,
+		.tell = ss_tell,
 		.close = ss_close,
 		.context = ctx,
 		.format = {.num_channels = ctx->wav_header.channels, .bits_per_sample = ctx->wav_header.bits_per_sample, .sample_rate = ctx->wav_header.sample_rate},
 		.threadsafe = true,
 	};
-	if (ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable) {
-		m.seek = ss_seek;
-		m.tell = ss_tell;
-	}
+	if (ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable) m.seek = ss_seek;
 
 	GaSampleSource *ret = ga_sample_source_create(&m);
 	if (!ret) goto fail;
