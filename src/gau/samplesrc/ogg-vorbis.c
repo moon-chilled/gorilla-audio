@@ -82,10 +82,9 @@ static usz ss_read(GaSampleSourceContext *ctx, void *odst, usz num_samples,
 #if 0
 static usz ss_read(GaSampleSourceContext *ctx, void *odst, usz num_samples,
                                             GaCbOnSeek onseek, void *seek_ctx) {
-	s32 samples_left = num_samples;
-	s32 samples_read;
-	s32 channels = ctx->ogg_info->channels;
+	ssz samples_left = num_samples;
 	usz total_samples = 0;
+	ssz samples_read;
 
 	char *dst = odst;
 
@@ -95,6 +94,7 @@ static usz ss_read(GaSampleSourceContext *ctx, void *odst, usz num_samples,
 		dst += bytes_read;
 
 		samples_read = bytes_read / (ctx->ogg_info->channels * ctx->sample_size);
+		total_samples += samples_read;
 		samples_left -= samples_read;
 	} while (samples_read > 0 && samples_left);
 	return total_samples;
