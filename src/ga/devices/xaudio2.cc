@@ -22,10 +22,12 @@ struct ga_DeviceImpl {
 
 extern "C" {
 static ga_result gaX_open(ga_Device *dev) {
+#define x2check(expr) do { if (FAILED(expr)) { ret = GA_ERR_SYS_LIB; goto cleanup; } } while (0)
+	ga_result ret;
 	HRESULT result;
 	WAVEFORMATEX fmt;
-	ga_sint32 i;
 	dev->impl = ga_alloc(sizeof(gaX_DeviceImpl));
+	if (!dev->impl) return GA_ERR_SYS_MEM;
 	dev->impl->sample_size = ga_format_sample_size(&dev->format);
 	dev->impl->next_buffer = 0;
 	dev->impl->xa = 0;
@@ -48,17 +50,19 @@ static ga_result gaX_open(ga_Device *dev) {
 	fmt.nBlockAlign = fmt.nChannels * (fmt.wBitsPerSample / 8);
 	fmt.nAvgBytesPerSec = fmt.nSamplesPerSec * fmt.nBlockAlign;
 
-	result = dev->impl->xa->CreateSourceVoice(&dev->impl->source, &fmt, XAUDIO2_VOICE_NOPITCH, XAUDIO2_DEFAULT_FREQ_RATIO, 0, 0, 0);
-	if (FAILED(result)) goto cleanup;
+	x2check(dev->impl->xa->CreateSourceVoice(&dev->impl->source, &fmt, XAUDIO2_VOICE_NOPITCH, XAUDIO2_DEFAULT_FREQ_RATIO, 0, 0, 0));
 
-	result = dev->impl->xa->StartEngine();
-	if (FAILED(result)) goto cleanup;
+	x2check(dev->impl->xa->StartEngine());
 
-	result = dev->impl->source->Start(0, XAUDIO2_COMMIT_NOW);
-	if (FAILED(result)) goto cleanup;
+	x2check(dev->impl->source->Start(0, XAUDIO2_COMMIT_NOW));
 
 	dev->impl->buffers = (void**)ga_alloc(dev->num_buffers * sizeof(void*));
-	for(i = 0; i < dev->num_buffers; ++i)
+	if (!dev->impl->buffers) {
+		ret = GA_ERR_SYS_MEM;
+		goto cleanup;
+	}
+	memset(dev->impl->buffers, 0, dev->num_buffers * sizeof(void*));
+	for (usz i = 0; i < dev->num_buffers; ++i)
 		dev->impl->buffers[i] = ga_alloc(dev->num_samples * dev->impl->sample_size);
 
 	return GA_OK;
@@ -73,8 +77,13 @@ cleanup:
 	if (dev->impl->master) dev->impl->master->DestroyVoice();
 	if (dev->impl->xa) dev->impl->xa->Release();
 	CoUninitialize();
+	if (dev->impl && dev->impl->buffers) {
+		for (usz i = 0; i < dev->num_buffers; i++) ga_free(dev->impl->buffers[i]);
+		ga_free(dev->impl->buffers);
+	}
+	
 	ga_free(dev->impl);
-	return GA_ERR_GENERIC;
+	return ret;
 }
 
 static ga_result gaX_close(ga_Device *dev) {
@@ -94,8 +103,8 @@ static ga_result gaX_close(ga_Device *dev) {
 
 	for(i = 0; i < dev->num_buffers; ++i)
 		ga_free(dev->impl->buffers[i]);
-	ga_free(in_device->buffers);
-	ga_free(in_device);
+	ga_free(dev->buffers);
+	ga_free(dev);
 	return GA_OK;
 }
 

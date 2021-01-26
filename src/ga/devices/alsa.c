@@ -18,13 +18,14 @@ struct GaXDeviceImpl {
 };
 
 static ga_result gaX_open(GaDevice *dev) {
-#define acheck(expr) if ((expr) < 0) goto cleanup
+#define acheck(expr) do { if ((expr) < 0) { res = GA_ERR_SYS_LIB; goto cleanup; } } while (0)
+	ga_result res = GA_OK;
 	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
-	if (!dev->impl) return GA_ERR_GENERIC;
+	if (!dev->impl) return GA_ERR_SYS_MEM;
 
 	if (snd_pcm_open(&dev->impl->interface, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0) {
 		ga_free(dev->impl);
-		return GA_ERR_GENERIC;
+		return GA_ERR_SYS_LIB;
 	}
 
 	snd_pcm_hw_params_t *params;
@@ -39,7 +40,7 @@ static ga_result gaX_open(GaDevice *dev) {
 		case 16: fmt = SND_PCM_FORMAT_S16_LE; break;
 		case 24: fmt = SND_PCM_FORMAT_S24_LE; break;
 		case 32: fmt = SND_PCM_FORMAT_S32_LE; break;
-		default: goto cleanup;
+		default: res = GA_ERR_MIS_PARAM; goto cleanup;
 	}
         acheck(snd_pcm_hw_params_set_format(dev->impl->interface, params, fmt));
 
@@ -58,7 +59,7 @@ cleanup:
 	snd_pcm_drain(dev->impl->interface);
 	snd_pcm_close(dev->impl->interface);
 	ga_free(dev->impl);
-	return GA_ERR_GENERIC;
+	return res;
 }
 
 static ga_result gaX_close(GaDevice *dev) {
@@ -82,9 +83,9 @@ static s32 gaX_check(GaDevice *dev) {
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	snd_pcm_sframes_t written = snd_pcm_writei(dev->impl->interface, buf, dev->num_samples);
-	// TODO: handle the below
-	if (written == -EBADFD) return GA_ERR_GENERIC; // PCM is not in the right state (SND_PCM_STATE_PREPARED or SND_PCM_STATE_RUNNING) 
-	if (written == -EPIPE) return GA_ERR_GENERIC; // underrun
+	// TODO: handle the below (particularly run)
+	if (written == -EBADFD) return GA_ERR_INTERNAL; // PCM is not in the right state (SND_PCM_STATE_PREPARED or SND_PCM_STATE_RUNNING) 
+	if (written == -EPIPE) return GA_ERR_SYS_RUN; // underrun
 	if (written == -ESTRPIPE) return GA_ERR_GENERIC; // a suspend event occurred (stream is suspended and waiting for an application recovery)
 
 	if (written != dev->num_samples) return GA_ERR_GENERIC; // underrun/signal

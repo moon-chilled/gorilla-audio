@@ -21,7 +21,7 @@ static int ogg_seek(void *datasource, ogg_int64_t offset, int whence) {
 		case SEEK_SET: res = ga_data_source_seek(*ds, off, GaSeekOrigin_Set); break;
 		case SEEK_CUR: res = ga_data_source_seek(*ds, off, GaSeekOrigin_Cur); break;
 		case SEEK_END: res = ga_data_source_seek(*ds, off, GaSeekOrigin_End); break;
-		default: res = GA_ERR_GENERIC; break;
+		default: res = GA_ERR_MIS_PARAM; break;
 	}
 
 	return ga_isok(res) ? 0 : -1;
@@ -110,7 +110,15 @@ static ga_result ss_seek(GaSampleSourceContext *ctx, usz sample_offset) {
 		res = ov_pcm_seek(&ctx->ogg_file, sample_offset);
 		ctx->end_of_samples = false;
 	}
-	return res==0 ? GA_OK : GA_ERR_GENERIC; //ov_pcm_seek returns 0 on success
+	switch (res) {
+		case 0: return GA_OK; //ov_pcm_seek returns 0 on success
+		case OV_ENOSEEK: return GA_ERR_MIS_UNSUP;
+		case OV_EINVAL:
+		case OV_EBADLINK: return GA_ERR_MIS_PARAM;
+		case OV_EREAD: return GA_ERR_SYS_IO;
+		case OV_EFAULT: //internal ov error, but our _own_ state remains consistent so not GA_ERR_INTERNAL
+		default: return GA_ERR_SYS_LIB;
+	}
 }
 static ga_result ss_tell(GaSampleSourceContext *ctx, usz *cur, usz *ototal) {
 	ga_result ret = GA_OK;
@@ -118,7 +126,7 @@ static ga_result ss_tell(GaSampleSourceContext *ctx, usz *cur, usz *ototal) {
 		/* TODO: Decide whether to support total samples for OGG files */
 		if (ototal) {
 			s64 ctotal = ov_pcm_total(&ctx->ogg_file, -1); /* Note: This isn't always valid when the stream is poorly-formatted */
-			if (ctotal < 0) ret = GA_ERR_GENERIC;
+			if (ctotal < 0) ret = GA_ERR_MIS_UNSUP;
 			else *ototal = (usz)ctotal;
 		}
 		if (cur) *cur = (usz)ov_pcm_tell(&ctx->ogg_file);

@@ -18,15 +18,15 @@ struct GaXDeviceImpl {
 };
 
 
-const char *gaX_openAlErrorToString(ALuint error) {
+const ga_result openal_to_ga(ALuint error) {
 	switch (error) {
-		case AL_NO_ERROR: return "OpenAL error - None";
-		case AL_INVALID_NAME: return "OpenAL error - Invalid name.";
-		case AL_INVALID_ENUM: return "OpenAL error - Invalid enum.";
-		case AL_INVALID_VALUE: return "OpenAL error - Invalid value.";
-		case AL_INVALID_OPERATION: return "OpenAL error - Invalid op.";
-		case AL_OUT_OF_MEMORY: return "OpenAL error - Out of memory.";
-		default: return "OpenAL error - Unknown error.";
+		case AL_NO_ERROR: puts("OpenAL error - None"); return GA_ERR_INTERNAL;
+		case AL_INVALID_NAME: puts("OpenAL error - Invalid name."); return GA_ERR_INTERNAL;
+		case AL_INVALID_ENUM: puts("OpenAL error - Invalid enum."); return GA_ERR_INTERNAL;
+		case AL_INVALID_VALUE: puts("OpenAL error - Invalid value."); return GA_ERR_INTERNAL;
+		case AL_INVALID_OPERATION: puts("OpenAL error - Invalid op."); return GA_ERR_INTERNAL;
+		case AL_OUT_OF_MEMORY: puts("OpenAL error - Out of memory."); return GA_ERR_SYS_MEM;
+		default: puts("OpenAL error - Unknown error."); return GA_ERR_SYS_LIB;
 	}
 }
 
@@ -34,13 +34,15 @@ static s32 AUDIO_ERROR = 0;
 
 #define CHECK_AL_ERROR(dowhat) do { \
 	if ((AUDIO_ERROR = alGetError()) != AL_NO_ERROR) { \
-		puts(gaX_openAlErrorToString(AUDIO_ERROR)); \
+		ret = openal_to_ga(AUDIO_ERROR); \
 		dowhat; \
 	} \
 } while (0)
 
 static ga_result gaX_open(GaDevice *dev) {
+	ga_result ret;
 	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
+	if (!dev->impl) return GA_ERR_SYS_MEM;
 	memset(dev->impl, 0, sizeof(*dev->impl));
 
 	dev->impl->next_buffer = 0;
@@ -72,7 +74,7 @@ cleanup:
 	if (dev->impl->context) alcDestroyContext(dev->impl->context);
 	if (dev->impl->dev) alcCloseDevice(dev->impl->dev);
 	ga_free(dev->impl);
-	return GA_ERR_GENERIC;
+	return ret;
 }
 
 static ga_result gaX_close(GaDevice *dev) {
@@ -86,6 +88,7 @@ static ga_result gaX_close(GaDevice *dev) {
 }
 
 static s32 gaX_check(GaDevice *dev) {
+	ga_result ret;
 	s32 whichBuf = 0;
 	s32 numProcessed = 0;
 	alGetSourcei(dev->impl->hw_source, AL_BUFFERS_PROCESSED, &numProcessed);
@@ -99,6 +102,7 @@ static s32 gaX_check(GaDevice *dev) {
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *in_buffer) {
+	ga_result ret = GA_OK;
 	s32 formatOal;
 	ALint state;
 	s32 bps = dev->format.bits_per_sample;
@@ -110,23 +114,25 @@ static ga_result gaX_queue(GaDevice *dev, void *in_buffer) {
 
 	alBufferData(dev->impl->hw_buffers[dev->impl->next_buffer], formatOal, in_buffer,
 			(ALsizei)dev->num_samples * ga_format_sample_size(&dev->format), dev->format.sample_rate);
-	CHECK_AL_ERROR(return GA_ERR_GENERIC);
+	CHECK_AL_ERROR(goto done);
 
 	alSourceQueueBuffers(dev->impl->hw_source, 1, &dev->impl->hw_buffers[dev->impl->next_buffer]);
-	CHECK_AL_ERROR(return GA_ERR_GENERIC);
+	CHECK_AL_ERROR(goto done);
 
 	dev->impl->next_buffer = (dev->impl->next_buffer + 1) % dev->num_buffers;
 	--dev->impl->empty_buffers;
 	alGetSourcei(dev->impl->hw_source, AL_SOURCE_STATE, &state);
-	CHECK_AL_ERROR(return GA_ERR_GENERIC);
+	CHECK_AL_ERROR(goto done);
 
 	if (state != AL_PLAYING) {
 		/* NOTE: calling this, even as a 'noop', can cause a clicking sound. */
 		alSourcePlay(dev->impl->hw_source);
 	}
 
-	CHECK_AL_ERROR(return GA_ERR_GENERIC);
-	return GA_OK;
+	CHECK_AL_ERROR(goto done);
+
+done:
+	return ret;
 }
 
 GaXDeviceProcs gaX_deviceprocs_OpenAL = { gaX_open, gaX_check, gaX_queue, gaX_close };

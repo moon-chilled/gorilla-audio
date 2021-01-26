@@ -46,10 +46,10 @@ void ga_thread_destroy(GaThread *thread) {
 
 ga_result ga_mutex_create(GaMutex *res) {
 	res->mutex = ga_alloc(sizeof(mtx_t));
-	if (!res->mutex) return GA_ERR_GENERIC;
+	if (!res->mutex) return GA_ERR_SYS_LIB;
 	if (mtx_init(res->mutex, mtx_plain) != thrd_success) {
 		ga_free(res->mutex);
-		return GA_ERR_GENERIC;
+		return GA_ERR_SYS_LIB;
 	}
 	return GA_OK;
 }
@@ -186,10 +186,10 @@ void ga_thread_destroy(GaThread *thread) {
 
 ga_result ga_mutex_create(GaMutex *res) {
 	res->mutex = ga_alloc(sizeof(pthread_mutex_t));
-	if (!res->mutex) return GA_ERR_GENERIC;
+	if (!res->mutex) return GA_ERR_SYS_LIB;
 	if (pthread_mutex_init((pthread_mutex_t*)ret->mutex, NULL)) {
 		ga_free(res->mutex);
-		return GA_ERR_GENERIC;
+		return GA_ERR_SYS_LIB;
 	}
 	return GA_OK;
 }
@@ -228,7 +228,7 @@ void ga_free(void *ptr) {
 }
 
 ga_result ga_initialize_systemops(GaSystemOps *callbacks) {
-	if (!callbacks || !callbacks->alloc || !callbacks->realloc || !callbacks->free) return GA_ERR_GENERIC;
+	if (!callbacks || !callbacks->alloc || !callbacks->realloc || !callbacks->free) return GA_ERR_MIS_PARAM;
 	*gaX_ops = *callbacks;
 	return GA_OK;
 }

@@ -103,17 +103,17 @@ fail:
 }
 
 ga_result ga_device_close(GaDevice *device) {
-	ga_result ret = device->procs.close ? device->procs.close(device) : GA_ERR_GENERIC;
+	ga_result ret = device->procs.close ? device->procs.close(device) : GA_OK;
 	free(device);
 	return ret;
 }
 
 s32 ga_device_check(GaDevice *device) {
-	return device->procs.check ? device->procs.check(device) : GA_ERR_GENERIC;
+	return device->procs.check(device);
 }
 
 ga_result ga_device_queue(GaDevice *device, void *buffer) {
-	return device->procs.queue ? device->procs.queue(device, buffer) : GA_ERR_GENERIC;
+	return device->procs.queue(device, buffer);
 }
 
 /* Data Source Structure */
@@ -134,7 +134,7 @@ usz ga_data_source_read(GaDataSource *src, void *dst, usz size, usz count) {
 ga_result ga_data_source_seek(GaDataSource *src, ssz offset, GaSeekOrigin whence) {
 	char *context = (char*)src + sizeof(GaDataSource);
 	if (src->seek && (src->flags & GaDataAccessFlag_Seekable)) return src->seek(context, offset, whence);
-	else return GA_ERR_GENERIC;
+	else return GA_ERR_MIS_UNSUP;
 }
 
 usz ga_data_source_tell(GaDataSource *dataSrc) {
@@ -192,10 +192,10 @@ bool ga_sample_source_ready(GaSampleSource *src, usz num_samples) {
 	return src->ready ? src->ready(src->context, num_samples) : true;
 }
 ga_result ga_sample_source_seek(GaSampleSource *src, usz sampleOffset) {
-	return src->seek ? src->seek(src->context, sampleOffset) : GA_ERR_GENERIC;
+	return src->seek && (src->flags & GaDataAccessFlag_Seekable) ? src->seek(src->context, sampleOffset) : GA_ERR_MIS_UNSUP;
 }
 ga_result ga_sample_source_tell(GaSampleSource *src, usz *samples, usz *totalSamples) {
-	return src->tell ? src->tell(src->context, samples, totalSamples) : GA_ERR_GENERIC;
+	return src->tell ? src->tell(src->context, samples, totalSamples) : GA_ERR_MIS_UNSUP;
 }
 static void gaX_sample_source_destroy(GaSampleSource *src) {
 	if (src->close) src->close(src->context);
@@ -440,7 +440,7 @@ ga_result ga_handle_play(GaHandle *handle) {
 	ga_mutex_lock(handle->mutex);
 	if (handle->state >= GaHandleState_Finished) {
 		ga_mutex_unlock(handle->mutex);
-		return GA_ERR_GENERIC;
+		return GA_ERR_MIS_UNSUP;
 	}
 	handle->state = GaHandleState_Playing;
 	ga_mutex_unlock(handle->mutex);
@@ -451,7 +451,7 @@ ga_result ga_handle_stop(GaHandle *handle) {
 	ga_mutex_lock(handle->mutex);
 	if (handle->state >= GaHandleState_Finished) {
 		ga_mutex_unlock(handle->mutex);
-		return GA_ERR_GENERIC;
+		return GA_ERR_MIS_UNSUP;
 	}
 	handle->state = GaHandleState_Stopped;
 	ga_mutex_unlock(handle->mutex);
@@ -495,7 +495,7 @@ ga_result ga_handle_set_paramf(GaHandle *handle, GaHandleParam param, f32 value)
 			handle->pitch = value;
 			ga_mutex_unlock(handle->mutex);
 			return GA_OK;
-		default: return GA_ERR_GENERIC;
+		default: return GA_ERR_MIS_PARAM;
 	}
 }
 
@@ -504,7 +504,7 @@ ga_result ga_handle_get_paramf(GaHandle *handle, GaHandleParam param, f32 *value
 		case GaHandleParam_Gain:  *value = handle->gain;  return GA_OK;
 		case GaHandleParam_Pan:   *value = handle->pan;   return GA_OK;
 		case GaHandleParam_Pitch: *value = handle->pitch; return GA_OK;
-		default: return GA_ERR_GENERIC;
+		default: return GA_ERR_MIS_PARAM;
 	}
 }
 
@@ -518,7 +518,7 @@ ga_result ga_handle_set_parami(GaHandle *handle, GaHandleParam param, s32 value)
 	   return GA_OK;
 	   }
 	   */
-	return GA_ERR_GENERIC;
+	return GA_ERR_MIS_PARAM;
 }
 
 ga_result ga_handle_get_parami(GaHandle *handle, GaHandleParam param, s32 *value) {
@@ -528,7 +528,7 @@ ga_result ga_handle_get_parami(GaHandle *handle, GaHandleParam param, s32 *value
 	   case GaHandleParam_?: *value = ?; return GA_OK;
 	   }
 	   */
-	return GA_ERR_GENERIC;
+	return GA_ERR_MIS_PARAM;
 }
 
 ga_result ga_handle_seek(GaHandle *handle, usz sample_offset) {
@@ -537,10 +537,10 @@ ga_result ga_handle_seek(GaHandle *handle, usz sample_offset) {
 }
 
 ga_result ga_handle_tell(GaHandle *handle, GaTellParam param, usz *out) {
-	if (!out) return GA_ERR_GENERIC;
+	if (!out) return GA_ERR_MIS_PARAM;
 	if (param == GaTellParam_Current) return ga_sample_source_tell(handle->sample_src, out, NULL);
 	else if (param == GaTellParam_Total) return ga_sample_source_tell(handle->sample_src, NULL, out);
-	else return GA_ERR_GENERIC;
+	else return GA_ERR_MIS_PARAM;
 }
 
 bool ga_handle_ready(GaHandle *handle, usz num_samples) {
@@ -576,11 +576,11 @@ fail:
 }
 
 ga_result ga_mixer_suspend(GaMixer *m) {
-	return atomic_exchange(&m->suspended, true) ? GA_ERR_GENERIC : GA_OK;
+	return atomic_exchange(&m->suspended, true) ? GA_ERR_MIS_UNSUP : GA_OK;
 }
 
 ga_result ga_mixer_unsuspend(GaMixer *m) {
-	return atomic_exchange(&m->suspended, false) ? GA_OK : GA_ERR_GENERIC;
+	return atomic_exchange(&m->suspended, false) ? GA_OK : GA_ERR_MIS_UNSUP;
 }
 
 void ga_mixer_format(GaMixer *mixer, GaFormat *fmt) {

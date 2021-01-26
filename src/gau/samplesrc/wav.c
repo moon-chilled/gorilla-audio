@@ -26,20 +26,20 @@ void data_source_advance(GaDataSource *data_src, s32 delta) {
 }
 
 static ga_result sample_source_wav_load_header(GaDataSource *data_src, GaWavData *wav_data) {
-	if(!data_src)
-		return GA_ERR_GENERIC;
+	if (!data_src)
+		return GA_ERR_MIS_PARAM;
 
 	/* TODO: Make this work with non-blocking reads? Need to get this data... */
 	s32 data_offset = 0;
 	char id[4];
 	ga_data_source_read(data_src, &id[0], 1, 4); /* 'RIFF' */
 	data_offset += 4;
-	if (memcmp(id, "RIFF", 4)) return GA_ERR_GENERIC;
+	if (memcmp(id, "RIFF", 4)) return GA_ERR_FMT;
 
 	ga_data_source_read(data_src, &wav_data->file_size, sizeof(s32), 1);
 	ga_data_source_read(data_src, &id[0], 1, 4); /* 'WAVE' */
 	data_offset += 8;
-	if (memcmp(id, "WAVE", 4)) return GA_ERR_GENERIC;
+	if (memcmp(id, "WAVE", 4)) return GA_ERR_FMT;
 	s32 dataFound = 0;
 	s32 hdrFound = 0;
 	do {
@@ -70,7 +70,7 @@ static ga_result sample_source_wav_load_header(GaDataSource *data_src, GaWavData
 		data_offset += chunkSize;
 	} while (!(hdrFound && dataFound)); /* TODO: Need End-Of-Data support in Data Sources */
 	if (hdrFound && dataFound) return GA_OK;
-	else return GA_ERR_GENERIC;
+	else return GA_ERR_FMT;
 }
 
 struct GaSampleSourceContext {

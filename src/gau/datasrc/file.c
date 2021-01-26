@@ -28,12 +28,12 @@ static ga_result gauX_data_source_file_seek(void *context, ssz offset, GaSeekOri
 		case GaSeekOrigin_Set: fwhence = SEEK_SET; break;
 		case GaSeekOrigin_Cur: fwhence = SEEK_CUR; break;
 		case GaSeekOrigin_End: fwhence = SEEK_END; break;
-		default: return GA_ERR_GENERIC;
+		default: return GA_ERR_MIS_PARAM;
 	}
 
 	gau_DataSourceFileContext *ctx = (gau_DataSourceFileContext*)context;
 	ga_mutex_lock(ctx->file_mutex);
-	ga_result ret = fseek(ctx->f, offset, fwhence) == -1 ? GA_ERR_GENERIC : GA_OK;
+	ga_result ret = fseek(ctx->f, offset, fwhence) == -1 ? GA_ERR_SYS_IO : GA_OK;
 	ga_mutex_unlock(ctx->file_mutex);
 
 	return ret;

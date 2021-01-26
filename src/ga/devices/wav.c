@@ -20,7 +20,7 @@
 #define ciwrite4(fp, number) cbwrite(fp, &(s32){ga_endian_tole4(number)}, 4)
 static ga_result gaX_open(GaDevice *dev) {
 	FILE *fp = fopen("gorilla-out.wav", "w");;
-	if (!fp) return GA_ERR_GENERIC;
+	if (!fp) return GA_ERR_SYS_IO;
 
 	cbwrite(fp, "RIFF", 4);
 	ciwrite4(fp, 0); //36 + datasize (size of the entire file except for this and the 'RIFF' magic)
@@ -44,7 +44,7 @@ static ga_result gaX_open(GaDevice *dev) {
 
 cleanup:
 	if (fp) fclose(fp);
-	return GA_ERR_GENERIC;
+	return GA_ERR_SYS_IO;
 }
 #undef cbwrite
 #undef ciwrite2
@@ -60,7 +60,7 @@ static ga_result gaX_close(GaDevice *dev) {
 	failure |= 1 != fwrite(&(s32){ga_endian_tole4(len-44)}, 4, 1, fp);
 
 	failure |= fclose((FILE*)dev->impl);
-	return failure ? GA_ERR_GENERIC : GA_OK;
+	return failure ? GA_ERR_SYS_IO : GA_OK;
 }
 
 static s32 gaX_check(GaDevice *dev) {
@@ -68,7 +68,7 @@ static s32 gaX_check(GaDevice *dev) {
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
-	if (fwrite(buf, ga_format_sample_size(&dev->format), dev->num_samples, (FILE*)dev->impl) != dev->num_samples) return GA_ERR_GENERIC;
+	if (fwrite(buf, ga_format_sample_size(&dev->format), dev->num_samples, (FILE*)dev->impl) != dev->num_samples) return GA_ERR_SYS_IO;
 	return GA_OK;
 }
 

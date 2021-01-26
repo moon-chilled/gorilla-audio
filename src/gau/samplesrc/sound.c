@@ -29,7 +29,7 @@ static bool end(GaSampleSourceContext *ctx) {
 }
 static ga_result seek(GaSampleSourceContext *ctx, usz sample_offset) {
 	if (sample_offset > ctx->num_samples)
-		return GA_ERR_GENERIC;
+		return GA_ERR_MIS_PARAM;
 	ga_mutex_lock(ctx->pos_mutex);
 	ctx->pos = sample_offset;
 	ga_mutex_unlock(ctx->pos_mutex);

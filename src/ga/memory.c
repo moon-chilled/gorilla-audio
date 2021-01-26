@@ -56,7 +56,7 @@ ga_result ga_buffer_write(GaCircBuffer *b, void *data, usz num_bytes) {
 	usz size = b->data_size;
 	usz next_free = b->next_free % size;
 	usz maxBytes = size - next_free;
-	if (num_bytes > ga_buffer_bytes_free(b)) return GA_ERR_GENERIC;
+	if (num_bytes > ga_buffer_bytes_free(b)) return GA_ERR_MIS_PARAM;
 	if (maxBytes >= num_bytes) {
 		memcpy(&b->data[next_free], data, num_bytes);
 	} else {

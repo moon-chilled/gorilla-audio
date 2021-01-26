@@ -13,9 +13,6 @@ struct GaXDeviceImpl {
 };
 
 static ga_result gaX_open(GaDevice *dev) {
-	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
-	if (!dev->impl) return GA_ERR_GENERIC;
-
 	pa_sample_spec spec;
 
 	switch (dev->format.bits_per_sample) {
@@ -23,8 +20,11 @@ static ga_result gaX_open(GaDevice *dev) {
 		case 16: spec.format = PA_SAMPLE_S16LE; break;
 		case 24: spec.format = PA_SAMPLE_S24LE; break;
 		case 32: spec.format = PA_SAMPLE_S32LE; break;
-		default: goto cleanup;
+		default: return GA_ERR_MIS_PARAM;
 	}
+
+	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
+	if (!dev->impl) return GA_ERR_SYS_MEM;
 
 	spec.channels = dev->format.num_channels;
 	spec.rate = dev->format.sample_rate;
@@ -44,8 +44,8 @@ static ga_result gaX_open(GaDevice *dev) {
 	return GA_OK;
 
 cleanup:
-	if (dev->impl) ga_free(dev->impl);
-	return GA_ERR_GENERIC;
+	ga_free(dev->impl);
+	return GA_ERR_SYS_LIB;
 }
 
 static ga_result gaX_close(GaDevice *dev) {
@@ -60,7 +60,7 @@ static s32 gaX_check(GaDevice *dev) {
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	int res = pa_simple_write(dev->impl->interface, buf, dev->num_samples * ga_format_sample_size(&dev->format), NULL);
-	return res<0 ? GA_OK : GA_ERR_GENERIC;
+	return res<0 ? GA_OK : GA_ERR_SYS_LIB;
 }
 
 GaXDeviceProcs gaX_deviceprocs_PulseAudio = { gaX_open, gaX_check, gaX_queue, gaX_close };

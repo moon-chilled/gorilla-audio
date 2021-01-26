@@ -35,6 +35,7 @@ usz gauX_data_source_memory_read(void *context, void *dst, usz size, usz count) 
 	return ret;
 }
 ga_result gauX_data_source_memory_seek(void *context, ssz offset, GaSeekOrigin whence) {
+	ga_result ret = GA_OK;
 	GauDataSourceMemoryContext *ctx = (GauDataSourceMemoryContext*)context;
 	usz data_size = ga_memory_size(ctx->memory);
 	ssz pos;
@@ -43,15 +44,16 @@ ga_result gauX_data_source_memory_seek(void *context, ssz offset, GaSeekOrigin w
 		case GaSeekOrigin_Set: pos = offset; break;
 		case GaSeekOrigin_Cur: pos = ctx->pos + offset; break;
 		case GaSeekOrigin_End: pos = data_size - offset; break;
-		default: goto fail;
+		default: ret = GA_ERR_MIS_PARAM; goto done;
 	}
-	if (pos < 0 || (usz)pos > data_size) goto fail;
+	if (pos < 0 || (usz)pos > data_size) {
+		ret = GA_ERR_MIS_PARAM;
+	       	goto done;
+	}
 	ctx->pos = pos;
+done:
 	ga_mutex_unlock(ctx->mutex);
-	return GA_OK;
-fail:
-	ga_mutex_unlock(ctx->mutex);
-	return GA_ERR_GENERIC;
+	return ret;
 }
 usz gauX_data_source_memory_tell(void *context) {
 	GauDataSourceMemoryContext *ctx = (GauDataSourceMemoryContext*)context;

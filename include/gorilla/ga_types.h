@@ -55,10 +55,32 @@ typedef double           ga_float64;
  *  \defgroup results Result Values
  */
 
-/**< Return type for the result of an operation. */
+/**< Return type for the result of an operation.
+ *
+ * If you just want a quick description of an error and don't want to handle
+ * each separately, OR it with each of the categories--GA_ERR_GENERIC,
+ * GA_ERR_MIS, GA_ERR_SYS
+ */
 typedef enum {
-	GA_OK = 0,       /**< Operation completed successfully.  Keep this at 0 so precocious callers can use !res to see if res was successful */
-	GA_ERR_GENERIC,  /**< Operation failed with an unspecified error. */
+	GA_OK = 0,              /**< Operation completed successfully.  This is kept at 0 so precocious callers can use !res in place of ga_isok(res). */
+	GA_ERR_GENERIC = 1,     /**< Unspecified error. */
+	GA_ERR_INTERNAL = 2,    /**< Gorilla is in an inconsistent state.  We will attempt to continue to operate as consistently as possible, but shenanigans may ensue. */
+
+
+	GA_ERR_MIS = 1 << 31,   /**< MIS category: errors that result from API misuse. */
+	GA_ERR_MIS_PARAM =      /**< Parameter was invalid (for example, attempted to open a file but the filename was null). */
+	GA_ERR_MIS,
+	GA_ERR_MIS_UNSUP,       /**< Requested operation was not supportted on the given object (for example, attempted to seek an unseekable data source). */
+
+
+	GA_ERR_SYS = 1 << 30,   /**< SYS category: errors that result from interactions with tye system. */
+	GA_ERR_SYS_IO =         /**< The system was unable to perform some requisite I/O operation. */
+	GA_ERR_SYS,
+	GA_ERR_SYS_MEM,         /**< Memory allocation failed.  This may be your fault, if you overrided the default allocator. */
+	GA_ERR_SYS_LIB,         /**< An different unspecified error resulted from some necessary (unforunate) interaction with a system library. */
+	GA_ERR_SYS_RUN,         /**< Under/overflowed output buffer.  These are not always possible to avoid and thus do not necessarily indicate a bug with ga, but if you are consistently getting these, report it; we may be misusing a system api. */
+
+	GA_ERR_FMT = 1 << 29,   /**< FMT category/entry: errors that result from poorly-formatted external data */
 } ga_result;
 
 static inline ga_bool ga_isok(ga_result res) {

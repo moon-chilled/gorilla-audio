@@ -62,11 +62,11 @@ static ga_result gaX_open(GaDevice *dev) {
 
 cleanup:
 	if (fd >= 0) close(fd);
-	return GA_ERR_GENERIC;
+	return GA_ERR_SYS_IO;
 }
 
 static ga_result gaX_close(GaDevice *dev) {
-	return close((int)(usz)dev->impl) ? GA_ERR_GENERIC : GA_OK;
+	return close((int)(usz)dev->impl) ? GA_ERR_SYS_IO : GA_OK;
 }
 
 static s32 gaX_check(GaDevice *dev) {
@@ -76,7 +76,7 @@ static s32 gaX_check(GaDevice *dev) {
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	ssz sz = dev->num_samples * ga_format_sample_size(&dev->format);
 	ssz written = write((int)(usz)dev->impl, buf, sz);
-	return sz==written ? GA_OK : GA_ERR_GENERIC;
+	return sz==written ? GA_OK : GA_ERR_SYS_IO;
 }
 
 GaXDeviceProcs gaX_deviceprocs_OSS = { gaX_open, gaX_check, gaX_queue, gaX_close };
