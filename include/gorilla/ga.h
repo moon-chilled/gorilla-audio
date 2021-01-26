@@ -403,7 +403,7 @@ typedef ga_bool (*GaCbSampleSource_Ready)(GaSampleSourceContext *context, ga_usi
 typedef ga_result (*GaCbSampleSource_Seek)(GaSampleSourceContext *context, ga_usize sample_offset);
 /** \ref ga_sample_source_tell */
 typedef ga_result (*GaCbSampleSource_Tell)(GaSampleSourceContext *context, ga_usize *samples, ga_usize *total_samples);
-/** \ref ga_sample_source_close */
+/** \ref ga_sample_source_release */
 typedef void (*GaCbSampleSource_Close)(GaSampleSourceContext *context);
 
 /** Specifies the creation of a sample source */
@@ -515,7 +515,8 @@ void ga_sample_source_acquire(GaSampleSource *sample_src);
 /** Releases a reference for a sample source.
  *
  *  Decrements the sample source's reference count by 1. When the last reference is
- *  released, the sample source's resources will be deallocated.
+ *  released, the sample source's resources will be deallocated and the sample
+ *  source's 'close' callback will be called.
  *
  *  \ingroup GaSampleSource
  *  \param sample_src Sample source whose reference count should be decremented.
@@ -857,8 +858,8 @@ typedef struct GaHandle GaHandle;
 
 /** Enumerated handle parameter values.
  *
- *  Used when calling \ref ga_handle_setParamf() "ga_handle_setParam*()"
- *  or \ref ga_handle_getParamf() "ga_handle_getParam*()".
+ *  Used when calling \ref ga_handle_set_paramf() "ga_handle_set_param*()"
+ *  or \ref ga_handle_get_paramf() "ga_handle_get_param*()".
  *
  *  \ingroup GaHandle
  *  \defgroup handleParams Handle Parameters

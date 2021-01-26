@@ -50,8 +50,7 @@ void ga_free(void *ptr);
  *                      to define custom allocation functions.  If you do not,
  *                      Gorilla will use standard ANSI C malloc/realloc/free
  *                      functions.
- *  \return GA_OK if library initialized successfully. GA_ERR_GENERIC
- *          if not.
+ *  \return GA_OK iff library initialized successfully.
  */
 ga_result ga_initialize_systemops(GaSystemOps *callbacks);
 
@@ -78,7 +77,7 @@ ga_uint32 ga_endian_tole4(ga_uint32 x);
 /** Thread data structure and associated functions.
  *
  *  \ingroup system
- *  \defgroup GaThread Thread
+ *  \defgroup GaThread Threading
  */
 
 /** Enumerated thread priorities.
