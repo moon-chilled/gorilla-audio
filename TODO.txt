@@ -3,8 +3,7 @@ ROAD MAP
 
 COMPATIBILITY:
 - Implement more platforms/devices:
-  - WinMM device (Windows)
-  - ALSA (Linux)
+  - WASAPI (Windows).  (Maybe also ASIO?)
   - CoreAudio (OSX/iOS)
   - OpenSL (Android 2.3+)
   - OpenMAX AL device (Multi)

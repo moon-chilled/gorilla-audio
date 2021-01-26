@@ -168,6 +168,22 @@ GaSound *gau_load_sound_file(const char *fname, GauAudioType format) {
 	return ret;
 }
 
+static GaSampleSource *gau_sample_source_create(GaDataSource *data, GauAudioType format) {
+	if (format == GauAudioType_Autodetect) {
+		if (!ga_data_source_flags(data) & GaDataAccessFlag_Seekable) return NULL;
+		char buf[4];
+		if (ga_data_source_read(data, buf, 4, 1) != 1) return NULL;
+		if (!ga_isok(ga_data_source_seek(data, -4, GaSeekOrigin_Cur))) return NULL;
+		if (!memcmp(buf, "OggS", 4)) format = GauAudioType_Ogg;
+		else if (!memcmp(buf, "RIFF", 4)) format = GauAudioType_Wav;
+		else return NULL;
+	}
+
+	if (format == GauAudioType_Ogg) return gau_sample_source_create_ogg(data);
+	if (format == GauAudioType_Wav) return gau_sample_source_create_wav(data);
+	return NULL;
+}
+
 GaHandle *gau_create_handle_sound(GaMixer *mixer, GaSound *sound,
                                    GaCbHandleFinish callback, void *context,
 				   GauSampleSourceLoop **loop_src) {
@@ -196,12 +212,7 @@ GaHandle *gau_create_handle_memory(GaMixer *mixer, GaMemory *memory, GauAudioTyp
 	GaHandle *ret = NULL;
 	GaDataSource *data = gau_data_source_create_memory(memory);
 	if (!data) return NULL;
-	GaSampleSource *src = NULL;
-	if (format == GauAudioType_Ogg)
-		src = gau_sample_source_create_ogg(data);
-	else if(format == GauAudioType_Wav)
-		src = gau_sample_source_create_wav(data);
-	ga_data_source_release(data);
+	GaSampleSource *src = gau_sample_source_create(data, format);
 	if (!src) return NULL;
 
 	GaSampleSource *src2 = src;
@@ -227,11 +238,7 @@ GaHandle *gau_create_handle_buffered_data(GaMixer *mixer, GaStreamManager *strea
 	if (!data) return NULL;
 	GaHandle *ret = NULL;
 
-	GaSampleSource *src = NULL;
-	if (format == GauAudioType_Ogg)
-		src = gau_sample_source_create_ogg(data);
-	else if (format == GauAudioType_Wav)
-		src = gau_sample_source_create_wav(data);
+	GaSampleSource *src = gau_sample_source_create(data, format);
 	if (!src) return NULL;
 
 	GaSampleSource *src2 = src;
@@ -259,30 +266,7 @@ GaHandle *gau_create_handle_buffered_file(GaMixer *mixer, GaStreamManager *strea
                                            GauSampleSourceLoop** loop_src) {
 	GaDataSource *data = gau_data_source_create_file(filename);
 	if (!data) return NULL;
-	GaHandle *ret = NULL;
-	GaSampleSource *src = NULL;
-	if(format == GauAudioType_Ogg)
-		src = gau_sample_source_create_ogg(data);
-	else if(format == GauAudioType_Wav)
-		src = gau_sample_source_create_wav(data);
+	GaHandle *ret = gau_create_handle_buffered_data(mixer, stream_mgr, data, format, callback, context, loop_src);
 	ga_data_source_release(data);
-	if (!src) return NULL;
-	GaSampleSource *src2 = src;
-	if (loop_src) {
-		*loop_src = gau_sample_source_create_loop(src);
-		gau_sample_source_loop_enable(*loop_src);
-		ga_sample_source_release(src);
-		src2 = gau_sample_source_loop_sample_source(*loop_src);
-	}
-	if (src2) {
-		GaSampleSource *streamSampleSrc = gau_sample_source_create_stream(stream_mgr, src2, 131072);
-		if(src == src2)
-			ga_sample_source_release(src2);
-		if (streamSampleSrc) {
-			ret = ga_handle_create(mixer, streamSampleSrc);
-			ga_sample_source_release(streamSampleSrc);
-			ga_handle_set_callback(ret, callback, context);
-		}
-	}
 	return ret;
 }

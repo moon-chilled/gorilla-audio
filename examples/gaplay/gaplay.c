@@ -44,8 +44,7 @@ int main(int argc, char **argv) {
 	GaMixer *mixer = check(gau_manager_mixer(mgr), "Unable to get mixer from manager");
 	GaStreamManager *smgr = gau_manager_stream_manager(mgr);
 
-	//GaHandle *handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GauAudioType_Wav, NULL, NULL, NULL);
-	GaHandle *handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GauAudioType_Ogg, NULL, NULL, NULL);
+	GaHandle *handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GauAudioType_Autodetect, NULL, NULL, NULL);
 	check(handle, "Could not load file '%s'.", argv[1]);
 	//ga_handle_setParamf(handle, GA_HANDLE_PARAM_PAN, 0);
 
