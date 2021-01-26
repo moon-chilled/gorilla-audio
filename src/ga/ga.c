@@ -116,43 +116,42 @@ ga_result ga_device_queue(GaDevice *device, void *buffer) {
 	return device->procs.queue(device, buffer);
 }
 
-/* Data Source Structure */
-void ga_data_source_init(GaDataSource *dataSrc) {
-	dataSrc->refCount = rc_new();
-	dataSrc->read = NULL;
-	dataSrc->seek = NULL;
-	dataSrc->tell = NULL;
-	dataSrc->close = NULL;
-	dataSrc->flags = 0;
+GaDataSource *ga_data_source_create(const GaDataSourceCreationMinutiae *m) {
+	if (!m->read || !m->tell) return NULL;
+	GaDataSource *ret = ga_alloc(sizeof(GaDataSource));
+	if (!ret) return NULL;
+	ret->read = m->read;
+	ret->seek = m->seek;
+	ret->tell = m->tell;
+	ret->close = m->close;
+	ret->context = m->context;
+	ret->flags = (m->seek ? GaDataAccessFlag_Seekable : 0)
+	           | (m->threadsafe ? GaDataAccessFlag_Threadsafe : 0);
+	ret->refCount = rc_new();
+	return ret;
 }
 
 usz ga_data_source_read(GaDataSource *src, void *dst, usz size, usz count) {
-	char *context = (char*)src + sizeof(GaDataSource); //todo this probably doesn't work well with padding
-	return src->read(context, dst, size, count);
+	return src->read(src->context, dst, size, count);
 }
 
 ga_result ga_data_source_seek(GaDataSource *src, ssz offset, GaSeekOrigin whence) {
-	char *context = (char*)src + sizeof(GaDataSource);
-	if (src->seek && (src->flags & GaDataAccessFlag_Seekable)) return src->seek(context, offset, whence);
+	if (src->seek && (src->flags & GaDataAccessFlag_Seekable)) return src->seek(src->context, offset, whence);
 	else return GA_ERR_MIS_UNSUP;
 }
 
-usz ga_data_source_tell(GaDataSource *dataSrc) {
-	char *context = (char*)dataSrc + sizeof(GaDataSource);
-	return dataSrc->tell(context);
+usz ga_data_source_tell(GaDataSource *src) {
+	return src->tell(src->context);
 }
 
-GaDataAccessFlags ga_data_source_flags(GaDataSource *dataSrc) {
-	return dataSrc->flags;
+GaDataAccessFlags ga_data_source_flags(GaDataSource *src) {
+	return src->flags;
 }
 
-void gaX_data_source_destroy(GaDataSource *dataSrc) {
-	GaCbDataSource_Close func = dataSrc->close;
-	char *context = (char*)dataSrc + sizeof(GaDataSource);
-	assert(dataSrc->refCount.rc == 0);
-	if(func)
-		func(context);
-	ga_free(dataSrc);
+void gaX_data_source_destroy(GaDataSource *src) {
+	assert(src->refCount.rc == 0);
+	if (src->close) src->close(src->context);
+	ga_free(src);
 }
 
 void ga_data_source_acquire(GaDataSource *dataSrc) {
@@ -165,7 +164,7 @@ void ga_data_source_release(GaDataSource *dataSrc) {
 
 /* Sample Source Structure */
 GaSampleSource *ga_sample_source_create(const GaSampleSourceCreationMinutiae *m) {
-	if (!m->read || !m->end) return NULL;
+	if (!m->read || !m->tell || !m->end) return NULL;
 	GaSampleSource *ret = ga_alloc(sizeof(GaSampleSource));
 	if (!ret) return NULL;
 	ret->refCount = rc_new();

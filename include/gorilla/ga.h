@@ -295,6 +295,65 @@ typedef enum {
 	GaSeekOrigin_End, /**< Seek to an offset from the end of the source. \ingroup seekOrigins */
 } GaSeekOrigin;
 
+/** Abstract context for data source callbacks */
+typedef struct GaDataSourceContext GaDataSourceContext;
+
+/** Data source read callback prototype.
+ *
+ *  \ingroup intDataSource
+ *  \param context User context.
+ *  \param dst Destination buffer into which bytes should be read. Must
+ *                be at least (size * count) bytes in size.
+ *  \param size Size of a single element (in bytes).
+ *  \param count Number of elements to read.
+ *  \return Total number of bytes read into the destination buffer.
+ */
+typedef ga_usize (*GaCbDataSource_Read)(GaDataSourceContext *context, void *dst, ga_usize size, ga_usize count);
+
+/** Data source seek callback prototype.
+ *
+ *  \ingroup intDataSource
+ *  \param context User context.
+ *  \param offset Offset (in bytes) from the specified seek origin.
+ *  \param origin Seek origin (see [\ref globDefs]).
+ *  \return If seek succeeds, the callback should return GA_OK, otherwise it should return GA_ERR_GENERIC.
+ *  \warning Data sources with GaDataAccessFlag_Seekable should always provide a seek callback.
+ *  \warning Data sources with GaDataAccessFlag_Seekable set should only return an error in the case of
+ *           an invalid seek request.
+ *  \todo Define a less-confusing contract for extending/defining this function.
+ */
+typedef ga_result (*GaCbDataSource_Seek)(GaDataSourceContext *context, ga_ssize offset, GaSeekOrigin whence);
+
+/** Data source tell callback prototype.
+ *
+ *  \ingroup intDataSource
+ *  \param context User context.
+ *  \return The current data source read position.
+ */
+typedef ga_usize (*GaCbDataSource_Tell)(GaDataSourceContext *context);
+
+/** Data source close callback prototype.
+ *
+ *  \ingroup intDataSource
+ *  \param context User context.
+ */
+typedef void (*GaCbDataSource_Close)(GaDataSourceContext *context);
+
+typedef struct {
+	GaCbDataSource_Read read;
+	GaCbDataSource_Seek seek;   // OPTIONAL
+	GaCbDataSource_Tell tell;
+	GaCbDataSource_Close close; // OPTIONAL
+	GaDataSourceContext *context;
+	ga_bool threadsafe;
+} GaDataSourceCreationMinutiae;
+
+/** Create a data source
+ *
+ * \return The created data source, or NULL if creation was unsuccessful
+ */
+GaDataSource *ga_data_source_create(const GaDataSourceCreationMinutiae *minutiae);
+
 /** Reads binary data from the data source.
  *
  *  \ingroup GaDataSource
@@ -411,7 +470,7 @@ typedef struct {
 	GaCbSampleSource_Read read;
 	GaCbSampleSource_End end;
 	GaCbSampleSource_Ready ready;   // OPTIONAL
-	GaCbSampleSource_Seek seek;     // OPTIONAL
+	GaCbSampleSource_Seek seek;     // OPTIONAL, must come with tell
 	GaCbSampleSource_Tell tell;     // OPTIONAL
 	GaCbSampleSource_Close close;   // OPTIONAL
 	GaSampleSourceContext *context;

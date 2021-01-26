@@ -6,7 +6,7 @@ CHANGE LOG
 - Allow suspending a mixer, making it output only zeroes
 - Tentative (not yet ready for use!) support for audio formats other than s16/2ch/44100.
 - Improve performance, touch up APIs, refactor.
-- Allow user-defined sample sources.
+- Allow user-defined sample and data sources.
 
 0.3.3
 - Add an OSS audio backend

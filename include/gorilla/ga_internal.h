@@ -97,47 +97,6 @@ struct GaDevice {
  *  \defgroup intDataSource Data Source
  */
 
-/** Data source read callback prototype.
- *
- *  \ingroup intDataSource
- *  \param context User context (pointer to the first byte after the data source).
- *  \param dst Destination buffer into which bytes should be read. Must
- *                be at least (size * count) bytes in size.
- *  \param size Size of a single element (in bytes).
- *  \param count Number of elements to read.
- *  \return Total number of bytes read into the destination buffer.
- */
-typedef usz (*GaCbDataSource_Read)(void *context, void *dst, usz size, usz count);
-
-/** Data source seek callback prototype.
- *
- *  \ingroup intDataSource
- *  \param context User context (pointer to the first byte after the data source).
- *  \param offset Offset (in bytes) from the specified seek origin.
- *  \param origin Seek origin (see [\ref globDefs]).
- *  \return If seek succeeds, the callback should return GA_OK, otherwise it should return GA_ERR_GENERIC.
- *  \warning Data sources with GaDataAccessFlag_Seekable should always provide a seek callback.
- *  \warning Data sources with GaDataAccessFlag_Seekable set should only return an error in the case of
- *           an invalid seek request.
- *  \todo Define a less-confusing contract for extending/defining this function.
- */
-typedef ga_result (*GaCbDataSource_Seek)(void *context, ssz offset, GaSeekOrigin whence);
-
-/** Data source tell callback prototype.
- *
- *  \ingroup intDataSource
- *  \param context User context (pointer to the first byte after the data source).
- *  \return The current data source read position.
- */
-typedef usz (*GaCbDataSource_Tell)(void *context);
-
-/** Data source close callback prototype.
- *
- *  \ingroup intDataSource
- *  \param context User context (pointer to the first byte after the data source).
- */
-typedef void (*GaCbDataSource_Close)(void *context);
-
 /** Abstract data source data structure [\ref MULTI_CLIENT].
  *
  *  A data source is a source of binary data, such as a file or socket, that
@@ -148,22 +107,14 @@ typedef void (*GaCbDataSource_Close)(void *context);
  *  \todo Design a clearer/better system for easily extending this data type.
  */
 struct GaDataSource {
-	GaCbDataSource_Read read;   /**< Internal read callback. */
-	GaCbDataSource_Seek seek;   /**< Internal seek callback (optional). */
-	GaCbDataSource_Tell tell;   /**< Internal tell callback (optional). */
-	GaCbDataSource_Close close; /**< Internal close callback (optional). */
-	RC refCount;                /**< Reference count. */
-	GaDataAccessFlags flags;    /**< Flags defining which functionality this data source supports (see [\ref globDefs]). */
+	GaCbDataSource_Read read;     /**< Internal read callback. */
+	GaCbDataSource_Seek seek;     /**< Internal seek callback (optional). */
+	GaCbDataSource_Tell tell;     /**< Internal tell callback. */
+	GaCbDataSource_Close close;   /**< Internal close callback (optional). */
+	GaDataSourceContext *context; /**< opaque context for callbacks. */
+	GaDataAccessFlags flags;      /**< Flags defining which functionality this data source supports (see [\ref globDefs]). */
+	RC refCount;                  /**< Reference count. */
 };
-
-/** Initializes the reference count and other default values.
- *
- *  Because GaDataSource is an abstract data type, this function should not be
- *  called except when implement a concrete data source implementation.
- *
- *  \ingroup intDataSource
- */
-void ga_data_source_init(GaDataSource *data_src);
 
 /*******************/
 /*  Sample Source  */

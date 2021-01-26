@@ -3,20 +3,13 @@
 #include "gorilla/gau.h"
 #include "gorilla/ga_internal.h"
 
-/* Memory-Based Data Source */
-typedef struct {
+struct GaDataSourceContext {
 	GaMemory *memory;
 	usz pos;
 	GaMutex mutex;
-} GauDataSourceMemoryContext;
+};
 
-typedef struct {
-	GaDataSource dataSrc;
-	GauDataSourceMemoryContext context;
-} GauDataSourceMemory;
-
-usz gauX_data_source_memory_read(void *context, void *dst, usz size, usz count) {
-	GauDataSourceMemoryContext *ctx = (GauDataSourceMemoryContext*)context;
+static usz read(GaDataSourceContext *ctx, void *dst, usz size, usz count) {
 	usz ret = 0;
 	usz dataSize = ga_memory_size(ctx->memory);
 	usz toRead = size * count;
@@ -34,9 +27,8 @@ usz gauX_data_source_memory_read(void *context, void *dst, usz size, usz count) 
 	ga_mutex_unlock(ctx->mutex);
 	return ret;
 }
-ga_result gauX_data_source_memory_seek(void *context, ssz offset, GaSeekOrigin whence) {
+static ga_result seek(GaDataSourceContext *ctx, ssz offset, GaSeekOrigin whence) {
 	ga_result ret = GA_OK;
-	GauDataSourceMemoryContext *ctx = (GauDataSourceMemoryContext*)context;
 	usz data_size = ga_memory_size(ctx->memory);
 	ssz pos;
 	ga_mutex_lock(ctx->mutex);
@@ -55,33 +47,40 @@ done:
 	ga_mutex_unlock(ctx->mutex);
 	return ret;
 }
-usz gauX_data_source_memory_tell(void *context) {
-	GauDataSourceMemoryContext *ctx = (GauDataSourceMemoryContext*)context;
+static usz tell(GaDataSourceContext *ctx) {
 	ga_mutex_lock(ctx->mutex);
 	usz ret = ctx->pos;
 	ga_mutex_unlock(ctx->mutex);
 	return ret;
 }
-void gauX_data_source_memory_close(void *context) {
-	GauDataSourceMemoryContext *ctx = (GauDataSourceMemoryContext*)context;
+static void close(GaDataSourceContext *ctx) {
 	ga_memory_release(ctx->memory);
 	ga_mutex_destroy(ctx->mutex);
+	ga_free(ctx);
 }
 GaDataSource *gau_data_source_create_memory(GaMemory *memory) {
-	GauDataSourceMemory *ret = ga_alloc(sizeof(GauDataSourceMemory));
-	if (!ret) return NULL;
-	if (!ga_isok(ga_mutex_create(&ret->context.mutex))) {
+	GaDataSourceContext *ctx = ga_alloc(sizeof(GaDataSourceContext));
+	if (!ctx) return NULL;
+
+	GaDataSource *ret = ga_data_source_create(&(GaDataSourceCreationMinutiae){
+		.read = read,
+		.seek = seek,
+		.tell = tell,
+		.close = close,
+		.context = ctx,
+		.threadsafe = true,
+	});
+	if (!ret) {
+		ga_free(ctx);
+		return NULL;
+	}
+	if (!ga_isok(ga_mutex_create(&ctx->mutex))) {
+		ga_free(ctx);
 		ga_free(ret);
 		return NULL;
 	}
-	ga_data_source_init(&ret->dataSrc);
-	ret->dataSrc.flags = GaDataAccessFlag_Seekable | GaDataAccessFlag_Threadsafe;
-	ret->dataSrc.read = &gauX_data_source_memory_read;
-	ret->dataSrc.seek = &gauX_data_source_memory_seek;
-	ret->dataSrc.tell = &gauX_data_source_memory_tell;
-	ret->dataSrc.close = &gauX_data_source_memory_close;
 	ga_memory_acquire(memory);
-	ret->context.memory = memory;
-	ret->context.pos = 0;
-	return (GaDataSource*)ret;
+	ctx->memory = memory;
+	ctx->pos = 0;
+	return ret;
 }
