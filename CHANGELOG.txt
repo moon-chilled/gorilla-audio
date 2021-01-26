@@ -1,6 +1,13 @@
 CHANGE LOG
 ---
 
+0.4.0
+- Add audio backends for ALSA, PulseAudio, wav (dump audio to file), dummy (don't do anything).
+- Allow suspending a mixer, making it output only zeroes
+- Tentative (not yet ready for use!) support for audio formats other than s16/2ch/44100.
+- Improve performance, touch up APIs, refactor.
+- Allow user-defined sample sources.
+
 0.3.3
 - Add an OSS audio backend
 - XAudio2 is the default backend on windows
