@@ -233,7 +233,7 @@ static GaMemory *gaX_memory_create(void *data, usz size, bool copy) {
 }
 
 GaMemory *ga_memory_create(void *data, usz size) {
-	return gaX_memory_create(data, size, ga_true);
+	return gaX_memory_create(data, size, true);
 }
 
 GaMemory *ga_memory_create_data_source(GaDataSource *src) {
@@ -269,7 +269,7 @@ GaMemory *ga_memory_create_data_source(GaDataSource *src) {
 		} while (bytes_read > 0);
 	}
 
-	GaMemory *ret = gaX_memory_create(data, len, ga_false);
+	GaMemory *ret = gaX_memory_create(data, len, false);
 	if (!ret) ga_free(data);
 	return ret;
 }
@@ -565,7 +565,7 @@ GaMixer *ga_mixer_create(GaFormat *format, u32 num_samples) {
 	ret->mix_format.num_channels = format->num_channels;
 	ret->mix_format.sample_rate = format->sample_rate;
 	ret->mix_buffer = ga_alloc(num_samples * ga_format_sample_size(&ret->mix_format));
-	ret->suspended = ga_false;
+	ret->suspended = false;
 	return ret;
 
 fail:
@@ -576,15 +576,11 @@ fail:
 }
 
 ga_result ga_mixer_suspend(GaMixer *m) {
-	ga_result ret = m->suspended ? GA_ERR_GENERIC : GA_OK;
-	m->suspended = ga_true;
-	return ret;
+	return atomic_exchange(&m->suspended, true) ? GA_ERR_GENERIC : GA_OK;
 }
 
 ga_result ga_mixer_unsuspend(GaMixer *m) {
-	ga_result ret = m->suspended ? GA_OK : GA_ERR_GENERIC;
-	m->suspended = ga_false;
-	return ret;
+	return atomic_exchange(&m->suspended, false) ? GA_OK : GA_ERR_GENERIC;
 }
 
 void ga_mixer_format(GaMixer *mixer, GaFormat *fmt) {

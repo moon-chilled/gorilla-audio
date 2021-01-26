@@ -51,7 +51,7 @@ cleanup:
 #undef ciwrite4
 
 static ga_result gaX_close(GaDevice *dev) {
-	bool failure = ga_false;
+	bool failure = false;
 	FILE *fp = (FILE*)dev->impl;
 	long len = ftell(fp);
 	fseek(fp, 4, SEEK_SET);

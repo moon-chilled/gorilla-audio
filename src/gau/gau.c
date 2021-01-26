@@ -75,7 +75,7 @@ GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
 
 	/* Create and run mixer and stream threads */
 	ret->thread_policy = thread_policy;
-	ret->kill_threads = ga_false;
+	ret->kill_threads = false;
 	if(ret->thread_policy == GauThreadPolicy_Multi) {
 		ret->mix_thread = ga_thread_create(gauX_mixThreadFunc, ret, GaThreadPriority_Highest, 64 * 1024);
 		ret->stream_thread = ga_thread_create(gauX_streamThreadFunc, ret, GaThreadPriority_Highest, 64 * 1024);
@@ -122,7 +122,7 @@ GaDevice *gau_manager_device(GauManager *mgr) {
 
 void gau_manager_destroy(GauManager *mgr) {
 	if (mgr->thread_policy == GauThreadPolicy_Multi) {
-		mgr->kill_threads = ga_true;
+		mgr->kill_threads = true;
 		ga_thread_join(mgr->stream_thread);
 		ga_thread_join(mgr->mix_thread);
 		ga_thread_destroy(mgr->stream_thread);

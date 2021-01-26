@@ -29,20 +29,20 @@ void gauX_tell_jump_push(GaLink *head, usz pos, ssz delta) {
 
 bool gauX_tell_jump_peek(GaLink *head, usz *pos, ssz *delta) {
 	gau_TellJumpLink *link;
-	if (head->next == head) return ga_false;
+	if (head->next == head) return false;
 	link = (gau_TellJumpLink*)head->next;
 	*pos = link->data.pos;
 	*delta = link->data.delta;
-	return ga_true;
+	return true;
 }
 
 bool gauX_tell_jump_pop(GaLink *head) {
 	gau_TellJumpLink *link;
-	if (head->next == head) return ga_false;
+	if (head->next == head) return false;
 	link = (gau_TellJumpLink*)head->next;
 	ga_list_unlink((GaLink*)link);
 	ga_free(link);
-	return ga_true;
+	return true;
 }
 
 ssz gauX_tell_jump_process(GaLink *head, usz advance) {
@@ -88,13 +88,13 @@ gaX_StreamLink *gaX_stream_link_create(void) {
 
 // returns true if the stream is dead
 bool gaX_stream_link_produce(gaX_StreamLink *stream_link) {
-	bool ret = ga_true;
+	bool ret = true;
 	ga_mutex_lock(stream_link->produce_mutex);
 	if (stream_link->stream) {
 		/* Mutexing this entire section guarantees that ga_stream_destroy()
 		   cannot occur during production */
 		ga_stream_produce(stream_link->stream);
-		ret = ga_false;
+		ret = false;
 	}
 	ga_mutex_unlock(stream_link->produce_mutex);
 	return ret;
