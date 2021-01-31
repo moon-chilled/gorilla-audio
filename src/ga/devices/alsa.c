@@ -28,8 +28,11 @@ static ga_result gaX_open(GaDevice *dev) {
 		return GA_ERR_SYS_LIB;
 	}
 
-	snd_pcm_hw_params_t *params;
+	snd_pcm_hw_params_t *params = NULL;
+#define alloca malloc
         snd_pcm_hw_params_alloca(&params);
+#undef alloca
+	if (!params) goto cleanup;
         acheck(snd_pcm_hw_params_any(dev->impl->interface, params));
 
         acheck(snd_pcm_hw_params_set_access(dev->impl->interface, params, SND_PCM_ACCESS_RW_INTERLEAVED));
@@ -51,11 +54,13 @@ static ga_result gaX_open(GaDevice *dev) {
 	acheck(snd_pcm_hw_params_set_rate_near(dev->impl->interface, params, &dev->format.sample_rate, NULL));
 	acheck(snd_pcm_hw_params(dev->impl->interface, params));
 
+	free(params);
 	//todo latency
 
 	return GA_OK;
 
 cleanup:
+	free(params);
 	snd_pcm_drain(dev->impl->interface);
 	snd_pcm_close(dev->impl->interface);
 	ga_free(dev->impl);

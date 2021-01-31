@@ -135,10 +135,15 @@ static s32 priority_lut[] = {
 	[GaThreadPriority_Highest] = -20
 };
 
+typedef struct { GaCbThreadFunc func; void *context; ga_result res; } ThreadWrapperContext;
+
 struct GaThreadObj {
 	pthread_t thread;
 	pthread_attr_t attr;
+	ThreadWrapperContext *ctx;
 };
+
+void *ga_thread_wrapper(void *context) { ThreadWrapperContext *ctx = context; ctx->res = ctx->func(ctx->context); return NULL; }
 
 GaThread *ga_thread_create(GaCbThreadFunc thread_func, void *context,
                            GaThreadPriority priority, u32 stack_size) {
@@ -147,12 +152,17 @@ GaThread *ga_thread_create(GaCbThreadFunc thread_func, void *context,
 	if (!ret) goto fail;
 	GaThreadObj *thread_obj = ga_alloc(sizeof(GaThreadObj));
 	if (!thread_obj) goto fail;
+	thread_obj->ctx = ga_alloc(sizeof(ThreadWrapperContext));
+	if (!thread_obj->ctx) goto fail;
 
 	ret->thread_obj = thread_obj;
 	ret->thread_func = thread_func;
 	ret->context = context;
 	ret->priority = priority;
 	ret->stack_size = stack_size;
+
+	thread_obj->ctx->func = thread_func;
+	thread_obj->ctx->context = context;
 
 	if (pthread_attr_init(&thread_obj->attr) != 0){} // report error
 #if defined(__APPLE__) || defined(__ANDROID__) || defined(__FreeBSD__) || defined(__OpenBSD__)
@@ -162,7 +172,7 @@ GaThread *ga_thread_create(GaCbThreadFunc thread_func, void *context,
 #endif
 	if (pthread_attr_setschedparam(&thread_obj->attr, &param) != 0){} //report error
 	if (pthread_attr_setstacksize(&thread_obj->attr, stack_size) != 0){} //report error
-	if (pthread_create(&thread_obj->thread, &thread_obj->attr, thread_func, context) != 0) goto fail;
+	if (pthread_create(&thread_obj->thread, &thread_obj->attr, ga_thread_wrapper, thread_obj->ctx) != 0) goto fail;
 
 	return ret;
 fail:
@@ -174,12 +184,13 @@ void ga_thread_join(GaThread *thread) {
 	pthread_join(thread->thread_obj->thread, 0);
 }
 void ga_thread_sleep(u32 ms) {
-	usleep(ms * 1000);
+	nanosleep(&(struct timespec){.tv_sec = ms / 1000, .tv_nsec = (ms % 1000) * 1000000}, NULL);
 }
 void ga_thread_destroy(GaThread *thread) {
 	pthread_cancel(thread->thread_obj->thread);
 	pthread_join(thread->thread_obj->thread, NULL);
 	pthread_attr_destroy(&thread->thread_obj->attr);
+	ga_free(thread->thread_obj->ctx);
 	ga_free(thread->thread_obj);
 	ga_free(thread);
 }
@@ -187,7 +198,7 @@ void ga_thread_destroy(GaThread *thread) {
 ga_result ga_mutex_create(GaMutex *res) {
 	res->mutex = ga_alloc(sizeof(pthread_mutex_t));
 	if (!res->mutex) return GA_ERR_SYS_LIB;
-	if (pthread_mutex_init((pthread_mutex_t*)ret->mutex, NULL)) {
+	if (pthread_mutex_init((pthread_mutex_t*)res->mutex, NULL)) {
 		ga_free(res->mutex);
 		return GA_ERR_SYS_LIB;
 	}

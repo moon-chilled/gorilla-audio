@@ -18,7 +18,7 @@ endif
 
 MODE ?= debug
 
-CFLAGS := -Iext/libogg/include -Iext/libvorbis/include -Iext/libopus/include -Iext/opusfile/include
+CFLAGS := -Iext/libogg/include -Iext/libvorbis/include -Iext/libopus/include -Iext/opusfile/include -DHAVE_ALLOCA_H
 CFLAGS_release :=
 CFLAGS_debug :=
 CXXFLAGS :=
@@ -43,6 +43,7 @@ VORBIS_SRC := ext/libvorbis/lib/analysis.c ext/libvorbis/lib/bitrate.c ext/libvo
 OPUSFILE_SRC := ext/opusfile/src/opusfile.c ext/opusfile/src/info.c ext/opusfile/src/internal.c ext/opusfile/src/stream.c 
 
 GA_CFLAGS := -Iinclude
+OPUS_CFLAGS := -Iext/libopus/celt -Iext/libopus/silk -Iext/libopus/silk/float -DOPUS_BUILD -DUSE_ALLOCA -DHAVE_LRINT -DHAVE_LRINTF -DHAVE_STDINT_H -DPACKAGE_VERSION="\"(gorilla audio)\"" -DSKIP_CONFIG_H
 
 ifeq ($(TARGET),win32)
 	CFLAGS += -DUNICODE -D_UNICODE -D_CRT_SECURE_NO_WARNINGS
@@ -51,6 +52,7 @@ ifeq ($(TARGET),win32)
 else
 	CFLAGS += -Wall -Wextra -Wno-unused-parameter
 	CFLAGS += -fPIC
+	CFLAGS += -std=c99
 	CFLAGS_debug += -Werror
 	CFLAGS_debug += -g
 	CFLAGS_release += -O2
@@ -120,8 +122,16 @@ o/$(MODE)/src/%.o: src/%.c
 o/$(MODE)/ext/%.o: ext/%.c
 	@mkdir -p `dirname $@`
 	$(CC) -c -o $@ $(CFLAGS) $(CFLAGS_$(MODE)) $<
+o/$(MODE)/ext/libopus/%.o: ext/libopus/%.c
+	@mkdir -p `dirname $@`
+	$(CC) -c -o $@ $(CFLAGS) $(CFLAGS_$(MODE)) $(OPUS_CFLAGS) $<
 
-OBJ := $(patsubst %.c,o/$(MODE)/%.o,$(GA_SRC) $(GAU_SRC) $(OGG_SRC) $(VORBIS_SRC) $(OPUSFILE_SRC))
+include ext/libopus/silk_sources.mk
+include ext/libopus/celt_sources.mk
+include ext/libopus/opus_sources.mk
+OPUS_SRC := $(patsubst %,ext/libopus/%,$(SILK_SOURCES) $(SILK_SOURCES_FLOAT) $(CELT_SOURCES) $(OPUS_SOURCES) $(OPUS_SOURCES_FLOAT))
+
+OBJ := $(patsubst %.c,o/$(MODE)/%.o,$(GA_SRC) $(GAU_SRC) $(OGG_SRC) $(VORBIS_SRC) $(OPUS_SRC) $(OPUSFILE_SRC))
 o/$(MODE)/libgorilla.so: $(OBJ)
 	@mkdir -p o/$(MODE)
 	$(CCLD) -shared $(LFLAGS) -o o/$(MODE)/libgorilla.so $(OBJ)
