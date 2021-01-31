@@ -153,7 +153,7 @@ GaMemory *gau_load_memory_file(const char *fname) {
 
 static GaSampleSource *gau_sample_source_create(GaDataSource *data, GauAudioType format) {
 	if (format == GauAudioType_Autodetect) {
-		if (!ga_data_source_flags(data) & GaDataAccessFlag_Seekable) return NULL;
+		if (!(ga_data_source_flags(data) & GaDataAccessFlag_Seekable)) return NULL;
 		char buf[4];
 		if (ga_data_source_read(data, buf, 4, 1) != 1) return NULL;
 		if (!ga_isok(ga_data_source_seek(data, -4, GaSeekOrigin_Cur))) return NULL;
