@@ -8,6 +8,9 @@
 *.exe
 *.wav
 *.ogg
+*.opus
+
+tags
 
 # What we're here for
 *.obj
@@ -17,10 +20,8 @@
 *.user
 *.ncb
 BuildLog.htm
-gorilla.lib
-gorillaD.lib
 /docs/output/
-/bin/
+/o
 *.ilk
 *.a
 *.so

@@ -151,37 +151,64 @@ GaMemory *gau_load_memory_file(const char *fname) {
 	return ret;
 }
 
-GaSound *gau_load_sound_file(const char *fname, GauAudioType format) {
-	GaSound *ret = NULL;
-	GaDataSource *data = gau_data_source_create_file(fname);
-	if (!data) return NULL;
-	GaSampleSource *sample_src = NULL;
-	if (format == GauAudioType_Ogg)
-		sample_src = gau_sample_source_create_ogg(data);
-	else if (format == GauAudioType_Wav)
-		sample_src = gau_sample_source_create_wav(data);
-	ga_data_source_release(data);
-	if (sample_src) {
-		ret = ga_sound_create_sample_source(sample_src);
-		ga_sample_source_release(sample_src);
-	}
-	return ret;
-}
-
 static GaSampleSource *gau_sample_source_create(GaDataSource *data, GauAudioType format) {
 	if (format == GauAudioType_Autodetect) {
 		if (!ga_data_source_flags(data) & GaDataAccessFlag_Seekable) return NULL;
 		char buf[4];
 		if (ga_data_source_read(data, buf, 4, 1) != 1) return NULL;
 		if (!ga_isok(ga_data_source_seek(data, -4, GaSeekOrigin_Cur))) return NULL;
-		if (!memcmp(buf, "OggS", 4)) format = GauAudioType_Ogg;
-		else if (!memcmp(buf, "RIFF", 4)) format = GauAudioType_Wav;
-		else return NULL;
+		if (!memcmp(buf, "OggS", 4)) {
+			// ogg file format is:
+			// 4 'OggS'
+			// 1 version, always 0
+			// 1 header type; (1=continued)|(2=first)|(4=last)
+			// 8 granule position
+			// 4 stream serial number, ~uuid; not actually serial
+			// 4 page sequence number
+			// 4 crc
+			// 1 number of segments
+			// then 'segments' bytes of junk
+			// then the actual data
+			// ogg has:
+			// 1 packtype
+			// 6 'vorbis'
+			// opus has:
+			// 4 'Opus'
+			if (!ga_isok(ga_data_source_seek(data, 26, GaSeekOrigin_Cur))) return NULL;
+			u8 nseg;
+			if (ga_data_source_read(data, &nseg, 1, 1) != 1) return NULL;
+			if (!ga_isok(ga_data_source_seek(data, nseg, GaSeekOrigin_Cur))) return NULL;
+			char buf[7];
+			if (ga_data_source_read(data, buf, 1, 7) != 7) return NULL;
+			if (!ga_isok(ga_data_source_seek(data, -7-27-nseg, GaSeekOrigin_Cur))) return NULL;
+
+			if (!memcmp(buf, "Opus", 4)) format = GauAudioType_Opus;
+			else if (!memcmp(buf+1, "vorbis", 6)) format = GauAudioType_Vorbis;
+			else return NULL;
+		} else if (!memcmp(buf, "RIFF", 4)) {
+			format = GauAudioType_Wav;
+		} else {
+			return NULL;
+		}
 	}
 
-	if (format == GauAudioType_Ogg) return gau_sample_source_create_ogg(data);
+	if (format == GauAudioType_Vorbis) return gau_sample_source_create_vorbis(data);
+	if (format == GauAudioType_Opus) return gau_sample_source_create_opus(data);
 	if (format == GauAudioType_Wav) return gau_sample_source_create_wav(data);
 	return NULL;
+}
+
+GaSound *gau_load_sound_file(const char *fname, GauAudioType format) {
+	GaSound *ret = NULL;
+	GaDataSource *data = gau_data_source_create_file(fname);
+	if (!data) return NULL;
+	GaSampleSource *sample_src = gau_sample_source_create(data, format);
+	ga_data_source_release(data);
+	if (sample_src) {
+		ret = ga_sound_create_sample_source(sample_src);
+		ga_sample_source_release(sample_src);
+	}
+	return ret;
 }
 
 GaHandle *gau_create_handle_sound(GaMixer *mixer, GaSound *sound,

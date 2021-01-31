@@ -4,3 +4,9 @@
 [submodule "ext/libogg"]
 	path = ext/libogg
 	url = https://gitlab.xiph.org/xiph/ogg.git
+[submodule "ext/libopus"]
+	path = ext/libopus
+	url = https://gitlab.xiph.org/xiph/opus.git
+[submodule "ext/opusfile"]
+	path = ext/opusfile
+	url = https://gitlab.xiph.org/xiph/opusfile.git

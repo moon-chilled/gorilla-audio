@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
 	assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
 	cur = ga_format_to_seconds(&dev->format, cur);
 	if (ga_isok(ga_handle_tell(handle, GaTellParam_Total, &dur))) {
-		dur = ga_format_to_seconds(&dev->format, dur);
+		dur = ga_format_to_seconds(&hfmt, dur);
 	} else {
 		dur = -1;
 	}

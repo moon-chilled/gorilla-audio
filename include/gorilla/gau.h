@@ -136,7 +136,13 @@ GaSampleSource *gau_sample_source_create_wav(GaDataSource *in_dataSrc);
  *
  *  \ingroup concreteSample
  */
-GaSampleSource *gau_sample_source_create_ogg(GaDataSource *in_dataSrc);
+GaSampleSource *gau_sample_source_create_vorbis(GaDataSource *in_dataSrc);
+
+/** Creates a sample source of PCM samples from an Ogg/Opus file.
+ *
+ *  \ingroup concreteSample
+ */
+GaSampleSource *gau_sample_source_create_opus(GaDataSource *in_dataSrc);
 
 /** Creates a buffered sample source of PCM samples from another sample source.
  *
@@ -243,10 +249,11 @@ GaMemory *gau_load_memory_file(const char *in_filename);
 
 
 typedef enum {
-	GauAudioType_Unknown = 1,
-	GauAudioType_Autodetect = 2, // TODO: support this
-	GauAudioType_Ogg = 3,
-	GauAudioType_Wav = 4,
+	GauAudioType_Unknown,
+	GauAudioType_Autodetect, // TODO: support this
+	GauAudioType_Vorbis,
+	GauAudioType_Opus,
+	GauAudioType_Wav,
 } GauAudioType;
 
 /** Load a file's PCM data into a sound object.

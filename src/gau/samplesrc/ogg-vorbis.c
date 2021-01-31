@@ -139,7 +139,7 @@ static void ss_close(GaSampleSourceContext *ctx) {
 	ga_mutex_destroy(ctx->ogg_mutex);
 	ga_free(ctx);
 }
-GaSampleSource *gau_sample_source_create_ogg(GaDataSource *data) {
+GaSampleSource *gau_sample_source_create_vorbis(GaDataSource *data) {
 	GaSampleSourceContext *ctx = ga_alloc(sizeof(GaSampleSourceContext));
 	if (!ctx) return NULL;
 
@@ -151,26 +151,22 @@ GaSampleSource *gau_sample_source_create_ogg(GaDataSource *data) {
 		.read = ss_read,
 		.end = ss_end,
 		.ready = NULL,
+		.tell = ss_tell,
 		.close = ss_close,
 		.context = ctx,
 		.threadsafe = true,
 	};
 	bool seekable = ga_data_source_flags(data) & GaDataAccessFlag_Seekable;
-	if (seekable) {
-		m.seek = ss_seek;
-		m.tell = ss_tell;
-	}
+	if (seekable) m.seek = ss_seek;
 
 	ov_callbacks ogg_callbacks = {
 		.read_func = ogg_read,
+		.tell_func = ogg_tell,
 		.close_func = ogg_close,
 
 	};
 
-	if (seekable) {
-		ogg_callbacks.seek_func = ogg_seek;
-		ogg_callbacks.tell_func = ogg_tell;
-	}
+	if (seekable) ogg_callbacks.seek_func = ogg_seek;
 
 	/* 0 means "open" */
 	if (ov_open_callbacks(&ctx->data_src, &ctx->ogg_file, 0, 0, ogg_callbacks) != 0) goto fail;
@@ -181,7 +177,7 @@ GaSampleSource *gau_sample_source_create_ogg(GaDataSource *data) {
 		ov_clear(&ctx->ogg_file);
 		goto fail;
 	}
-	m.format.bits_per_sample = 16;
+	m.format.bits_per_sample = 16; //s16le ftw!
 	m.format.num_channels = ctx->ogg_info->channels;
 	m.format.sample_rate = ctx->ogg_info->rate;
 

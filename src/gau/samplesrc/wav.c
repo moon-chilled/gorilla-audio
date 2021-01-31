@@ -81,19 +81,19 @@ struct GaSampleSourceContext {
 	GaMutex pos_mutex;
 };
 
-static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz numSamples, GaCbOnSeek onseek, void *seek_ctx) {
-	usz numRead = 0;
-	usz totalSamples = ctx->wav_header.data_size / ctx->sample_size;
+static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_samples, GaCbOnSeek onseek, void *seek_ctx) {
+	usz num_res = 0;
+	usz total_samples = ctx->wav_header.data_size / ctx->sample_size;
 	with_mutex(ctx->pos_mutex) {
-		if (ctx->pos + numSamples > totalSamples) numSamples = totalSamples - ctx->pos;
-		numRead = ga_data_source_read(ctx->data_src, dst, ctx->sample_size, numSamples);
-		ctx->pos += numRead;
+		if (ctx->pos + num_samples > total_samples) num_samples = total_samples - ctx->pos;
+		num_res = ga_data_source_read(ctx->data_src, dst, ctx->sample_size, num_samples);
+		ctx->pos += num_res;
 	}
-	return numRead;
+	return num_res;
 }
 static bool ss_end(GaSampleSourceContext *ctx) {
-	usz totalSamples = ctx->wav_header.data_size / ctx->sample_size;
-	return atomic_load(&ctx->pos) == totalSamples;
+	usz total_samples = ctx->wav_header.data_size / ctx->sample_size;
+	return atomic_load(&ctx->pos) == total_samples;
 }
 static ga_result ss_seek(GaSampleSourceContext *ctx, usz sample_offset) {
 	ga_result ret;
