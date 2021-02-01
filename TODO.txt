@@ -40,7 +40,6 @@ LUXURY FEATURES:
 - Surround sound (multi-channel) input and output formats
 - Support for multiple ga_StreamManager threads
 - Floating-point format support
-- MP3 support (optional)
 - AIFF support
 - OGG Opus support
 - Network-streaming audio (OGG, MP3, ShoutCast, IceCast)

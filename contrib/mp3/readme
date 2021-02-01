@@ -1,0 +1,6 @@
+Gorilla audio natively supports the OGG Vorbis and Opus formats.  You should
+use these for all your high-quality lossy audio format needs.  MP3 is an
+obsolete technology that requires large file sizes and produces low-quality
+audio, and should be avoided.  However, if you really need mp3 support for some
+reason, include 'mp3dec.c' and 'dr_mp3.h' in your source distribution and call
+ga_contrib_sample_source_create_mp3 to create MP3 decoders from data sources.

@@ -14,6 +14,8 @@
 	_ptr; \
 })
 
+GaSampleSource *ga_contrib_sample_source_create_mp3(GaDataSource *data_src);
+
 const char *devicetypename(GaDeviceType type) {
 	switch (type) {
 		case GaDeviceType_Dummy: return "dummy";
@@ -44,8 +46,22 @@ int main(int argc, char **argv) {
 	GaMixer *mixer = check(gau_manager_mixer(mgr), "Unable to get mixer from manager");
 	GaStreamManager *smgr = gau_manager_stream_manager(mgr);
 
-	GaHandle *handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GauAudioType_Autodetect, NULL, NULL, NULL);
-	check(handle, "Could not load file '%s'.", argv[1]);
+	GaHandle *handle;
+	{
+		ga_usize l = strlen(argv[1]);
+		if (l >= 3 && !strcmp(argv[1] + l - 3, "mp3")) {
+			GaDataSource *ds = gau_data_source_create_file(argv[1]);
+			check(ds, "Could not open file '%s'.", argv[1]);
+			GaSampleSource *ss = ga_contrib_sample_source_create_mp3(ds);
+			check(ss, "Could not load file '%s'.", argv[1]);
+			handle = ga_handle_create(mixer, ss);
+			ga_data_source_release(ds);
+			ga_sample_source_release(ss);
+		} else {
+			handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GauAudioType_Autodetect, NULL, NULL, NULL);
+		}
+	}
+	check(handle, ":(");
 	//ga_handle_setParamf(handle, GA_HANDLE_PARAM_PAN, 0);
 
 	ga_handle_play(handle);
