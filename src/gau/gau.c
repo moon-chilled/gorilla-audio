@@ -163,7 +163,7 @@ static GaSampleSource *gau_sample_source_create(GaDataSource *data, GauAudioType
 			// 1 version, always 0
 			// 1 header type; (1=continued)|(2=first)|(4=last)
 			// 8 granule position
-			// 4 stream serial number, ~uuid; not actually serial
+			// 4 stream serial number; ~uuid, not actually serial
 			// 4 page sequence number
 			// 4 crc
 			// 1 number of segments
