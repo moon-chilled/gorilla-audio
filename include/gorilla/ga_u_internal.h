@@ -49,5 +49,6 @@ static inline RC rc_new(void) {
 
 #define min(x, y) ((x) < (y) ? (x) : (y))
 #define max(x, y) ((x) > (y) ? (x) : (y))
+#define clamp(x, lo, hi) min(max((x), (lo)), (hi))
 
 #endif //_GORILLA_GA_U_INTERNAL_H

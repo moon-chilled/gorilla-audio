@@ -29,10 +29,10 @@ typedef uint8_t          ga_uint8;
 typedef uint16_t         ga_uint16;
 typedef uint32_t         ga_uint32;
 typedef uint64_t         ga_uint64;
-typedef int8_t           ga_sint8;
-typedef int16_t          ga_sint16;
-typedef int32_t          ga_sint32;
-typedef int64_t          ga_sint64;
+typedef  int8_t          ga_sint8;
+typedef  int16_t         ga_sint16;
+typedef  int32_t         ga_sint32;
+typedef  int64_t         ga_sint64;
 
 typedef _Bool            ga_bool;
 #define ga_true          ((ga_bool)1)
@@ -58,20 +58,18 @@ typedef double           ga_float64;
 /**< Return type for the result of an operation.
  *
  * If you just want a quick description of an error and don't want to handle
- * each separately, OR it with each of the categories--GA_ERR_GENERIC,
- * GA_ERR_MIS, GA_ERR_SYS
+ * each separately, check if it's greater than each of the
+ * categories--GA_ERR_GENERIC, GA_ERR_MIS, GA_ERR_SYS, GA_ERR_FMT
  */
 typedef enum {
 	GA_OK = 0,              /**< Operation completed successfully.  This is kept at 0 so precocious callers can use !res in place of ga_isok(res). */
 	GA_ERR_GENERIC = 1,     /**< Unspecified error. */
 	GA_ERR_INTERNAL = 2,    /**< Gorilla is in an inconsistent state.  We will attempt to continue to operate as consistently as possible, but shenanigans may ensue. */
 
-
 	GA_ERR_MIS = 1 << 31,   /**< MIS category: errors that result from API misuse. */
 	GA_ERR_MIS_PARAM =      /**< Parameter was invalid (for example, attempted to open a file but the filename was null). */
 	GA_ERR_MIS,
 	GA_ERR_MIS_UNSUP,       /**< Requested operation was not supportted on the given object (for example, attempted to seek an unseekable data source). */
-
 
 	GA_ERR_SYS = 1 << 30,   /**< SYS category: errors that result from interactions with tye system. */
 	GA_ERR_SYS_IO =         /**< The system was unable to perform some requisite I/O operation. */

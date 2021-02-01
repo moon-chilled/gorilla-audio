@@ -1,2 +1,1 @@
-check https://code.google.com/archive/p/gorilla-audio/issues
 replace more asserts with explicit failures (returned to caller)

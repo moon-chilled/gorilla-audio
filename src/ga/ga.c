@@ -396,9 +396,9 @@ static void gaX_handle_init(GaHandle *handle, GaMixer *mixer) {
 	handle->mixer = mixer;
 	handle->callback = NULL;
 	handle->context = NULL;
-	handle->gain = 1.0;
-	handle->pitch = 1.0;
-	handle->pan = 0.0;
+	handle->pitch = 1;
+	handle->gain = handle->last_gain = 1;
+	handle->pan = handle->last_pan = 0;
 	ga_mutex_create(&handle->mutex); //todo errhandle
 }
 
@@ -591,39 +591,39 @@ u32 ga_mixer_num_samples(GaMixer *mixer) {
 }
 
 static void gaX_mixer_mix_buffer(GaMixer *mixer,
-                          void *srcBuffer, s32 srcSamples, GaFormat *srcFmt,
-                          s32 *dst, s32 dstSamples, GaFormat *dstFmt,
-			  f32 gain, f32 pan, f32 pitch) {
-	s32 mixerChannels = dstFmt->num_channels;
-	s32 srcChannels = srcFmt->num_channels;
-	f32 sampleScale = srcFmt->sample_rate / (f32)dstFmt->sample_rate * pitch;
-	f32 fj = 0.0f;
-	s32 j = 0;
-	s32 i = 0;
-	f32 srcSamplesRead = 0.0f;
-	u32 sample_size = ga_format_sample_size(srcFmt);
-	pan = (pan + 1.0f) / 2.0f;
-	pan = pan > 1.0f ? 1.0f : pan;
-	pan = pan < 0.0f ? 0.0f : pan;
+                          void *src_buffer, s32 src_samples, GaFormat *src_fmt,
+                          s32 *dst, s32 dst_samples, GaFormat *dst_fmt,
+			  f32 gain, f32 last_gain, f32 pan, f32 last_pan, f32 pitch) {
+	u32 mixer_channels = dst_fmt->num_channels;
+	s32 src_channels = src_fmt->num_channels;
+	f32 sample_scale = src_fmt->sample_rate / (f32)dst_fmt->sample_rate * pitch; //todo interpolate?
+	f32 fj = 0.0;
+	f32 srcSamplesRead = 0.0;
+	u32 sample_size = ga_format_sample_size(src_fmt);
+	pan = clamp((pan + 1) / 2, 0, 1);
+	last_pan = clamp((last_pan + 1) / 2, 0, 1);
+	f32 cur_pan = last_pan, cur_gain = last_gain;
+	f32 d_pan = (pan - last_pan) / dst_samples;
+	f32 d_gain = (gain - last_gain) / dst_samples;
 
 	/* TODO: Support 8-bit/16-bit mono/stereo mixer format */
-	switch (srcFmt->bits_per_sample) {
+	switch (src_fmt->bits_per_sample) {
 		case 16: {
-			s32 srcBytes = srcSamples * sample_size;
-			const s16 *src = srcBuffer;
-			while (i < dstSamples * (s32)mixerChannels && srcBytes >= 2 * srcChannels) {
-				s32 newJ, deltaSrcBytes;
+			s32 src_bytes = src_samples * sample_size;
+			const s16 *src = src_buffer;
+			for (u32 i = 0, j = 0; i < dst_samples * mixer_channels && src_bytes >= 2 * src_channels; i += mixer_channels) {
+				f32 lmul = cur_gain * (cur_pan < 0.5 ? 1 : (1 - cur_pan) * 2);
+				f32 rmul = cur_gain * (cur_pan > 0.5 ? 1 : cur_pan * 2);
+				cur_pan += d_pan;
+				cur_gain += d_gain;
+				dst[i] += (s32)((s32)src[j] * lmul);
+				dst[i + 1] += (s32)((s32)src[j + ((src_channels == 1) ? 0 : 1)] * rmul);
 
-				dst[i] += (s32)((s32)src[j] * gain * (1.0f - pan) * 2);
-				dst[i + 1] += (s32)((s32)src[j + ((srcChannels == 1) ? 0 : 1)] * gain * pan * 2);
-
-				i += mixerChannels;
-				fj += sampleScale * srcChannels;
-				srcSamplesRead += sampleScale * srcChannels;
-				newJ = (u32)fj & (srcChannels == 1 ? ~0u : ~1u);
-				deltaSrcBytes = (newJ - j) * 2;
-				j = newJ;
-				srcBytes -= deltaSrcBytes;
+				fj += sample_scale * src_channels;
+				srcSamplesRead += sample_scale * src_channels;
+				u32 jP/*j'*/ = (u32)fj & (src_channels == 1 ? ~0u : ~1u);
+				src_bytes -= (jP - j) * 2;
+				j = jP;
 			}
 
 			break;
@@ -655,7 +655,11 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_sampl
 
 	ga_mutex_lock(handle->mutex);
 	f32 gain = handle->gain;
+	f32 last_gain = handle->last_gain;
+	handle->last_gain = gain;
 	f32 pan = handle->pan;
+	f32 last_pan = handle->last_pan;
+	handle->last_pan = pan;
 	f32 pitch = handle->pitch;
 	ga_mutex_unlock(handle->mutex);
 
@@ -673,9 +677,9 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_sampl
 	s32 numRead = 0;
 	numRead = ga_sample_source_read(ss, src, requested, 0, 0);
 	gaX_mixer_mix_buffer(mixer,
-			src, numRead, &handleFormat,
-			mixer->mix_buffer, num_samples, &mixer->format,
-			gain, pan, pitch);
+	                     src, numRead, &handleFormat,
+	                     mixer->mix_buffer, num_samples, &mixer->format,
+	                     gain, last_gain, pan, last_pan, pitch);
 	ga_free(src);
 }
 

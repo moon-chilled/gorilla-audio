@@ -168,9 +168,9 @@ struct GaHandle {
 	GaCbHandleFinish callback;
 	void *context;
 	GaHandleState state;
-	f32 gain;
 	f32 pitch;
-	f32 pan;
+	f32 gain, last_gain;
+	f32 pan, last_pan;
 	GaLink dispatch_link;
 	GaLink mix_link;
 	GaMutex mutex;
