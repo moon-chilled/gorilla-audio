@@ -17,9 +17,9 @@ static ga_result gaX_open(GaDevice *dev) {
 
 	switch (dev->format.bits_per_sample) {
 		case  8: spec.format = PA_SAMPLE_U8;    break;
-		case 16: spec.format = PA_SAMPLE_S16LE; break;
-		case 24: spec.format = PA_SAMPLE_S24LE; break;
-		case 32: spec.format = PA_SAMPLE_S32LE; break;
+		case 16: spec.format = PA_SAMPLE_S16NE; break;
+		case 24: spec.format = PA_SAMPLE_S24NE; break;
+		case 32: spec.format = PA_SAMPLE_S32NE; break;
 		default: return GA_ERR_MIS_PARAM;
 	}
 

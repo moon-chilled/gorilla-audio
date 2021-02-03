@@ -68,6 +68,7 @@ static s32 gaX_check(GaDevice *dev) {
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
+	//todo bswap on be
 	if (fwrite(buf, ga_format_sample_size(&dev->format), dev->num_samples, (FILE*)dev->impl) != dev->num_samples) return GA_ERR_SYS_IO;
 	return GA_OK;
 }

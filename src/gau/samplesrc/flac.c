@@ -20,6 +20,7 @@ struct GaSampleSourceContext {
 	usz sample_off;
 
 	FLAC__StreamDecoder *flac;
+	u32 flacbps;
 	GaMutex mutex;
 };
 
@@ -73,13 +74,17 @@ static void flac_metadata(const FLAC__StreamDecoder *decoder, const FLAC__Stream
 
 	ctx->fmt.sample_rate = metadata->data.stream_info.sample_rate;
 	ctx->fmt.num_channels = metadata->data.stream_info.channels;
-	//ctx->fmt.ctx->fmt.bits_per_sample = metadata->data.stream_info->bits_per_sample;
+	ctx->flacbps = metadata->data.stream_info.bits_per_sample;
 }
 
 
 static FLAC__StreamDecoderWriteStatus flac_write(const FLAC__StreamDecoder *decoder, const FLAC__Frame *frame, const FLAC__int32 *const buffer[], void *context) {
 	GaSampleSourceContext *ctx = context;
 	// lock not required; decode will only be called by a thread that's already acquired a mutex
+
+	assert (!ctx->bufoff);
+	assert (frame->header.channels == 2);
+	assert (ctx->flacbps == 16);
 
 	{
 		usz c = frame->header.blocksize * ctx->fmt.num_channels + ctx->bufoff;
@@ -89,15 +94,17 @@ static FLAC__StreamDecoderWriteStatus flac_write(const FLAC__StreamDecoder *deco
 		}
 	}
 
-	s16 *p = ctx->buffer + ctx->bufoff;
+	s16 *p = ctx->buffer;
 	for (usz i = 0; i < frame->header.blocksize; i++) {
 		for (usz j = 0; j < ctx->fmt.num_channels; j++) {
 			//todo don't truncate (mixer needs to requantize on its own)
 			//*p++ = buffer[j][i] << 16; //not great data access :/ oh well
 			*p++ = buffer[j][i]; //not great data access :/ oh well
+			printf("%d>\n", buffer[j][i]);
 		}
 	}
 	ctx->buflen = p - ctx->buffer;
+	printf("write %p..%p\n", ctx->buffer, p);
 
 	return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
 }
@@ -106,12 +113,18 @@ static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_samples, GaCbO
 	usz num_read = 0;
 	usz num_left = num_samples;
 	s16 *sdst = dst;
+
+	ga_mutex_lock(ctx->mutex);
 	while (num_read < num_samples) {
 		while (ctx->buflen <= ctx->bufoff) {
-			if (!FLAC__stream_decoder_process_single(ctx->flac)) return num_read;
+			if (!FLAC__stream_decoder_process_single(ctx->flac)) {
+				ga_mutex_unlock(ctx->mutex);
+				return num_read;
+			}
 		}
 
 		usz nread = min(ctx->buflen - ctx->bufoff, num_left);
+		printf("read  %p..%p\n", ctx->buffer + ctx->bufoff, ctx->buffer + ctx->bufoff + nread);
 		memcpy(sdst, ctx->buffer + ctx->bufoff, nread * 2);
 		sdst += nread;
 		num_read += nread;
@@ -123,7 +136,9 @@ static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_samples, GaCbO
 			ctx->bufoff = ctx->buflen = 0;
 		}
 	}
+	ga_mutex_unlock(ctx->mutex);
 
+	printf("READ %zu/%zu\n", num_read, num_samples);
 	return num_read;
 }
 

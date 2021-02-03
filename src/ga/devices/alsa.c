@@ -40,9 +40,9 @@ static ga_result gaX_open(GaDevice *dev) {
 	snd_pcm_format_t fmt;
 	switch (dev->format.bits_per_sample) {
 		case  8: fmt = SND_PCM_FORMAT_U8; break;
-		case 16: fmt = SND_PCM_FORMAT_S16_LE; break;
-		case 24: fmt = SND_PCM_FORMAT_S24_LE; break;
-		case 32: fmt = SND_PCM_FORMAT_S32_LE; break;
+		case 16: fmt = SND_PCM_FORMAT_S16; break;
+		case 24: fmt = SND_PCM_FORMAT_S24; break;
+		case 32: fmt = SND_PCM_FORMAT_S32; break;
 		default: res = GA_ERR_MIS_PARAM; goto cleanup;
 	}
         acheck(snd_pcm_hw_params_set_format(dev->impl->interface, params, fmt));

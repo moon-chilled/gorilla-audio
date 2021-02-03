@@ -43,15 +43,14 @@ static ga_result gaX_open(GaDevice *dev) {
 #ifdef AFMT_U8
 		case  8: fmt = AFMT_U8;     break;
 #endif
-		// TODO should these be _NE (native endian) instead?  Investigate else, preferrably test on be hw
-#ifdef AFMT_S16_LE
-		case 16: fmt = AFMT_S16_LE; break;
+#ifdef AFMT_S16_NE
+		case 16: fmt = AFMT_S16_NE; break;
 #endif
-#ifdef AFMT_S24_LE
-		case 24: fmt = AFMT_S24_LE; break;
+#ifdef AFMT_S24_NE
+		case 24: fmt = AFMT_S24_NE; break;
 #endif
-#ifdef AFMT_S32_LE
-		case 32: fmt = AFMT_S32_LE; break;
+#ifdef AFMT_S32_NE
+		case 32: fmt = AFMT_S32_NE; break;
 #endif
 		default: goto cleanup;
 	}
