@@ -37,7 +37,7 @@ static ga_result gaX_open(ga_Device *dev) {
 	result = XAudio2Create(&dev->impl->xa, 0, XAUDIO2_DEFAULT_PROCESSOR);
 	if (FAILED(result)) goto cleanup;
 
-	result = dev->impl->xa->CreateMasteringVoice(&dev->impl->master, 2, 44100, 0, 0, 0);
+	result = dev->impl->xa->CreateMasteringVoice(&dev->impl->master, 2, 48000, 0, 0, 0);
 	if (FAILED(result)) goto cleanup;
 
 	fmt.cbSize = sizeof(WAVEFORMATEX);
@@ -46,7 +46,7 @@ static ga_result gaX_open(ga_Device *dev) {
 	fmt.wFormatTag = WAVE_FORMAT_PCM;
 	fmt.nChannels = 2;
 	fmt.wBitsPerSample = 16;
-	fmt.nSamplesPerSec = 44100;
+	fmt.nSamplesPerSec = 48000;
 	fmt.nBlockAlign = fmt.nChannels * (fmt.wBitsPerSample / 8);
 	fmt.nAvgBytesPerSec = fmt.nSamplesPerSec * fmt.nBlockAlign;
 

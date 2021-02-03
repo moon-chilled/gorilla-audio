@@ -135,7 +135,7 @@ typedef enum {
  *  \ingroup GaFormat
  */
 typedef struct {
-	ga_uint32 sample_rate; /**< Sample rate (usually 44100) */
+	ga_uint32 sample_rate; /**< Sample rate (usually 48000) */
 	ga_uint32 bits_per_sample; /**< Bits per PCM sample (usually 16) */
 	ga_uint32 num_channels; /**< Number of audio channels (1 for mono, 2 for stereo) */
 } GaFormat;
@@ -216,7 +216,7 @@ typedef struct GaDevice GaDevice;
  *  \param type Requested and received device type (former is usually GaDeviceType_Default).
  *  \param num_buffers Requested and received number of buffers.
  *  \param num_samples Requested and received sample buffer size.
- *  \param format Requested device output format (usually 16-bit/44100/stereo).
+ *  \param format Requested device output format (usually 16-bit/48000/stereo).
  *  \return Concrete instance of the requested device type.  NULL if a suitable device could not be opened.
  *  \warning num_buffers, num_samples, and format are /requests/ to the audio
  *           device and may not necessarily be fulfilled.  The actually

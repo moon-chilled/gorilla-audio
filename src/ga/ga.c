@@ -61,7 +61,7 @@ GaDevice *ga_device_open(GaDeviceType *type,
 
 	u32 num_buffers = pnum_buffers ? *pnum_buffers : 4;
 	u32 num_samples = pnum_samples ? *pnum_samples : 512;
-	GaFormat format = pformat ? *pformat : (GaFormat){.bits_per_sample=16, .num_channels=2, .sample_rate=44100};
+	GaFormat format = pformat ? *pformat : (GaFormat){.bits_per_sample=16, .num_channels=2, .sample_rate=48000};
 
 	GaDevice *ret = ga_alloc(sizeof(GaDevice));
 	ret->dev_type = *type;

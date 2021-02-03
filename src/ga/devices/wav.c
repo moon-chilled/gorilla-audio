@@ -31,7 +31,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	ciwrite2(fp, 1); //pcm
 	ciwrite2(fp, dev->format.num_channels);
 	ciwrite4(fp, dev->format.sample_rate);
-	ciwrite4(fp, ga_format_sample_size(&dev->format) * dev->format.sample_rate); // 16/8 * 44100 = 2 * 44100
+	ciwrite4(fp, ga_format_sample_size(&dev->format) * dev->format.sample_rate);
 	ciwrite2(fp, ga_format_sample_size(&dev->format));
 	ciwrite2(fp, dev->format.bits_per_sample);
 
