@@ -51,13 +51,12 @@ GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
 
 	assert(thread_policy == GauThreadPolicy_Single
 	       || thread_policy == GauThreadPolicy_Multi);
-	if (!num_buffers) num_buffers = &(u32){4};
-	if (!num_samples) num_samples = &(u32){512};
+	num_buffers = num_buffers ? num_buffers : &(u32){4};
+	num_samples = num_samples ? num_samples : &(u32){512};
 	assert(*num_buffers >= 2);
 	assert(*num_samples >= 128);
 
 	/* Open device */
-	memset(&ret->format, 0, sizeof(GaFormat));
 	ret->format.bits_per_sample = 16;
 	ret->format.num_channels = 2;
 	ret->format.sample_rate = 44100;
@@ -187,14 +186,17 @@ static GaSampleSource *gau_sample_source_create(GaDataSource *data, GauAudioType
 			else return NULL;
 		} else if (!memcmp(buf, "RIFF", 4)) {
 			format = GauAudioType_Wav;
+		} else if (!memcmp(buf, "fLaC", 4)) {
+			format = GauAudioType_Flac;
 		} else {
 			return NULL;
 		}
 	}
 
-	if (format == GauAudioType_Vorbis) return gau_sample_source_create_vorbis(data);
-	if (format == GauAudioType_Opus) return gau_sample_source_create_opus(data);
 	if (format == GauAudioType_Wav) return gau_sample_source_create_wav(data);
+	if (format == GauAudioType_Flac) return gau_sample_source_create_flac(data);
+	if (format == GauAudioType_Opus) return gau_sample_source_create_opus(data);
+	if (format == GauAudioType_Vorbis) return gau_sample_source_create_vorbis(data);
 	return NULL;
 }
 

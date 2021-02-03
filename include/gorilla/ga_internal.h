@@ -104,12 +104,12 @@ struct GaDevice {
  *  source to generate actual PCM audio data.
  *
  *  \ingroup intDataSource
- *  \todo Design a clearer/better system for easily extending this data type.
  */
 struct GaDataSource {
 	GaCbDataSource_Read read;     /**< Internal read callback. */
 	GaCbDataSource_Seek seek;     /**< Internal seek callback (optional). */
 	GaCbDataSource_Tell tell;     /**< Internal tell callback. */
+	GaCbDataSource_Eof eof;       /**< Internal eof callback. */
 	GaCbDataSource_Close close;   /**< Internal close callback (optional). */
 	GaDataSourceContext *context; /**< opaque context for callbacks. */
 	GaDataAccessFlags flags;      /**< Flags defining which functionality this data source supports (see [\ref globDefs]). */

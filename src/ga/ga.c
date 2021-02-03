@@ -30,17 +30,14 @@ s32 ga_format_to_samples(GaFormat *format, f32 seconds) {
 
 /* Device Functions */
 GaDevice *ga_device_open(GaDeviceType *type,
-                          u32 *num_buffers,
-                          u32 *num_samples,
-			  GaFormat *format) {
-	if (!type) type = &(GaDeviceType){GaDeviceType_Default};
-	if (!num_buffers) num_buffers = &(u32){4};
-       	if (!num_samples) num_samples = &(u32){512};
-	if (!format) format = &(GaFormat){.bits_per_sample=16, .num_channels=2, .sample_rate=44100};
+                          u32 *pnum_buffers,
+                          u32 *pnum_samples,
+			  GaFormat *pformat) {
+	type = type ? type : &(GaDeviceType){GaDeviceType_Default};
 
 	// todo allow overriding with an environment variable
 	if (*type == GaDeviceType_Default) {
-#define try(t) *type = t; if ((ret = ga_device_open(type, num_buffers, num_samples, format))) return ret
+#define try(t) *type = t; if ((ret = ga_device_open(type, pnum_buffers, pnum_samples, pformat))) return ret
 		GaDevice *ret;
 #if defined(ENABLE_OSS)
 		try(GaDeviceType_OSS);
@@ -62,11 +59,15 @@ GaDevice *ga_device_open(GaDeviceType *type,
 		return NULL;
 	}
 
+	u32 num_buffers = pnum_buffers ? *pnum_buffers : 4;
+	u32 num_samples = pnum_samples ? *pnum_samples : 512;
+	GaFormat format = pformat ? *pformat : (GaFormat){.bits_per_sample=16, .num_channels=2, .sample_rate=44100};
+
 	GaDevice *ret = ga_alloc(sizeof(GaDevice));
 	ret->dev_type = *type;
-	ret->num_buffers = *num_buffers;
-	ret->num_samples = *num_samples;
-	ret->format = *format;
+	ret->num_buffers = num_buffers;
+	ret->num_samples = num_samples;
+	ret->format = format;
 
 	switch (*type) {
 		case GaDeviceType_Dummy: ret->procs = gaX_deviceprocs_dummy; break;
@@ -91,9 +92,9 @@ GaDevice *ga_device_open(GaDeviceType *type,
 
 	if (ret->procs.open(ret) != GA_OK) goto fail;
 	*type = ret->dev_type;
-	*num_buffers = ret->num_buffers;
-	*num_samples = ret->num_samples;
-	*format = ret->format;
+	if (pnum_buffers) *pnum_buffers = ret->num_buffers;
+	if (pnum_samples) *pnum_samples = ret->num_samples;
+	if (pformat) *pformat = ret->format;
 	return ret;
 
 fail:
@@ -117,12 +118,13 @@ ga_result ga_device_queue(GaDevice *device, void *buffer) {
 }
 
 GaDataSource *ga_data_source_create(const GaDataSourceCreationMinutiae *m) {
-	if (!m->read || !m->tell) return NULL;
+	if (!m->read || !m->tell || !m->eof) return NULL;
 	GaDataSource *ret = ga_alloc(sizeof(GaDataSource));
 	if (!ret) return NULL;
 	ret->read = m->read;
 	ret->seek = m->seek;
 	ret->tell = m->tell;
+	ret->eof = m->eof;
 	ret->close = m->close;
 	ret->context = m->context;
 	ret->flags = (m->seek ? GaDataAccessFlag_Seekable : 0)
@@ -138,6 +140,10 @@ usz ga_data_source_read(GaDataSource *src, void *dst, usz size, usz count) {
 ga_result ga_data_source_seek(GaDataSource *src, ssz offset, GaSeekOrigin whence) {
 	if (src->seek && (src->flags & GaDataAccessFlag_Seekable)) return src->seek(src->context, offset, whence);
 	else return GA_ERR_MIS_UNSUP;
+}
+
+bool ga_data_source_eof(GaDataSource *src) {
+	return src->eof(src->context);
 }
 
 usz ga_data_source_tell(GaDataSource *src) {

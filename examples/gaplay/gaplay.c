@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include <gorilla/ga.h>
 #include <gorilla/gau.h>
@@ -42,7 +43,7 @@ int main(int argc, char **argv) {
 
 	ga_initialize_systemops(NULL);
 	GauManager *mgr = check(gau_manager_create_custom(&(GaDeviceType){GaDeviceType_Default}, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
-	//GauManager *mgr = check(gau_manager_create_custom(&(GaDeviceType){GaDeviceType_WAV}, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
+	//GauManager *mgr = check(gau_manager_create_custom(&(GaDeviceType){GaDeviceType_Dummy}, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
 	GaMixer *mixer = check(gau_manager_mixer(mgr), "Unable to get mixer from manager");
 	GaStreamManager *smgr = gau_manager_stream_manager(mgr);
 

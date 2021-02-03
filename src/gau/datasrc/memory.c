@@ -48,9 +48,15 @@ done:
 	return ret;
 }
 static usz tell(GaDataSourceContext *ctx) {
-	ga_mutex_lock(ctx->mutex);
-	usz ret = ctx->pos;
-	ga_mutex_unlock(ctx->mutex);
+	usz ret;
+	with_mutex(ctx->mutex) ret = ctx->pos;
+	return ret;
+}
+static bool eof(GaDataSourceContext *ctx) {
+	bool ret;
+	with_mutex(ctx->mutex) {
+		ret = ctx->pos >= ga_memory_size(ctx->memory);
+	}
 	return ret;
 }
 static void close(GaDataSourceContext *ctx) {
@@ -66,6 +72,7 @@ GaDataSource *gau_data_source_create_memory(GaMemory *memory) {
 		.read = read,
 		.seek = seek,
 		.tell = tell,
+		.eof = eof,
 		.close = close,
 		.context = ctx,
 		.threadsafe = true,

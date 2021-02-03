@@ -58,7 +58,7 @@ typedef double           ga_float64;
 /**< Return type for the result of an operation.
  *
  * If you just want a quick description of an error and don't want to handle
- * each separately, check if it's greater than each of the
+ * each separately, check if it's >= than each of the
  * categories--GA_ERR_GENERIC, GA_ERR_MIS, GA_ERR_SYS, GA_ERR_FMT
  */
 typedef enum {

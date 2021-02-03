@@ -22,6 +22,9 @@ static usz tell(GaDataSourceContext *ctx) {
 	assert(ret >= 0); //todo handle
 	return ret;
 }
+static bool eof(GaDataSourceContext *ctx) {
+	return feof((FILE*)ctx);
+}
 static void close(GaDataSourceContext *ctx) {
 	fclose((FILE*)ctx);
 }
@@ -34,6 +37,7 @@ static GaDataSource *gau_data_source_create_fp(FILE *fp) {
 		.read = read,
 		.seek = seek,
 		.tell = tell,
+		.eof = eof,
 		.close = close,
 		.context = (GaDataSourceContext*)fp,
 		.threadsafe = true,

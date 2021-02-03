@@ -332,6 +332,14 @@ typedef ga_result (*GaCbDataSource_Seek)(GaDataSourceContext *context, ga_ssize 
  */
 typedef ga_usize (*GaCbDataSource_Tell)(GaDataSourceContext *context);
 
+/** Data source eof callback prototype.
+ *
+ *  \ingroup intDataSource
+ *  \param context User context.
+ *  \return Whether the stream is at its end.
+ */
+typedef ga_bool (*GaCbDataSource_Eof)(GaDataSourceContext *context);
+
 /** Data source close callback prototype.
  *
  *  \ingroup intDataSource
@@ -343,6 +351,7 @@ typedef struct {
 	GaCbDataSource_Read read;
 	GaCbDataSource_Seek seek;   // OPTIONAL
 	GaCbDataSource_Tell tell;
+	GaCbDataSource_Eof eof;
 	GaCbDataSource_Close close; // OPTIONAL
 	GaDataSourceContext *context;
 	ga_bool threadsafe;
@@ -384,6 +393,13 @@ ga_result ga_data_source_seek(GaDataSource *dataSrc, ga_ssize offset, GaSeekOrig
  *  \return The current data source read position.
  */
 ga_usize ga_data_source_tell(GaDataSource *dataSrc);
+
+/** Tells whether the end of the data source has been reached.
+ *
+ *  \ingroup GaDataSource
+ *  \param dataSrc Data source to tell the read position of.
+ */
+ga_bool ga_data_source_eof(GaDataSource *dataSrc);
 
 /** Returns the bitfield of flags set for a data source (see \ref globDefs).
  *

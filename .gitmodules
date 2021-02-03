@@ -10,3 +10,6 @@
 [submodule "ext/opusfile"]
 	path = ext/opusfile
 	url = https://gitlab.xiph.org/xiph/opusfile.git
+[submodule "ext/libflac"]
+	path = ext/libflac
+	url = https://gitlab.xiph.org/xiph/flac.git
