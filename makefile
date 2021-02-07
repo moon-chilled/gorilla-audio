@@ -31,6 +31,7 @@ ifneq ($(CC),tcc)
 endif
 
 ENABLE_XAUDIO2 := 0
+ENABLE_ARCAN := 0
 ENABLE_PULSEAUDIO := 0
 ENABLE_ALSA := 0
 ENABLE_OSS := 0
@@ -77,7 +78,7 @@ ifeq ($(TARGET),win32)
 else ifeq ($(TARGET),macos)
 	ENABLE_OPENAL := 1
 else ifeq ($(TARGET),linux)
-	ENABLE_PULSEAUDIO := 1
+	#ENABLE_PULSEAUDIO := 1 #alsa backend in much better state than pulse, and pulse alsa impl isn't going anywhere
 	ENABLE_ALSA := 1
 
 	FLAC_CFLAGS += -D_DEFAULT_SOURCE
@@ -94,6 +95,11 @@ ifeq ($(ENABLE_XAUDIO2),1)
 	CFLAGS += -DENABLE_XAUDIO2
 	CXXFLAGS += -DENABLE_XAUDIO2
 	GA_SRC += src/ga/devices/xaudio2.cc
+endif
+ifeq ($(ENABLE_ARCAN),1)
+	CFLAGS += -DENABLE_ARCAN `pkg-config --cflags arcan-shmif`
+	LFLAGS += `pkg-config --libs arcan-shmif`
+	GA_SRC += src/ga/devices/arcan.c
 endif
 ifeq ($(ENABLE_PULSEAUDIO),1)
 	CFLAGS += -DENABLE_PULSEAUDIO `pkg-config --cflags libpulse-simple`

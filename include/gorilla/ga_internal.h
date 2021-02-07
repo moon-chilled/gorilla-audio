@@ -51,6 +51,10 @@ extern GaXDeviceProcs gaX_deviceprocs_OSS;
 extern GaXDeviceProcs gaX_deviceprocs_XAudio2;
 #endif
 
+#ifdef ENABLE_ARCAN
+extern GaXDeviceProcs gaX_deviceprocs_Arcan;
+#endif
+
 #ifdef ENABLE_PULSEAUDIO
 extern GaXDeviceProcs gaX_deviceprocs_PulseAudio;
 #endif

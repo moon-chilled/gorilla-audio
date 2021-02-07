@@ -1,6 +1,6 @@
+#define _POSIX_C_SOURCE 200809l //nanosleep
 #include "gorilla/ga_internal.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -127,6 +127,7 @@ void ga_mutex_unlock(GaMutex mutex) {
 #elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__unix__) || defined(__POSIX__)
 #include <pthread.h>
 #include <sched.h>
+#include <time.h>
 
 static s32 priority_lut[] = {
 	[GaThreadPriority_Normal] = 0,
