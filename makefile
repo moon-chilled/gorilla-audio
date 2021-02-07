@@ -30,6 +30,9 @@ ifneq ($(CC),tcc)
 	CFLAGS += -MMD
 endif
 
+BUILD_STATIC := 1
+BUILD_DYNAMIC := 1
+
 ENABLE_XAUDIO2 := 0
 ENABLE_ARCAN := 0
 ENABLE_PULSEAUDIO := 0
@@ -97,8 +100,13 @@ ifeq ($(ENABLE_XAUDIO2),1)
 	GA_SRC += src/ga/devices/xaudio2.cc
 endif
 ifeq ($(ENABLE_ARCAN),1)
-	CFLAGS += -DENABLE_ARCAN `pkg-config --cflags arcan-shmif`
-	LFLAGS += `pkg-config --libs arcan-shmif`
+	CFLAGS += -DENABLE_ARCAN
+	ifeq ($(ARCAN_LWA_BUILD),1)
+		CFLAGS += $(ARCAN_LWA_CFLAGS)
+	else
+		CFLAGS += `pkg-config --cflags arcan-shmif`
+		LFLAGS += `pkg-config --libs arcan-shmif`
+	endif
 	GA_SRC += src/ga/devices/arcan.c
 endif
 ifeq ($(ENABLE_PULSEAUDIO),1)
@@ -126,7 +134,13 @@ endif
 #TEARDOWN#
 ##########
 
-default: o/$(MODE)/libgorilla.so o/$(MODE)/libgorilla.a
+ifeq ($(BUILD_STATIC),1)
+default: o/$(MODE)/libgorilla.a
+endif
+
+ifeq ($(BUILD_DYNAMIC),1)
+default: o/$(MODE)/libgorilla.so
+endif
 
 include $(wildcard src/$(MODE)/ga/src/*.d src/$(MODE)/ga/*/*.d src/$(MODE)/gau/*.d src/$(MODE)/gau/*/*.d)
 
