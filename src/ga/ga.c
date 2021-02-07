@@ -743,7 +743,7 @@ ga_result ga_mixer_mix(GaMixer *m, void *buffer) {
 }
 
 ga_result ga_mixer_dispatch(GaMixer *m) {
-	for (GaLink *link = m->dispatch_list.next; link != &m->dispatch_list; link = link->next) {
+	for (GaLink *next, *link = m->dispatch_list.next; (next = link->next), (link != &m->dispatch_list); link = next) {
 		GaHandle *handle = link->data;
 
 		/* Remove finished handles and call callbacks */
