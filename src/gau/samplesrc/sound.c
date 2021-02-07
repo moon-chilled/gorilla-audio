@@ -8,7 +8,7 @@ struct GaSampleSourceContext {
 	u32 sample_size;
 	usz num_samples;
 	GaMutex pos_mutex;
-	atomic_usz pos;
+	usz pos;
 };
 
 static usz read(GaSampleSourceContext *ctx, void *dst, usz num_samples, GaCbOnSeek onseek, void *seek_ctx) {
@@ -49,6 +49,7 @@ static void close(GaSampleSourceContext *ctx) {
 GaSampleSource *gau_sample_source_create_sound(GaSound *sound) {
 	GaSampleSourceContext *ctx = ga_alloc(sizeof(GaSampleSourceContext));
 	if (!ctx) return NULL;
+	if (!ga_isok(ga_mutex_create(&ctx->pos_mutex))) goto fail;
 
 	GaSampleSourceCreationMinutiae m = {
 		.read = read,
@@ -68,10 +69,12 @@ GaSampleSource *gau_sample_source_create_sound(GaSound *sound) {
 	ctx->pos = 0;
 
 	GaSampleSource *ret = ga_sample_source_create(&m);
-	if (!ret) {
-		ga_free(ctx);
-		return NULL;
-	}
+	if (!ret) goto fail;
 	ga_sound_acquire(sound);
 	return ret;
+
+fail:
+	if (ctx) ga_mutex_destroy(ctx->pos_mutex);
+	ga_free(ctx);
+	return NULL;
 }

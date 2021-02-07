@@ -66,6 +66,17 @@ static s32 gaX_check(GaDevice *dev) {
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	struct arcan_shmif_cont *c = dev->impl->acon;
+
+	if (!dev->impl->homemade) {
+		struct {
+			u64 magic;
+			atomic_u8 resize_pending;
+		} *debedebe = c->user;
+		if (debedebe && debedebe->magic == 0xfeedface) {
+			while (debedebe->resize_pending) ga_thread_sleep(1); /* :| */
+		}
+	}
+
 	if (!arcan_shmif_lock(c)) return GA_ERR_SYS_LIB;
 	usz desired = dev->num_samples * ga_format_sample_size(&dev->format);
 	usz avail = c->abufsize - c->abufused;

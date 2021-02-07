@@ -29,6 +29,7 @@ typedef struct {
 	_Atomic u32 rc;
 } RC; //refcount
 typedef _Atomic bool atomic_bool;
+typedef _Atomic u8  atomic_u8;
 typedef _Atomic u32 atomic_u32;
 typedef ga_atomic_usize atomic_usz;
 typedef _Atomic ssz atomic_ssz;
