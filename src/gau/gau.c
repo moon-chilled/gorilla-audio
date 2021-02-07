@@ -260,15 +260,14 @@ GaHandle *gau_create_handle_memory(GaMixer *mixer, GaMemory *memory, GauAudioTyp
 	return ret;
 }
 
-GaHandle *gau_create_handle_buffered_data(GaMixer *mixer, GaStreamManager *stream_mgr,
-                                           GaDataSource *data, GauAudioType format,
-                                           GaCbHandleFinish callback, void *context,
-                                           GauSampleSourceLoop **loop_src) {
-	if (!data) return NULL;
-	GaHandle *ret = NULL;
-
-	GaSampleSource *src = gau_sample_source_create(data, format);
+GaHandle *gau_create_handle_buffered_samples(GaMixer *mixer, GaStreamManager *stream_mgr, GaSampleSource *src,
+                                             GaCbHandleFinish callback, void *context,
+                                             GauSampleSourceLoop **loop_src) {
 	if (!src) return NULL;
+
+	ga_sample_source_acquire(src);
+
+	GaHandle *ret = NULL;
 
 	GaSampleSource *src2 = src;
 	if (loop_src) {
@@ -286,6 +285,17 @@ GaHandle *gau_create_handle_buffered_data(GaMixer *mixer, GaStreamManager *strea
 			ga_handle_set_callback(ret, callback, context);
 		}
 	}
+	return ret;
+}
+
+GaHandle *gau_create_handle_buffered_data(GaMixer *mixer, GaStreamManager *stream_mgr,
+                                           GaDataSource *data, GauAudioType format,
+                                           GaCbHandleFinish callback, void *context,
+                                           GauSampleSourceLoop **loop_src) {
+	if (!data) return NULL;
+	GaSampleSource *src = gau_sample_source_create(data, format);
+	GaHandle *ret = gau_create_handle_buffered_samples(mixer, stream_mgr, src, callback, context, loop_src);
+	ga_sample_source_release(src);
 	return ret;
 }
 

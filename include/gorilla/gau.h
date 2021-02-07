@@ -283,35 +283,43 @@ GaSound *gau_load_sound_file(const char *in_filename, GauAudioType in_format);
  *
  *  \ingroup createHelper
  */
-GaHandle *gau_create_handle_memory(GaMixer *in_mixer, GaMemory *in_memory, GauAudioType in_format,
-                                    GaCbHandleFinish in_callback, void *in_context,
-                                    GauSampleSourceLoop **out_loopSrc);
+GaHandle *gau_create_handle_memory(GaMixer *mixer, GaMemory *memory, GauAudioType format,
+                                    GaCbHandleFinish callback, void *context,
+                                    GauSampleSourceLoop **loop_src);
 
 /** Create a handle to play a sound object.
  *
  *  \ingroup createHelper
  */
-GaHandle *gau_create_handle_sound(GaMixer *in_mixer, GaSound *in_sound,
-                                   GaCbHandleFinish in_callback, void *in_context,
-                                   GauSampleSourceLoop **out_loopSrc);
+GaHandle *gau_create_handle_sound(GaMixer *mixer, GaSound *sound,
+                                   GaCbHandleFinish callback, void *context,
+                                   GauSampleSourceLoop **loop_src);
+
+/** Create a handle to play a background-buffered stream from a sample source.
+ *
+ *  \ingroup createHelper
+ */
+GaHandle *gau_create_handle_buffered_samples(GaMixer *mixer, GaStreamManager *stream_mgr, GaSampleSource *src,
+                                           GaCbHandleFinish callback, void *context,
+                                           GauSampleSourceLoop **loop_src);
 
 /** Create a handle to play a background-buffered stream from a data source.
  *
  *  \ingroup createHelper
  */
-GaHandle *gau_create_handle_buffered_data(GaMixer *in_mixer, GaStreamManager *in_streamMgr,
-                                           GaDataSource *in_dataSrc, GauAudioType in_format,
-                                           GaCbHandleFinish in_callback, void *in_context,
-                                           GauSampleSourceLoop **out_loopSrc);
+GaHandle *gau_create_handle_buffered_data(GaMixer *mixer, GaStreamManager *streamMgr,
+                                           GaDataSource *data_src, GauAudioType format,
+                                           GaCbHandleFinish callback, void *context,
+                                           GauSampleSourceLoop **loop_src);
 
 /** Create a handle to play a background-buffered stream from a file.
  *
  *  \ingroup createHelper
  */
-GaHandle *gau_create_handle_buffered_file(GaMixer *in_mixer, GaStreamManager *in_streamMgr,
-                                           const char *in_filename, GauAudioType in_format,
-                                           GaCbHandleFinish in_callback, void *in_context,
-                                           GauSampleSourceLoop **out_loopSrc);
+GaHandle *gau_create_handle_buffered_file(GaMixer *mixer, GaStreamManager *stream_mgr,
+                                           const char *filename, GauAudioType format,
+                                           GaCbHandleFinish callback, void *context,
+                                           GauSampleSourceLoop **loop_src);
 
 #ifdef __cplusplus
 }
