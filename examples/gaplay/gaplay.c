@@ -44,7 +44,6 @@ int main(int argc, char **argv) {
 
 	ga_initialize_systemops(NULL);
 	GauManager *mgr = check(gau_manager_create_custom(&(GaDeviceType){GaDeviceType_Default}, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
-	//GauManager *mgr = check(gau_manager_create_custom(&(GaDeviceType){GaDeviceType_Dummy}, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
 	GaMixer *mixer = check(gau_manager_mixer(mgr), "Unable to get mixer from manager");
 	GaStreamManager *smgr = gau_manager_stream_manager(mgr);
 
@@ -56,15 +55,16 @@ int main(int argc, char **argv) {
 			check(ds, "Could not open file '%s'.", argv[1]);
 			GaSampleSource *ss = ga_contrib_sample_source_create_mp3(ds);
 			check(ss, "Could not load file '%s'.", argv[1]);
-			handle = ga_handle_create(mixer, ss);
 			ga_data_source_release(ds);
+			handle = gau_create_handle_buffered_samples(mgr, ss, NULL, NULL, NULL);
+			check(handle, "oops...");
 			ga_sample_source_release(ss);
 		} else {
-			handle = gau_create_handle_buffered_file(mixer, smgr, argv[1], GauAudioType_Autodetect, NULL, NULL, NULL);
+			handle = gau_create_handle_buffered_file(mgr, argv[1], GauAudioType_Autodetect, NULL, NULL, NULL);
 		}
 	}
 	check(handle, ":(");
-	//ga_handle_setParamf(handle, GA_HANDLE_PARAM_PAN, 0);
+	//ga_handle_set_paramf(handle, GaHandleParam_Pan, 0);
 
 	ga_handle_play(handle);
 
@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
 	while (ga_handle_playing(handle)) {
 		gau_manager_update(mgr);
 		assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
-		cur = ga_format_to_seconds(&dev->format, cur);
+		cur = ga_format_to_seconds(&hfmt, cur);
 		printtime(cur);
 		printf(" / ");
 		printtime(dur);
