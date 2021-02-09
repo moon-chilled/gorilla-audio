@@ -687,7 +687,7 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_sampl
 	/* TODO: To optimize, we can refactor the _read() interface to be _mix(), avoiding this malloc/copy */
 	void *src = ga_alloc(requested * srcSampleSize);
 	s32 numRead = 0;
-	numRead = ga_sample_source_read(ss, src, requested, 0, 0);
+	numRead = ga_sample_source_read(ss, src, requested, NULL, NULL);
 	gaX_mixer_mix_buffer(mixer,
 	                     src, numRead, &handleFormat,
 	                     mixer->mix_buffer, num_samples, &mixer->format,

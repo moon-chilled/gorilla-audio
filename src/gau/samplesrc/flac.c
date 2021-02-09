@@ -13,7 +13,9 @@ struct GaSampleSourceContext {
 	GaDataSource *data_src;
 	usz datalen; //iff ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable
 	s16 *buffer;
-	u32 buflen, bufoff, bufcap;
+	u32 bufmax; // one past the index of the highest valid (unread) sample
+	u32 bufoff; // the index of the first valid sample
+	u32 bufcap; // the number of samples that can ever be stored in buffer
 
 	GaFormat fmt;
 
@@ -75,6 +77,9 @@ static void flac_metadata(const FLAC__StreamDecoder *decoder, const FLAC__Stream
 	ctx->fmt.sample_rate = metadata->data.stream_info.sample_rate;
 	ctx->fmt.num_channels = metadata->data.stream_info.channels;
 	ctx->flacbps = metadata->data.stream_info.bits_per_sample;
+
+	ctx->bufcap = metadata->data.stream_info.max_blocksize * ctx->fmt.num_channels;
+	ctx->buffer = ga_alloc(ctx->bufcap * sizeof(*ctx->buffer));
 }
 
 
@@ -83,63 +88,52 @@ static FLAC__StreamDecoderWriteStatus flac_write(const FLAC__StreamDecoder *deco
 	// lock not required; decode will only be called by a thread that's already acquired a mutex
 
 	assert (!ctx->bufoff);
-	assert (frame->header.channels == 2);
+	assert (!ctx->bufmax);
 	assert (ctx->flacbps == 16);
+	assert (frame->header.channels == ctx->fmt.num_channels);
 
-	{
-		usz c = frame->header.blocksize * ctx->fmt.num_channels + ctx->bufoff;
-		if (c > ctx->bufcap) {
-			ctx->buffer = ga_realloc(ctx->buffer, c * 2);
-			ctx->bufcap = c;
-		}
-	}
+	assert (ctx->bufcap >= frame->header.blocksize * ctx->fmt.num_channels + ctx->bufoff);
 
 	s16 *p = ctx->buffer;
 	for (usz i = 0; i < frame->header.blocksize; i++) {
 		for (usz j = 0; j < ctx->fmt.num_channels; j++) {
-			//todo don't truncate (mixer needs to requantize on its own)
-			//*p++ = buffer[j][i] << 16; //not great data access :/ oh well
 			*p++ = buffer[j][i]; //not great data access :/ oh well
-			printf("%d>\n", buffer[j][i]);
 		}
 	}
-	ctx->buflen = p - ctx->buffer;
-	printf("write %p..%p\n", ctx->buffer, p);
+	ctx->bufmax += p - ctx->buffer;
 
 	return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
 }
 
-static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_samples, GaCbOnSeek onseek, void *seek_ctx) {
-	usz num_read = 0;
-	usz num_left = num_samples;
+static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_frames, GaCbOnSeek onseek, void *seek_ctx) {
+	usz frames_read = 0;
+	usz num_left = num_frames*ctx->fmt.num_channels;
 	s16 *sdst = dst;
 
 	ga_mutex_lock(ctx->mutex);
-	while (num_read < num_samples) {
-		while (ctx->buflen <= ctx->bufoff) {
+	while (frames_read < num_frames) {
+		while (ctx->bufoff+1 >= ctx->bufmax) {
 			if (!FLAC__stream_decoder_process_single(ctx->flac)) {
 				ga_mutex_unlock(ctx->mutex);
-				return num_read;
+				return frames_read;
 			}
 		}
 
-		usz nread = min(ctx->buflen - ctx->bufoff, num_left);
-		printf("read  %p..%p\n", ctx->buffer + ctx->bufoff, ctx->buffer + ctx->bufoff + nread);
+		usz nread = min(ctx->bufmax - ctx->bufoff, num_left);
 		memcpy(sdst, ctx->buffer + ctx->bufoff, nread * 2);
 		sdst += nread;
-		num_read += nread;
+		frames_read += nread/ctx->fmt.num_channels;
 		ctx->bufoff += nread;
 		num_left -= nread;
 		ctx->sample_off += nread;
 
-		if (ctx->bufoff+1 >= ctx->buflen) {
-			ctx->bufoff = ctx->buflen = 0;
+		if (ctx->bufoff+1 >= ctx->bufmax) {
+			ctx->bufoff = ctx->bufmax = 0;
 		}
 	}
 	ga_mutex_unlock(ctx->mutex);
 
-	printf("READ %zu/%zu\n", num_read, num_samples);
-	return num_read;
+	return frames_read;
 }
 
 static ga_bool ss_end(GaSampleSourceContext *ctx) {

@@ -41,30 +41,26 @@ struct GaSampleSourceContext {
 	GaMutex ogg_mutex;
 };
 
-static usz ss_read(GaSampleSourceContext *ctx, void *odst, usz num_samples,
+static usz ss_read(GaSampleSourceContext *ctx, void *odst, usz num_frames,
                                             GaCbOnSeek onseek, void *seek_ctx) {
 	usz ret = 0;
-	usz left = num_samples;
+	usz left = num_frames * ctx->format.num_channels;
 	s16 *dst = odst;
 
 	with_mutex(ctx->ogg_mutex) {
-		int i;
 		do {
-			i = op_read(ctx->ogg_file, dst, left, NULL);
+			int i = op_read(ctx->ogg_file, dst, left, NULL);
 			if (i > 0) {
-				usz a = i * ctx->format.num_channels;
-				ret += a;
-				dst = (s16*)((char*)dst + a);
-				left -= a;
+				ret += i;
+				dst += i * ctx->format.num_channels;
+				left -= i * ctx->format.num_channels;
 			} else {
 				ctx->end_of_samples = true;
+				break;
 			}
-		} while (ret < num_samples && i > 0);
-		assert (i > 0);
+		} while (left);
 	}
 
-	assert (num_samples == ret);
-	
 	return ret;
 }
 
