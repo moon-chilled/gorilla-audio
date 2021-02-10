@@ -100,11 +100,11 @@ static ga_result gaX_close(GaDevice *dev) {
 	return GA_OK;
 }
 
-static s32 gaX_check(GaDevice *dev) {
+static u32 gaX_check(GaDevice *dev) {
 	pa_mainloop_iterate(dev->impl->mainloop, 0, NULL);
 	dev->impl->looped = true;
 	usz r = pa_stream_writable_size(dev->impl->stream);
-	if (r == (usz)-1) return -1;
+	if (r == (usz)-1) return 0;
 	return r / (dev->num_samples * ga_format_sample_size(&dev->format));
 }
 

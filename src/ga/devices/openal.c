@@ -87,7 +87,7 @@ static ga_result gaX_close(GaDevice *dev) {
 	return GA_OK;
 }
 
-static s32 gaX_check(GaDevice *dev) {
+static u32 gaX_check(GaDevice *dev) {
 	ga_result ret;
 	s32 whichBuf = 0;
 	s32 numProcessed = 0;

@@ -59,7 +59,7 @@ static ga_result gaX_close(GaDevice *dev) {
 	return GA_OK;
 }
 
-static s32 gaX_check(GaDevice *dev) {
+static u32 gaX_check(GaDevice *dev) {
 	struct arcan_shmif_cont *c = dev->impl->acon;
 	return (c->abufsize - c->abufused) / (dev->num_samples * ga_format_sample_size(&dev->format));
 }

@@ -226,17 +226,19 @@ typedef struct GaDevice GaDevice;
  *           NULL for any of these arguments, a reasonable default will be chosen.
  */
 GaDevice *ga_device_open(GaDeviceType *type,
-                          ga_uint32 *num_buffers,
-                          ga_uint32 *num_samples,
-                          GaFormat *format);
+                         ga_uint32 *num_buffers,
+                         ga_uint32 *num_samples,
+                         GaFormat *format);
 
 /** Checks the number of free (unqueued) buffers.
  *
  *  \ingroup GaDevice
  *  \param device Device to check.
- *  \return Number of free (unqueued) buffers.
+ *  \return Number of free (unqueued) buffers.  0 can indicate either that
+ *          there are no free buffers or that an error has occurred.  TODO
+ *          error-checking interface
  */
-ga_sint32 ga_device_check(GaDevice *device);
+ga_uint32 ga_device_check(GaDevice *device);
 
 /** Adds a buffer to a device's presentation queue.
  *

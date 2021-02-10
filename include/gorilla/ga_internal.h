@@ -35,7 +35,7 @@ extern "C" {
  */
 typedef struct {
 	ga_result (*open)(GaDevice *dev);
-	s32 (*check)(GaDevice *dev);
+	u32 (*check)(GaDevice *dev);
 	ga_result (*queue)(GaDevice *dev, void *buffer);
 	ga_result (*close)(GaDevice *device);
 } GaXDeviceProcs;

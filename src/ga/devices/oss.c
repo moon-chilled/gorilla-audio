@@ -68,8 +68,8 @@ static ga_result gaX_close(GaDevice *dev) {
 	return close((int)(usz)dev->impl) ? GA_ERR_SYS_IO : GA_OK;
 }
 
-static s32 gaX_check(GaDevice *dev) {
-	return dev->num_buffers; //TODO is this right?
+static u32 gaX_check(GaDevice *dev) {
+	return dev->num_buffers; //TODO
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {

@@ -80,7 +80,7 @@ static ga_result gaX_close(GaDevice *dev) {
 	return GA_OK;
 }
 
-static s32 gaX_check(GaDevice *dev) {
+static u32 gaX_check(GaDevice *dev) {
 	snd_pcm_sframes_t avail = snd_pcm_avail(dev->impl->interface);
 	if (avail < 0) return 0;
 	return avail / dev->num_samples;

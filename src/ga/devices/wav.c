@@ -63,8 +63,8 @@ static ga_result gaX_close(GaDevice *dev) {
 	return failure ? GA_ERR_SYS_IO : GA_OK;
 }
 
-static s32 gaX_check(GaDevice *dev) {
-	return 1;
+static u32 gaX_check(GaDevice *dev) {
+	return 1; //TODO
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
