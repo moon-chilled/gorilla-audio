@@ -135,4 +135,4 @@ done:
 	return ret;
 }
 
-GaXDeviceProcs gaX_deviceprocs_OpenAL = { gaX_open, gaX_check, gaX_queue, gaX_close };
+GaXDeviceProcs gaX_deviceprocs_OpenAL = { .open=gaX_open, .check=gaX_check, .queue=gaX_queue, .close=gaX_close };

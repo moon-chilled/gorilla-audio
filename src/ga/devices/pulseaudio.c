@@ -107,6 +107,18 @@ static u32 gaX_check(GaDevice *dev) {
 	return r / (dev->num_samples * ga_format_sample_size(&dev->format));
 }
 
+static void *gaX_get_buffer(GaDevice *dev) {
+	void *ret;
+	usz l = dev->num_samples * ga_format_sample_size(&dev->format);
+	if (pa_stream_begin_write(dev->impl->stream, &ret, &l) != 0 || ret == NULL) return NULL;
+	if (l < dev->num_samples * ga_format_sample_size(&dev->format)) {
+		pa_stream_cancel_write(dev->impl->stream);
+		return NULL;
+	}
+
+	return ret;
+}
+
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	if (!dev->impl->looped) pa_mainloop_iterate(dev->impl->mainloop, 0, NULL);
 	dev->impl->looped = false;
@@ -114,4 +126,4 @@ static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	return res==0 ? GA_OK : GA_ERR_SYS_LIB;
 }
 
-GaXDeviceProcs gaX_deviceprocs_PulseAudio = { gaX_open, gaX_check, gaX_queue, gaX_close };
+GaXDeviceProcs gaX_deviceprocs_PulseAudio = { .open=gaX_open, .check=gaX_check, .get_buffer=gaX_get_buffer, .queue=gaX_queue, .close=gaX_close };

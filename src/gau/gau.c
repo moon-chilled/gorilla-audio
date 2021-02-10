@@ -14,25 +14,25 @@ struct GauManager {
 	GaDevice *device;
 	GaMixer *mixer;
 	GaStreamManager *stream_mgr;
-	u32 sample_size;
-	s16 *mix_buffer;
 	GaFormat format;
 	bool kill_threads;
 };
 
-static ga_result gauX_mixThreadFunc(void *context) {
+static ga_result mix_thread(void *context) {
 	GauManager *ctx = context;
 	while (!ctx->kill_threads) {
-		s32 numToQueue = ga_device_check(ctx->device);
+		u32 numToQueue = ga_device_check(ctx->device);
 		while (numToQueue--) {
-			ga_mixer_mix(ctx->mixer, ctx->mix_buffer);
-			ga_device_queue(ctx->device, ctx->mix_buffer);
+			s16 *buf = ga_device_get_buffer(ctx->device);
+			if (!buf) continue; //avoid churning cpu, even at the cost of underruns
+			ga_mixer_mix(ctx->mixer, buf);
+			ga_device_queue(ctx->device, buf);
 		}
 		ga_thread_sleep(5);
 	}
 	return GA_OK;
 }
-static ga_result gauX_streamThreadFunc(void *context) {
+static ga_result stream_thread(void *context) {
 	GauManager *ctx = context;
 	while (!ctx->kill_threads) {
 		ga_stream_manager_buffer(ctx->stream_mgr);
@@ -68,16 +68,13 @@ GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
 	if (!ret->mixer) goto fail;
 	ret->stream_mgr = ga_stream_manager_create();
 	if (!ret->stream_mgr) goto fail;
-	ret->sample_size = ga_format_sample_size(&ret->format);
-	ret->mix_buffer = ga_alloc(*num_samples * ret->sample_size);
-	if (!ret->mix_buffer) goto fail;
 
 	/* Create and run mixer and stream threads */
 	ret->thread_policy = thread_policy;
 	ret->kill_threads = false;
-	if(ret->thread_policy == GauThreadPolicy_Multi) {
-		ret->mix_thread = ga_thread_create(gauX_mixThreadFunc, ret, GaThreadPriority_Highest, 64 * 1024);
-		ret->stream_thread = ga_thread_create(gauX_streamThreadFunc, ret, GaThreadPriority_Highest, 64 * 1024);
+	if (ret->thread_policy == GauThreadPolicy_Multi) {
+		ret->mix_thread = ga_thread_create(mix_thread, ret, GaThreadPriority_Highest, 64 * 1024);
+		ret->stream_thread = ga_thread_create(stream_thread, ret, GaThreadPriority_Highest, 64 * 1024);
 	} else {
 		ret->mix_thread = NULL;
 		ret->stream_thread = NULL;
@@ -89,24 +86,23 @@ fail:
 		if (ret->device) ga_device_close(ret->device);
 		if (ret->mixer) ga_mixer_destroy(ret->mixer);
 		if (ret->stream_mgr) ga_stream_manager_destroy(ret->stream_mgr);
-		if (ret->mix_buffer) ga_free(ret->mix_buffer);
 		ga_free(ret);
 	}
 	return NULL;
 }
 void gau_manager_update(GauManager *mgr) {
-	if (mgr->thread_policy == GauThreadPolicy_Single) {
-		s16 *buf = mgr->mix_buffer;
-		GaMixer *mixer = mgr->mixer;
-		GaDevice *dev = mgr->device;
-		s32 numToQueue = ga_device_check(dev);
-		while (numToQueue--) {
-			ga_mixer_mix(mixer, buf);
-			ga_device_queue(dev, buf);
-		}
-		ga_stream_manager_buffer(mgr->stream_mgr);
-	}
 	ga_mixer_dispatch(mgr->mixer);
+	if (mgr->thread_policy == GauThreadPolicy_Multi) return;
+	GaMixer *mixer = mgr->mixer;
+	GaDevice *dev = mgr->device;
+	u32 numToQueue = ga_device_check(dev);
+	while (numToQueue--) {
+		s16 *buf = ga_device_get_buffer(dev);
+		if (!buf) continue;
+		ga_mixer_mix(mixer, buf);
+		ga_device_queue(dev, buf);
+	}
+	ga_stream_manager_buffer(mgr->stream_mgr);
 }
 
 GaMixer *gau_manager_mixer(GauManager *mgr) {
@@ -131,7 +127,6 @@ void gau_manager_destroy(GauManager *mgr) {
 	/* Clean up mixer and stream manager */
 	ga_stream_manager_destroy(mgr->stream_mgr);
 	ga_mixer_destroy(mgr->mixer);
-	ga_free(mgr->mix_buffer);
 	ga_device_close(mgr->device);
 	ga_free(mgr);
 }

@@ -241,14 +241,29 @@ GaDevice *ga_device_open(GaDeviceType *type,
  */
 ga_uint32 ga_device_check(GaDevice *device);
 
+/** Get a pointer to a new buffer.
+ *
+ *  \ingroup GaDevice
+ *  \return The new buffer, or NULL if none is available.
+ *  \warning Always call ga_device_queue on the resultant buffer (if it is
+ *           valid) before calling ga_device_get_buffer again.  
+ */
+void *ga_device_get_buffer(GaDevice *device);
+
 /** Adds a buffer to a device's presentation queue.
  *
  *  \ingroup GaDevice
  *  \param device Device in which to queue the buffer.
- *  \param buffer Buffer to add to the presentation queue.
- *  \return GA_OK if the buffer was queued successfully. GA_ERR_GENERIC if not.
+ *  \param buffer Buffer to add to the presentation queue.  Note: this buffer
+ *                _must_ come from ga_device_get_buffer.  For devices which
+ *                don't
+ *  \return GA_OK iff the buffer was queued successfully.
+ *          GA_ERR_MIS_PARAM if buffer is NULL or (potentially) if it does not originate from ga_device_get_buffer
+ *          GA_ERR_SYS_LIB or GA_ERR_SYS_IO if the system refused to serve our request
  *  \warning You should always call ga_device_check() prior to queueing a buffer! If
  *           there isn't a free (unqueued) buffer, the operation may fail.
+ *  \warning Takes ownership of buffer; always call ga_device_get_buffer
+ *           to get a new one.
  */
 ga_result ga_device_queue(GaDevice *device, void *buffer);
 
@@ -256,7 +271,7 @@ ga_result ga_device_queue(GaDevice *device, void *buffer);
  *
  *  \ingroup GaDevice
  *  \param device Device to close.
- *  \return GA_OK if the device was closed successfully. GA_ERR_GENERIC if not.
+ *  \return GA_OK iff the device was closed successfully.
  *  \warning The client must never use a device after calling ga_device_close().
  */
 ga_result ga_device_close(GaDevice *device);
@@ -319,7 +334,7 @@ typedef ga_usize (*GaCbDataSource_Read)(GaDataSourceContext *context, void *dst,
  *  \param context User context.
  *  \param offset Offset (in bytes) from the specified seek origin.
  *  \param origin Seek origin (see [\ref globDefs]).
- *  \return If seek succeeds, the callback should return GA_OK, otherwise it should return GA_ERR_GENERIC.
+ *  \return GA_OK iff the seek succeeds.
  *  \warning Data sources with GaDataAccessFlag_Seekable should always provide a seek callback.
  *  \warning Data sources with GaDataAccessFlag_Seekable set should only return an error in the case of
  *           an invalid seek request.
@@ -384,7 +399,10 @@ ga_usize ga_data_source_read(GaDataSource *dataSrc, void *dst, ga_usize size, ga
  *  \param dataSrc Data source to seek within.
  *  \param offset Offset (in bytes) from the specified seek origin.
  *  \param whence Seek origin (see [\ref seekOrigins]).
- *  \return If seek succeeds, returns GA_OK, otherwise returns GA_ERR_GENERIC (invalid seek request).
+ *  \return GA_OK iff seek succeeds.
+ *          GA_ERR_MIS_UNSUP for a data source which doesn't support seeking.
+ *          GA_ERR_MIS_PARAM for an invalid seek request.
+ *          GA_ERR_SYS_IO if the system refuses to serve our seek for some reason.
  *  \warning Only data sources with GaDataAccessFlag_Seekable can have ga_data_source_seek() called on them.
 */
 ga_result ga_data_source_seek(GaDataSource *dataSrc, ga_ssize offset, GaSeekOrigin whence);
@@ -546,7 +564,7 @@ ga_bool ga_sample_source_ready(GaSampleSource *sample_src, ga_usize num_samples)
  *  \ingroup GaSampleSource
  *  \param sample_src Sample source to seek within.
  *  \param sample_offset Offset (in samples) from the start of the sample stream.
- *  \return If seek succeeds, returns GA_OK, otherwise returns GA_ERR_GENERIC (invalid seek request).
+ *  \return GA_OK iff seek succeeds.  See \ref ga_data_source_seek
  *  \warning Only sample sources with GaDataAccessFlag_Seekable can have ga_sample_source_seek()
  *           called on them.
  */
@@ -878,8 +896,7 @@ ga_uint32 ga_mixer_num_samples(GaMixer *mixer);
  *  \param buffer An empty buffer into which the mixed samples should be
  *                    copied. The buffer must be large enough to hold the
  *                    mixer's number of samples in the mixer's sample format.
- *  \return Whether the mixer successfully mixed the data. GA_SUCCESS if the
- *          operation was successful, GA_ERROR_GENERIC if not.
+ *  \return Whether the mixer successfully mixed the data.
  */
 ga_result ga_mixer_mix(GaMixer *mixer, void *buffer);
 
@@ -1308,8 +1325,7 @@ ga_bool ga_stream_ready(GaBufferedStream *stream, ga_usize num_samples);
  *  \param stream Buffered stream to seek within.
  *  \param sample_offset Offset (in samples) from the start of the contained
  *                         sample source.
- *  \return If seek succeeds, returns GA_OK, otherwise returns GA_ERR_GENERIC (invalid seek
- *          request).
+ *  \return GA_OK iff seek succeeds.  See \ref ga_data_source_seek.
  *  \warning Only buffered streams with GaDataAccessFlag_Seekable can have ga_stream_seek()
  *           called on them.
  */

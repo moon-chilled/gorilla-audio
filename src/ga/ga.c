@@ -28,6 +28,8 @@ s32 ga_format_to_samples(GaFormat *format, f32 seconds) {
 	return seconds * format->sample_rate;
 }
 
+static void *gaX_get_buffer_nozerocopy(GaDevice *dev) { return dev->buffer; }
+
 /* Device Functions */
 GaDevice *ga_device_open(GaDeviceType *type,
                           u32 *pnum_buffers,
@@ -69,7 +71,7 @@ GaDevice *ga_device_open(GaDeviceType *type,
 	u32 num_samples = pnum_samples ? *pnum_samples : 512;
 	GaFormat format = pformat ? *pformat : (GaFormat){.bits_per_sample=16, .num_channels=2, .sample_rate=48000};
 
-	GaDevice *ret = ga_alloc(sizeof(GaDevice));
+	GaDevice *ret = memset(ga_alloc(sizeof(GaDevice)), 0, sizeof(GaDevice));
 	ret->dev_type = *type;
 	ret->num_buffers = num_buffers;
 	ret->num_samples = num_samples;
@@ -104,6 +106,14 @@ GaDevice *ga_device_open(GaDeviceType *type,
 
 	if (ret->procs.open(ret) != GA_OK) goto fail;
 	*type = ret->dev_type;
+	if (!ret->procs.get_buffer) {
+		ret->procs.get_buffer = gaX_get_buffer_nozerocopy;
+		ret->buffer = ga_alloc(ret->num_samples * ga_format_sample_size(&ret->format));
+		if (!ret->buffer) {
+			ret->procs.close(ret);
+			goto fail;
+		}
+	}
 	if (pnum_buffers) *pnum_buffers = ret->num_buffers;
 	if (pnum_samples) *pnum_samples = ret->num_samples;
 	if (pformat) *pformat = ret->format;
@@ -117,12 +127,17 @@ fail:
 
 ga_result ga_device_close(GaDevice *device) {
 	ga_result ret = device->procs.close ? device->procs.close(device) : GA_OK;
-	free(device);
+	ga_free(device->buffer);
+	ga_free(device);
 	return ret;
 }
 
 u32 ga_device_check(GaDevice *device) {
 	return device->procs.check(device);
+}
+
+void *ga_device_get_buffer(GaDevice *device) {
+	return device->procs.get_buffer(device);
 }
 
 ga_result ga_device_queue(GaDevice *device, void *buffer) {

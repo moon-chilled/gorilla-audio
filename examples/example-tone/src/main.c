@@ -29,13 +29,12 @@ int main(int argc, char** argv) {
 	if(!dev)
 		return 1;
 
-	/* Allocate buffer */
-	buf = (s16*)malloc(numSamples * sampleSize);
-
 	/* Infinite mix loop */
 	while(1) {
 		numToQueue = ga_device_check(dev);
-		while(numToQueue--) {
+		while (numToQueue--) {
+			buf = ga_device_get_buffer(dev);
+			if (!buf) continue;
 			for(i = 0; i < numSamples * 2; i = i + 2) {
 				sample = (s16)(sin(t) * 32768);
 				sample = (sample > -32768 ? (sample < 32767 ? sample : 32767) : -32768);

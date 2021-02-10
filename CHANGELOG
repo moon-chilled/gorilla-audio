@@ -2,11 +2,11 @@ CHANGE LOG
 ---
 
 0.4.0
-- Add support for ALSA, sndio, and PulseAudio.  Add dummy and wav audio devices.
+- Add support for ALSA, Arcan, PulseAudio, and sndio.  Add dummy and wav audio devices.
+- Zero-copy mixing.
 - Add support for flac and opus, as well as a contrib module for mp3.
-- Allow suspending a mixer, making it output only zeroes
-- Tentative (not yet ready for use!) support for audio formats other than s16/2ch.
-- Improve performance, touch up APIs, refactor.
+- Transcoding support.
+- Miscellaneous performance improvements, API touch-ups, internal refactors.
 - Allow user-defined sample and data sources.
 
 0.3.3

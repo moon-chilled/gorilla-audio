@@ -80,4 +80,4 @@ static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	return sz==written ? GA_OK : GA_ERR_SYS_IO;
 }
 
-GaXDeviceProcs gaX_deviceprocs_OSS = { gaX_open, gaX_check, gaX_queue, gaX_close };
+GaXDeviceProcs gaX_deviceprocs_OSS = { .open=gaX_open, .check=gaX_check, .queue=gaX_queue, .close=gaX_close };

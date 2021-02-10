@@ -281,7 +281,7 @@
     <div class="heading4">MacOS, Linux, FreeBSD, OpenBSD</div>
     <ol>
       <li>Install a C development toolchain
-      <li><i>Only on MacOS and OpenBSD</i> install OpenAL
+      <li><i>Only on MacOS</i> install OpenAL
       <li>Run <span class="code">make</span> (or <span class=code>make MODE=release</span> to make a release build</li>
     </ol>
   </div>
@@ -301,9 +301,9 @@
   <p>Gorilla Audio can be configured to use external libraries, which may require additional configuration as described below:</p>
 
   <a name="sec2_3_1"></a>
-  <div class="heading3">2.3.1&nbsp;&nbsp;OpenAL (MacOS, OpenBSD)</div>
+  <div class="heading3">2.3.1&nbsp;&nbsp;OpenAL (MacOS)</div>
   <div class="copytext">
-    <p>On MacOS and OpenBSD, where a native audio driver is not yet available, OpenAL will be used for audio output.  You can also force GA to use OpenAL on other platforms by building with <span class=code>make ENABLE_OPENAL=1</span>.  You will need to install OpenAL development libraries in order to use it.</p>
+    <p>On MacOS, where a native audio driver is not yet available, OpenAL will be used for audio output.  You can also force GA to use OpenAL on other platforms by building with <span class=code>make ENABLE_OPENAL=1</span>.  You will need to install OpenAL development libraries in order to use it.</p>
 
     <p>OpenAL is licensed under the LGPL license.</p>
   </div>

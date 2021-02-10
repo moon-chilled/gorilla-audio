@@ -36,6 +36,7 @@ extern "C" {
 typedef struct {
 	ga_result (*open)(GaDevice *dev);
 	u32 (*check)(GaDevice *dev);
+	void *(*get_buffer)(GaDevice *dev); //optional
 	ga_result (*queue)(GaDevice *dev, void *buffer);
 	ga_result (*close)(GaDevice *device);
 } GaXDeviceProcs;
@@ -91,6 +92,9 @@ struct GaDevice {
 	u32 num_buffers;
 	u32 num_samples;
 	GaFormat format;
+
+	// use iff get_buffer is missing to avoid spurious allocations
+	void *buffer;
 
 	GaXDeviceProcs procs;
 	GaXDeviceImpl *impl;

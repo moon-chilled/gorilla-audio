@@ -5,8 +5,10 @@ COMPATIBILITY:
 - Implement more platforms/devices:
   - WASAPI (Windows).  (Maybe also ASIO?)
   - CoreAudio (OSX/iOS)
-  - OpenSL (Android 2.3+)
-  - OpenMAX AL device (Multi)
+  - OpenSL (Android 2.3+) or AAudio (8.0+)
+    - https://github.com/google/oboe abstracts over the two
+  - Jack
+  - Webaudio + wasm build?
 
 IMPROVEMENTS:
 - Improve looping system
@@ -41,7 +43,6 @@ LUXURY FEATURES:
 - Support for multiple ga_StreamManager threads
 - Floating-point format support
 - AIFF support
-- OGG Opus support
 - Network-streaming audio (OGG, MP3, ShoutCast, IceCast)
 - Handle-locking for atomic groups of control commands
 

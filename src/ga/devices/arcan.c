@@ -85,4 +85,4 @@ static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	return GA_OK;
 }
 
-GaXDeviceProcs gaX_deviceprocs_Arcan = { gaX_open, gaX_check, gaX_queue, gaX_close };
+GaXDeviceProcs gaX_deviceprocs_Arcan = { .open=gaX_open, .check=gaX_check, .queue=gaX_queue, .close=gaX_close };
