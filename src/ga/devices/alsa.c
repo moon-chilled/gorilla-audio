@@ -1,13 +1,7 @@
 #include "gorilla/ga.h"
 #include "gorilla/ga_internal.h"
 
-#include <string.h>
-#include <unistd.h>
 #include <alsa/asoundlib.h>
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
 
 // TODO: consider using SND_PCM_ACCESS_MMAP_INTERLEAVED?
 // it would require some restructuring elsewhere.  Probably not worth it,

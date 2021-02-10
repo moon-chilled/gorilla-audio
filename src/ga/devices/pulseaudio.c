@@ -1,11 +1,10 @@
 #include "gorilla/ga.h"
 #include "gorilla/ga_internal.h"
 
+#include <string.h>
+
 #include <pulse/pulseaudio.h>
 #include <pulse/error.h>
-
-#include <string.h>
-#include <assert.h>
 
 struct GaXDeviceImpl {
 	pa_mainloop *mainloop;

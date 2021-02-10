@@ -1,15 +1,7 @@
 #include "gorilla/ga.h"
 #include "gorilla/ga_internal.h"
 
-#include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/soundcard.h>
-
-#include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
 
 // (c)hecked (b)uffer write
 #define cbwrite(fp, data, size) do { \

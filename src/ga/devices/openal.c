@@ -1,12 +1,11 @@
 #include "gorilla/ga.h"
 #include "gorilla/ga_internal.h"
 
+#include <stdio.h>
+#include <string.h>
+
 #include "al.h"
 #include "alc.h"
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <memory.h>
 
 struct GaXDeviceImpl {
 	struct ALCdevice *dev;
@@ -18,7 +17,7 @@ struct GaXDeviceImpl {
 };
 
 
-const ga_result openal_to_ga(ALuint error) {
+ga_result openal_to_ga(ALuint error) {
 	switch (error) {
 		case AL_NO_ERROR: puts("OpenAL error - None"); return GA_ERR_INTERNAL;
 		case AL_INVALID_NAME: puts("OpenAL error - Invalid name."); return GA_ERR_INTERNAL;
@@ -98,6 +97,7 @@ static u32 gaX_check(GaDevice *dev) {
 		alSourceUnqueueBuffers(dev->impl->hw_source, 1, &dev->impl->hw_buffers[whichBuf]);
 		CHECK_AL_ERROR(;);
 	}
+	(void)ret;
 	return dev->impl->empty_buffers;
 }
 

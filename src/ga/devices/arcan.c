@@ -3,10 +3,6 @@
 
 #include <arcan_shmif.h>
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-
 struct GaXDeviceImpl {
 	struct arcan_shmif_cont *acon;
 	bool homemade;

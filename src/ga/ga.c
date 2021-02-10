@@ -115,7 +115,7 @@ ga_result ga_device_close(GaDevice *device) {
 	return ret;
 }
 
-s32 ga_device_check(GaDevice *device) {
+u32 ga_device_check(GaDevice *device) {
 	return device->procs.check(device);
 }
 

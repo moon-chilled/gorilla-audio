@@ -1,15 +1,10 @@
 #include "gorilla/ga.h"
 #include "gorilla/ga_internal.h"
 
-#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/soundcard.h>
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
 
 static ga_result gaX_open(GaDevice *dev) {
 	int fd = open("/dev/dsp", O_WRONLY, O_NONBLOCK); //todo configurable
