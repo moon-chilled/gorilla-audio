@@ -18,7 +18,7 @@ endif
 
 MODE ?= debug
 
-CFLAGS := -Iext/libflac/include -Iext/libogg/include -Iext/libopus/include -Iext/opusfile/include -Iext/libvorbis/include -DHAVE_ALLOCA_H
+CFLAGS := -Iext/libflac/include -Iext/libogg/include -Iext/libopus/include -Iext/opusfile/include -Iext/libvorbis/include
 CFLAGS_release :=
 CFLAGS_debug :=
 CXXFLAGS :=
@@ -67,6 +67,7 @@ else
 	CFLAGS_debug += -Werror
 	CFLAGS_debug += -g
 	CFLAGS_release += -O2
+	LFLAGS += -lpthread -lm
 
 	FLAC_CFLAGS += -DHAVE_FSEEKO
 endif
@@ -83,7 +84,7 @@ else ifeq ($(TARGET),macos)
 else ifeq ($(TARGET),linux)
 	ENABLE_PULSEAUDIO := 1
 	ENABLE_ALSA := 1
-
+	CFLAGS += -DHAVE_ALLOCA_H
 	FLAC_CFLAGS += -D_DEFAULT_SOURCE
 else ifeq ($(TARGET),freebsd)
 	ENABLE_OSS := 1

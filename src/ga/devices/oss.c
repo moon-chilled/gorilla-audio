@@ -7,8 +7,8 @@
 #include <sys/soundcard.h>
 
 static ga_result gaX_open(GaDevice *dev) {
-	int fd = open("/dev/dsp", O_WRONLY, O_NONBLOCK); //todo configurable
-	if (fd < 0) goto cleanup;
+	int fd = open("/dev/dsp", O_WRONLY/*|O_NONBLOCK*/); //todo configurable
+	if (fd < 0) return GA_ERR_SYS_IO;
 
 	// If we request a mode and it's not supported by the hardware, this tells
 	// the mixer to fake it in software.
@@ -31,10 +31,6 @@ static ga_result gaX_open(GaDevice *dev) {
 	if (ioctl(fd, SNDCTL_DSP_CHANNELS, &(int){dev->format.num_channels}) == -1) goto cleanup;
 	int fmt;
 	switch (dev->format.bits_per_sample) {
-		// 8-bit being unsigned is consistent with other frameworks
-		// ga_openal.c uses AL_FORMAT_*8, which is apparently (http://forum.lwjgl.org/index.php?topic=4058.0) unsigned
-		// xaudio2 uses unsigned for 8-bit audio (https://docs.microsoft.com/en-us/windows/win32/api/xaudio2/nf-xaudio2-ixaudio2-createsourcevoice),
-		//  though ga_xaudio2.cc currently doesn't take advantage of this (hardcodes 16-bit)
 #ifdef AFMT_U8
 		case  8: fmt = AFMT_U8;     break;
 #endif
@@ -50,13 +46,20 @@ static ga_result gaX_open(GaDevice *dev) {
 		default: goto cleanup;
 	}
 	if (ioctl(fd, SNDCTL_DSP_SETFMT, &(int){fmt}) == -1) goto cleanup;
+
+	audio_buf_info info;
+	if (ioctl(fd, SNDCTL_DSP_GETOSPACE, &info) == -1) goto cleanup;
+	dev->num_buffers = info.fragstotal;
+	dev->num_samples = info.fragsize / ga_format_sample_size(&dev->format);
+	if (dev->num_buffers < 2) goto cleanup;
+
 	dev->impl = (void*)(usz)fd;
 
 	return GA_OK;
 
 cleanup:
-	if (fd >= 0) close(fd);
-	return GA_ERR_SYS_IO;
+	close(fd);
+	return GA_ERR_SYS_LIB;
 }
 
 static ga_result gaX_close(GaDevice *dev) {
@@ -64,7 +67,11 @@ static ga_result gaX_close(GaDevice *dev) {
 }
 
 static u32 gaX_check(GaDevice *dev) {
-	return dev->num_buffers; //TODO
+	int fd = (int)(usz)dev->impl;
+	audio_buf_info i;
+	if (ioctl(fd, SNDCTL_DSP_GETOSPACE, &i) == -1) return 0;
+
+	return i.fragments < 0 ? 0 : i.fragments;
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
