@@ -81,7 +81,7 @@ ifeq ($(TARGET),win32)
 else ifeq ($(TARGET),macos)
 	ENABLE_OPENAL := 1
 else ifeq ($(TARGET),linux)
-	#ENABLE_PULSEAUDIO := 1
+	ENABLE_PULSEAUDIO := 1
 	ENABLE_ALSA := 1
 
 	FLAC_CFLAGS += -D_DEFAULT_SOURCE

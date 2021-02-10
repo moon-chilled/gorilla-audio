@@ -222,9 +222,8 @@ typedef struct GaDevice GaDevice;
  *  \warning num_buffers, num_samples, and format are /requests/ to the audio
  *           device and may not necessarily be fulfilled.  The actually
  *           received values (as well as type, when it is GaDeviceType_Default)
- *           will be written back out to the same
- *           locations.  If you pass in NULL for any of these arguments, a
- *           reasonable default will be chosen.
+ *           will be written back out to the same locations.  If you pass in
+ *           NULL for any of these arguments, a reasonable default will be chosen.
  */
 GaDevice *ga_device_open(GaDeviceType *type,
                           ga_uint32 *num_buffers,
@@ -246,7 +245,7 @@ ga_sint32 ga_device_check(GaDevice *device);
  *  \param buffer Buffer to add to the presentation queue.
  *  \return GA_OK if the buffer was queued successfully. GA_ERR_GENERIC if not.
  *  \warning You should always call ga_device_check() prior to queueing a buffer! If
- *           there isn't a free (unqueued) buffer, the operation will fail.
+ *           there isn't a free (unqueued) buffer, the operation may fail.
  */
 ga_result ga_device_queue(GaDevice *device, void *buffer);
 
