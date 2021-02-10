@@ -35,6 +35,7 @@ BUILD_DYNAMIC := 1
 
 ENABLE_XAUDIO2 := 0
 ENABLE_ARCAN := 0
+ENABLE_SNDIO := 0
 ENABLE_PULSEAUDIO := 0
 ENABLE_ALSA := 0
 ENABLE_OSS := 0
@@ -89,7 +90,7 @@ else ifeq ($(TARGET),linux)
 else ifeq ($(TARGET),freebsd)
 	ENABLE_OSS := 1
 else ifeq ($(TARGET),openbsd)
-	ENABLE_OPENAL := 1
+	ENABLE_SNDIO := 1
 
 	FLAC_CFLAGS += -D__BSD_VISIBLE -D__XPG_VISIBLE=420
 endif
@@ -109,6 +110,11 @@ ifeq ($(ENABLE_ARCAN),1)
 		LFLAGS += `pkg-config --libs arcan-shmif`
 	endif
 	GA_SRC += src/ga/devices/arcan.c
+endif
+ifeq ($(ENABLE_SNDIO),1)
+	CFLAGS += -DENABLE_SNDIO
+	LFLAGS += -lsndio
+	GA_SRC += src/ga/devices/sndio.c
 endif
 ifeq ($(ENABLE_PULSEAUDIO),1)
 	CFLAGS += -DENABLE_PULSEAUDIO `pkg-config --cflags libpulse-simple`

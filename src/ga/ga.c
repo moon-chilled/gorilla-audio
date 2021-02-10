@@ -48,6 +48,9 @@ GaDevice *ga_device_open(GaDeviceType *type,
 #if defined(ENABLE_ARCAN)
 		try(GaDeviceType_Arcan);
 #endif
+#if defined(ENABLE_SNDIO)
+		try(GaDeviceType_Sndio);
+#endif
 #if defined(ENABLE_PULSEAUDIO)
 		try(GaDeviceType_PulseAudio);
 #endif
@@ -83,6 +86,9 @@ GaDevice *ga_device_open(GaDeviceType *type,
 #endif
 #ifdef ENABLE_ARCAN
 		case GaDeviceType_Arcan: ret->procs = gaX_deviceprocs_Arcan; break;
+#endif
+#ifdef ENABLE_SNDIO
+		case GaDeviceType_Sndio: ret->procs = gaX_deviceprocs_sndio; break;
 #endif
 #ifdef ENABLE_PULSEAUDIO
 		case GaDeviceType_PulseAudio: ret->procs = gaX_deviceprocs_PulseAudio; break;

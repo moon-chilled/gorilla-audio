@@ -55,6 +55,10 @@ extern GaXDeviceProcs gaX_deviceprocs_XAudio2;
 extern GaXDeviceProcs gaX_deviceprocs_Arcan;
 #endif
 
+#ifdef ENABLE_SNDIO
+extern GaXDeviceProcs gaX_deviceprocs_sndio;
+#endif
+
 #ifdef ENABLE_PULSEAUDIO
 extern GaXDeviceProcs gaX_deviceprocs_PulseAudio;
 #endif
@@ -219,6 +223,14 @@ struct GaBufferedStream {
 	s32 end;
 	GaDataAccessFlags flags;
 };
+
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+# define ENDIAN(little, big) little
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+# define ENDIAN(little, big) big
+#else
+# error Unable to determine endianness
+#endif
 
 #ifdef __cplusplus
 }

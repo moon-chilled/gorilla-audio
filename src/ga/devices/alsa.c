@@ -17,7 +17,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_SYS_MEM;
 
-	if (snd_pcm_open(&dev->impl->interface, "default", SND_PCM_STREAM_PLAYBACK, 0) < 0) {
+	if (snd_pcm_open(&dev->impl->interface, "default", SND_PCM_STREAM_PLAYBACK, 0/*SND_PCM_NONBLOCK*/) < 0) {
 		ga_free(dev->impl);
 		return GA_ERR_SYS_LIB;
 	}

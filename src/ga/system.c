@@ -258,32 +258,16 @@ static inline u32 ga_endian_bswap4(u32 x) {
 }
 
 u16 ga_endian_tobe2(u16 x) {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-	return ga_endian_bswap2(x);
-#else
-	return x;
-#endif
+	return ENDIAN(ga_endian_bswap2(x), x);
 }
 u32 ga_endian_tobe4(u32 x) {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-	return ga_endian_bswap4(x);
-#else
-	return x;
-#endif
+	return ENDIAN(ga_endian_bswap4(x), x);
 }
 u16 ga_endian_tole2(u16 x) {
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-	return ga_endian_bswap2(x);
-#else
-	return x;
-#endif
+	return ENDIAN(x, ga_endian_bswap2(x));
 }
 u32 ga_endian_tole4(u32 x) {
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-	return ga_endian_bswap4(x);
-#else
-	return x;
-#endif
+	return ENDIAN(x, ga_endian_bswap4(x));
 }
 
 u16 ga_endian_frombe2(u16 x) {

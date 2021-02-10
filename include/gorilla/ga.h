@@ -185,6 +185,7 @@ typedef enum {
 	GaDeviceType_OSS,             /**< OSS playback device (mainly FreeBSD) */
 	GaDeviceType_XAudio2,         /**< XAudio2 playback device (Windows-only) */
 	GaDeviceType_Arcan,           /**< Arcan playback device (cross-platform, not on windows) */
+	GaDeviceType_Sndio,           /**< sndio playback device (cross-platform, mainly for OpenBSD) */
 	GaDeviceType_PulseAudio,      /**< PulseAudio playback device (cross-platform, mainly for linux) */
 	GaDeviceType_ALSA,            /**< ALSA playback device (mainly for linux) */
 	GaDeviceType_OpenAL,          /**< OpenAL playback device (cross-platform) */
