@@ -236,6 +236,44 @@ struct GaBufferedStream {
 # error Unable to determine endianness
 #endif
 
+static inline u16 ga_endian_bswap2(u16 x) {
+	return (x<<8) | (x>>8);
+}
+static inline u32 ga_endian_bswap4(u32 x) {
+	return ga_endian_bswap2(x >> 16)
+	     | ga_endian_bswap2(x) << 16;
+}
+
+static inline u16 ga_endian_tobe2(u16 x) {
+	return ENDIAN(ga_endian_bswap2(x), x);
+}
+static inline u32 ga_endian_tobe4(u32 x) {
+	return ENDIAN(ga_endian_bswap4(x), x);
+}
+static inline u16 ga_endian_tole2(u16 x) {
+	return ENDIAN(x, ga_endian_bswap2(x));
+}
+static inline u32 ga_endian_tole4(u32 x) {
+	return ENDIAN(x, ga_endian_bswap4(x));
+}
+
+static inline u16 ga_endian_frombe2(u16 x) {
+	return ga_endian_tobe2(x);
+}
+static inline u32 ga_endian_frombe4(u32 x) {
+	return ga_endian_tobe4(x);
+}
+static inline u16 ga_endian_fromle2(u16 x) {
+	return ga_endian_tole2(x);
+}
+static inline u32 ga_endian_fromle4(u32 x) {
+	return ga_endian_tole4(x);
+}
+
+static inline s32 ga_add32_saturate(s32 x, s32 y) {
+	return clamp((s64)x + (s64)y, GA_S32_MIN, GA_S32_MAX);
+}
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -126,18 +126,30 @@ typedef enum {
  *  \defgroup GaFormat Format
  */
 
+/** Format enumeration for an individual sample [\ref POD].
+ *
+ *  These are all native endian to facilitate easier processing.  Conversions
+ *  happen at the edges
+ */
+typedef enum {
+	GaSampleFormat_U8  =  1,
+	GaSampleFormat_S16 =  2,
+	GaSampleFormat_S32 =  4,
+	GaSampleFormat_F32 = -4,
+} GaSampleFormat;
+
 /** Audio format data structure [\ref POD].
  *
- *  Stores the format (sample rate, bps, channels) for PCM audio data.
+ *  Stores the format (sample rate+format, channels) for PCM audio data.
  *
  *  This object may be used on any thread.
  *
  *  \ingroup GaFormat
  */
 typedef struct {
-	ga_uint32 sample_rate; /**< Sample rate (usually 48000) */
-	ga_uint32 bits_per_sample; /**< Bits per PCM sample (usually 16) */
-	ga_uint32 num_channels; /**< Number of audio channels (1 for mono, 2 for stereo) */
+	ga_uint32 sample_rate;
+	GaSampleFormat sample_fmt;
+	ga_uint32 num_channels;
 } GaFormat;
 
 /** Retrieves the sample size (in bytes) of a specified format.
@@ -276,6 +288,10 @@ ga_result ga_device_queue(GaDevice *device, void *buffer);
  */
 ga_result ga_device_close(GaDevice *device);
 
+/** Gets the native audio format of a device
+ *
+ */
+void ga_device_format(GaDevice *device, GaFormat *format);
 
 /*****************/
 /*  Data Source  */
@@ -894,8 +910,8 @@ ga_uint32 ga_mixer_num_samples(GaMixer *mixer);
  *  \ingroup GaMixer
  *  \param mixer Mixer object whose handles' samples should be mixed.
  *  \param buffer An empty buffer into which the mixed samples should be
- *                    copied. The buffer must be large enough to hold the
- *                    mixer's number of samples in the mixer's sample format.
+ *                copied. The buffer must be large enough to hold the
+ *                mixer's number of samples in the mixer's sample format.
  *  \return Whether the mixer successfully mixed the data.
  */
 ga_result ga_mixer_mix(GaMixer *mixer, void *buffer);

@@ -1,9 +1,20 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
+#include <assert.h>
+#include <poll.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <termios.h>
+#include <stdlib.h>
 
 #include <gorilla/ga.h>
 #include <gorilla/gau.h>
-#include <gorilla/ga_internal.h> //sneaky, sneaky!  TODO: define proper getters here
+
+#define min(x, y) ((x) < (y) ? (x) : (y))
+#define max(x, y) ((x) > (y) ? (x) : (y))
+#define clamp(x, lo, hi) min(max(lo, x), hi)
 
 #define check(ptr, ...) ({ \
 	__typeof__(ptr) _ptr = ptr; \
@@ -17,6 +28,15 @@
 
 GaSampleSource *ga_contrib_sample_source_create_mp3(GaDataSource *data_src);
 
+const char *sampleformatname(GaSampleFormat fmt) {
+	switch (fmt) {
+		case GaSampleFormat_U8: return "u8";
+		case GaSampleFormat_S16: return "s16";
+		case GaSampleFormat_S32: return "s32";
+		case GaSampleFormat_F32: return "f32";
+		default: return "???";
+	}
+}
 const char *devicetypename(GaDeviceType type) {
 	switch (type) {
 		case GaDeviceType_Dummy: return "dummy";
@@ -32,9 +52,37 @@ const char *devicetypename(GaDeviceType type) {
 	}
 }
 
-void printtime(int n) {
+void enable_raw_mode(void) {
+}
+
+void done(int status) {
+	struct termios term;
+	tcgetattr(0, &term);
+	term.c_lflag |= ICANON | ECHO;
+	tcsetattr(0, TCSANOW, &term);
+	exit(status);
+}
+
+void printmins(int n) {
 	if (n < 0) printf("???");
 	else printf("%d:%02d", n/60, n%60);
+}
+
+void printtime(int cur, int dur) {
+	printmins(cur);
+	printf(" / ");
+	printmins(dur);
+	printf(" (%.0f%%)\r", 100*cur/(float)dur);
+	fflush(stdout);
+}
+bool kbhit() {
+	return poll(&(struct pollfd){.fd = 0, .events = POLLIN}, 1, 100) == 1;
+}
+
+char getch() {
+	char ret;
+	read(0, &ret, 1);
+	return ret;
 }
 
 int main(int argc, char **argv) {
@@ -44,7 +92,8 @@ int main(int argc, char **argv) {
 	}
 
 	ga_initialize_systemops(NULL);
-	GauManager *mgr = check(gau_manager_create_custom(&(GaDeviceType){GaDeviceType_Default}, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
+	GaDeviceType dev_type = GaDeviceType_Default;
+	GauManager *mgr = check(gau_manager_create_custom(&dev_type, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
 	GaMixer *mixer = check(gau_manager_mixer(mgr), "Unable to get mixer from manager");
 	GaStreamManager *smgr = gau_manager_stream_manager(mgr);
 
@@ -70,34 +119,74 @@ int main(int argc, char **argv) {
 	ga_handle_play(handle);
 
 	GaDevice *dev = gau_manager_device(mgr);
-	GaFormat hfmt;
+	GaFormat hfmt, dfmt;
 	ga_handle_format(handle, &hfmt);
-	printf("gaplay [%iHz %ich -> %s (%iHz %ich)] %s\n", hfmt.sample_rate, hfmt.num_channels, devicetypename(dev->dev_type), dev->format.sample_rate, dev->format.num_channels, argv[1]);
+	ga_device_format(dev, &dfmt);
+	printf("gaplay [%s %iHz %ich -> %s (%s %iHz %ich)] %s\n", sampleformatname(hfmt.sample_fmt), hfmt.sample_rate, hfmt.num_channels, devicetypename(dev_type), sampleformatname(dfmt.sample_fmt), dfmt.sample_rate, dfmt.num_channels, argv[1]);
 
-	ga_usize cur, dur;
+	ga_usize cur, dur, sdur;
 	assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
-	cur = ga_format_to_seconds(&dev->format, cur);
-	if (ga_isok(ga_handle_tell(handle, GaTellParam_Total, &dur))) {
-		dur = ga_format_to_seconds(&hfmt, dur);
+	cur = ga_format_to_seconds(&dfmt, cur);
+	if (ga_isok(ga_handle_tell(handle, GaTellParam_Total, &sdur))) {
+		dur = ga_format_to_seconds(&hfmt, sdur);
 	} else {
-		dur = -1;
+		dur = sdur = -1;
 	}
 
-	while (ga_handle_playing(handle)) {
+	{
+		struct termios term;
+		tcgetattr(0, &term);
+		term.c_lflag &= ~(ICANON | ECHO);
+		tcsetattr(0, TCSANOW, &term);
+	}
+
+	printtime(cur, dur);
+
+	while (!ga_handle_finished(handle)) {
 		gau_manager_update(mgr);
 		assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
 		cur = ga_format_to_seconds(&hfmt, cur);
-		printtime(cur);
-		printf(" / ");
-		printtime(dur);
-		printf(" (%.0f%%)\r", 100*cur/(float)dur);
-		fflush(stdout);
-		ga_thread_sleep(1000);
+
+		if (kbhit()) {
+			switch (getch()) {
+				case ' ':
+					(ga_handle_playing(handle) ? ga_handle_stop : ga_handle_play)(handle);
+					break;
+				case 'q': goto done;
+
+				// escape, maybe arrow key
+				case '\x1b':
+					if (!kbhit()) break;
+					if (!kbhit() || getch() != '[' || !kbhit()) break;
+
+				       	int delta;
+					switch (getch()) {
+						case 'A': delta =  60; break;
+						case 'B': delta = -60; break;
+						case 'C': delta =   5; break;
+						case 'D': delta =  -5; break;
+						default: goto cont;
+					}
+
+					int sample = clamp(ga_format_to_samples(&hfmt, cur + delta), 0, sdur - 1);
+					ga_handle_seek(handle, sample);
+
+					assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
+					cur = ga_format_to_seconds(&hfmt, cur);
+					break;
+			}
+		}
+
+cont:
+		printtime(cur, dur);
 	}
 
+done:
 	putchar('\n');
 
 	ga_handle_destroy(handle);
 	gau_manager_destroy(mgr);
 	ga_shutdown_systemops();
+
+	done(0);
 }

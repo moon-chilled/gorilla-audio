@@ -248,37 +248,3 @@ ga_result ga_shutdown_systemops(void) {
 	*gaX_ops = default_callbacks;
 	return GA_OK;
 }
-
-static inline u16 ga_endian_bswap2(u16 x) {
-	return (x<<8) | (x>>8);
-}
-static inline u32 ga_endian_bswap4(u32 x) {
-	return ga_endian_bswap2(x >> 16)
-	     | ga_endian_bswap2(x) << 16;
-}
-
-u16 ga_endian_tobe2(u16 x) {
-	return ENDIAN(ga_endian_bswap2(x), x);
-}
-u32 ga_endian_tobe4(u32 x) {
-	return ENDIAN(ga_endian_bswap4(x), x);
-}
-u16 ga_endian_tole2(u16 x) {
-	return ENDIAN(x, ga_endian_bswap2(x));
-}
-u32 ga_endian_tole4(u32 x) {
-	return ENDIAN(x, ga_endian_bswap4(x));
-}
-
-u16 ga_endian_frombe2(u16 x) {
-	return ga_endian_tobe2(x);
-}
-u32 ga_endian_frombe4(u32 x) {
-	return ga_endian_tobe4(x);
-}
-u16 ga_endian_fromle2(u16 x) {
-	return ga_endian_tole2(x);
-}
-u32 ga_endian_fromle4(u32 x) {
-	return ga_endian_tole4(x);
-}

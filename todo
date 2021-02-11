@@ -1,1 +1,3 @@
 replace more asserts with explicit failures (returned to caller)
+popping
+2.flac sounds a bit funny

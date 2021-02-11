@@ -45,11 +45,11 @@ static usz ss_read(GaSampleSourceContext *ctx, void *odst, usz num_frames,
                                             GaCbOnSeek onseek, void *seek_ctx) {
 	usz ret = 0;
 	usz left = num_frames * ctx->format.num_channels;
-	s16 *dst = odst;
+	f32 *dst = odst;
 
 	with_mutex(ctx->ogg_mutex) {
 		do {
-			int i = op_read(ctx->ogg_file, dst, left, NULL);
+			int i = op_read_float(ctx->ogg_file, dst, left, NULL);
 			if (i > 0) {
 				ret += i;
 				dst += i * ctx->format.num_channels;
@@ -132,7 +132,7 @@ GaSampleSource *gau_sample_source_create_opus(GaDataSource *data) {
 	if (!(ctx->ogg_file = op_open_callbacks(&ctx->data_src, &callbacks, NULL, 0, NULL))) goto fail;
 	if (seekable != op_seekable(ctx->ogg_file)) return NULL; //???
 
-	m.format.bits_per_sample = 16; //s16le ftw!
+	m.format.sample_fmt = GaSampleFormat_F32;
 	m.format.num_channels = op_head(ctx->ogg_file, 0)->channel_count;
 	m.format.sample_rate = 48000;
 	ctx->format = m.format;

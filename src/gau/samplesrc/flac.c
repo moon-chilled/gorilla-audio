@@ -12,7 +12,7 @@
 struct GaSampleSourceContext {
 	GaDataSource *data_src;
 	usz datalen; //iff ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable
-	s16 *buffer;
+	char *buffer;
 	u32 bufmax; // one past the index of the highest valid (unread) sample
 	u32 bufoff; // the index of the first valid sample
 	u32 bufcap; // the number of samples that can ever be stored in buffer
@@ -20,6 +20,8 @@ struct GaSampleSourceContext {
 	GaFormat fmt;
 
 	usz sample_off;
+
+	bool seeking;
 
 	FLAC__StreamDecoder *flac;
 	u32 flacbps;
@@ -78,8 +80,13 @@ static void flac_metadata(const FLAC__StreamDecoder *decoder, const FLAC__Stream
 	ctx->fmt.num_channels = metadata->data.stream_info.channels;
 	ctx->flacbps = metadata->data.stream_info.bits_per_sample;
 
+	switch (ctx->flacbps) {
+		case 16: ctx->fmt.sample_fmt = GaSampleFormat_S16; break;
+		case 24: ctx->fmt.sample_fmt = GaSampleFormat_S32; break;
+	}
+
 	ctx->bufcap = metadata->data.stream_info.max_blocksize * ctx->fmt.num_channels;
-	ctx->buffer = ga_alloc(ctx->bufcap * sizeof(*ctx->buffer));
+	ctx->buffer = ga_alloc(ctx->bufcap * ctx->fmt.sample_fmt);
 }
 
 
@@ -87,45 +94,67 @@ static FLAC__StreamDecoderWriteStatus flac_write(const FLAC__StreamDecoder *deco
 	GaSampleSourceContext *ctx = context;
 	// lock not required; decode will only be called by a thread that's already acquired a mutex
 
+	if (ctx->seeking) return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
+
 	assert (!ctx->bufoff);
 	assert (!ctx->bufmax);
-	assert (ctx->flacbps == 16);
 	assert (frame->header.channels == ctx->fmt.num_channels);
 
 	assert (ctx->bufcap >= frame->header.blocksize * ctx->fmt.num_channels + ctx->bufoff);
 
-	s16 *p = ctx->buffer;
-	for (usz i = 0; i < frame->header.blocksize; i++) {
-		for (usz j = 0; j < ctx->fmt.num_channels; j++) {
-			*p++ = buffer[j][i]; //not great data access :/ oh well
+	if (ctx->flacbps == 16) {
+		s16 *p = (s16*)ctx->buffer;
+		for (usz i = 0; i < frame->header.blocksize; i++) {
+			for (usz j = 0; j < ctx->fmt.num_channels; j++) {
+				*p++ = buffer[j][i]; //not great data access :/ oh well
+			}
 		}
+		ctx->bufmax += p - (s16*)ctx->buffer;
+	} else if (ctx->flacbps == 24) {
+		s32 *p = (s32*)ctx->buffer;
+		for (usz i = 0; i < frame->header.blocksize; i++) {
+			for (usz j = 0; j < ctx->fmt.num_channels; j++) {
+				*p++ = buffer[j][i] << 8; //not great data access :/ oh well
+			}
+		}
+		ctx->bufmax += p - (s32*)ctx->buffer;
+	} else {
+		return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 	}
-	ctx->bufmax += p - ctx->buffer;
 
 	return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
 }
 
+static ga_bool ss_end(GaSampleSourceContext *ctx) {
+	FLAC__StreamDecoderState res;
+	with_mutex(ctx->mutex) res = FLAC__stream_decoder_get_state(ctx->flac);
+	return res == FLAC__STREAM_DECODER_END_OF_STREAM
+	    || res == FLAC__STREAM_DECODER_ABORTED;
+}
+
 static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_frames, GaCbOnSeek onseek, void *seek_ctx) {
 	usz frames_read = 0;
-	usz num_left = num_frames*ctx->fmt.num_channels;
-	s16 *sdst = dst;
+	usz samples_left = num_frames*ctx->fmt.num_channels;
+	char *sdst = dst;
 
 	ga_mutex_lock(ctx->mutex);
 	while (frames_read < num_frames) {
 		while (ctx->bufoff+1 >= ctx->bufmax) {
-			if (!FLAC__stream_decoder_process_single(ctx->flac)) {
+			if (!FLAC__stream_decoder_process_single(ctx->flac)
+			    || FLAC__stream_decoder_get_state(ctx->flac) == FLAC__STREAM_DECODER_END_OF_STREAM
+			    || FLAC__stream_decoder_get_state(ctx->flac) == FLAC__STREAM_DECODER_ABORTED) {
 				ga_mutex_unlock(ctx->mutex);
 				return frames_read;
 			}
 		}
 
-		usz nread = min(ctx->bufmax - ctx->bufoff, num_left);
-		memcpy(sdst, ctx->buffer + ctx->bufoff, nread * 2);
-		sdst += nread;
-		frames_read += nread/ctx->fmt.num_channels;
-		ctx->bufoff += nread;
-		num_left -= nread;
-		ctx->sample_off += nread;
+		usz samples_read = min(ctx->bufmax - ctx->bufoff, samples_left);
+		memcpy(sdst, ctx->buffer + ctx->bufoff * ctx->fmt.sample_fmt, samples_read * ctx->fmt.sample_fmt);
+		sdst += samples_read * ctx->fmt.sample_fmt;
+		frames_read += samples_read/ctx->fmt.num_channels;
+		ctx->bufoff += samples_read;
+		samples_left -= samples_read;
+		ctx->sample_off += samples_read;
 
 		if (ctx->bufoff+1 >= ctx->bufmax) {
 			ctx->bufoff = ctx->bufmax = 0;
@@ -136,16 +165,16 @@ static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_frames, GaCbOn
 	return frames_read;
 }
 
-static ga_bool ss_end(GaSampleSourceContext *ctx) {
-	FLAC__StreamDecoderState res;
-	with_mutex(ctx->mutex) res = FLAC__stream_decoder_get_state(ctx->flac);
-	return res == FLAC__STREAM_DECODER_END_OF_STREAM;
-}
 static ga_result ss_seek(GaSampleSourceContext *ctx, usz sample_offset) {
 	FLAC__bool res;
 	with_mutex(ctx->mutex) {
+		ctx->seeking = true;
 		res = FLAC__stream_decoder_seek_absolute(ctx->flac, sample_offset);
-		if (res) ctx->sample_off = sample_offset;
+		if (res) {
+			ctx->sample_off = sample_offset;
+			ctx->bufmax = ctx->bufoff = 0;
+		}
+		ctx->seeking = false;
 	}
 	return res ? GA_OK : GA_ERR_GENERIC;
 }
@@ -179,13 +208,16 @@ GaSampleSource *gau_sample_source_create_flac(GaDataSource *data_src) {
 	if (!ga_isok(ga_mutex_create(&ctx->mutex))) goto fail;
 	ctx->data_src = data_src;
 	ctx->datalen = datalen;
-	ctx->fmt.bits_per_sample = 16;
 
 	ctx->flac = FLAC__stream_decoder_new();
 
 	FLAC__StreamDecoderInitStatus status = FLAC__stream_decoder_init_stream(ctx->flac, flac_read, seekable ? flac_seek : NULL, flac_tell, seekable ? flac_length : NULL, flac_eof, flac_write, flac_metadata, flac_error, ctx);
 	if (status != FLAC__STREAM_DECODER_INIT_STATUS_OK) goto fail;
 	if (!FLAC__stream_decoder_process_until_end_of_metadata(ctx->flac)) goto fail;
+
+	if (ctx->flacbps != 16
+	    && ctx->flacbps != 24
+	    && ctx->flacbps != 32) goto fail;
 
 	GaSampleSourceCreationMinutiae m = {
 		.read = ss_read,

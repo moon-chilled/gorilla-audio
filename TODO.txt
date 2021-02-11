@@ -37,11 +37,10 @@ DSP FILTERS:
 
 LUXURY FEATURES:
 - Input audio recording (recording devices + wrapping samplesource)
-- Optimize mixer (less branches, SIMD)
+- Optimize mixer (fewer branches, SIMD)
 - Tracker support (MOD/S3M/XM/IT)
 - Surround sound (multi-channel) input and output formats
 - Support for multiple ga_StreamManager threads
-- Floating-point format support
 - AIFF support
 - Network-streaming audio (OGG, MP3, ShoutCast, IceCast)
 - Handle-locking for atomic groups of control commands

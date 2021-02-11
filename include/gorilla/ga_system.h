@@ -65,11 +65,6 @@ ga_result ga_initialize_systemops(GaSystemOps *callbacks);
  */
 ga_result ga_shutdown_systemops(void);
 
-ga_uint16 ga_endian_tobe2(ga_uint16 x);
-ga_uint32 ga_endian_tobe4(ga_uint32 x);
-ga_uint16 ga_endian_tole2(ga_uint16 x);
-ga_uint32 ga_endian_tole4(ga_uint32 x);
-
 
 /************/
 /*  Thread  */

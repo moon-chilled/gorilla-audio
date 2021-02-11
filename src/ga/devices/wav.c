@@ -11,6 +11,8 @@
 #define ciwrite2(fp, number) cbwrite(fp, &(s16){ga_endian_tole2(number)}, 2)
 #define ciwrite4(fp, number) cbwrite(fp, &(s32){ga_endian_tole4(number)}, 4)
 static ga_result gaX_open(GaDevice *dev) {
+	if (dev->format.sample_fmt < 0) return GA_ERR_MIS_UNSUP;
+
 	FILE *fp = fopen("gorilla-out.wav", "w");;
 	if (!fp) return GA_ERR_SYS_IO;
 
@@ -25,7 +27,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	ciwrite4(fp, dev->format.sample_rate);
 	ciwrite4(fp, ga_format_sample_size(&dev->format) * dev->format.sample_rate);
 	ciwrite2(fp, ga_format_sample_size(&dev->format));
-	ciwrite2(fp, dev->format.bits_per_sample);
+	ciwrite2(fp, dev->format.sample_fmt << 3);
 
 	cbwrite(fp, "data", 4);
 	ciwrite4(fp, 0); //size of all the data following

@@ -81,7 +81,7 @@ GaSampleSource *ga_contrib_sample_source_create_mp3(GaDataSource *data_src) {
 		.tell = ss_tell,
 		.close = ss_close,
 		.context = ctx,
-		.format = {.num_channels = ctx->mp3.channels, .bits_per_sample = 16, .sample_rate = ctx->mp3.sampleRate},
+		.format = {.num_channels = ctx->mp3.channels, .sample_fmt = GaSampleFormat_S16, .sample_rate = ctx->mp3.sampleRate},
 		.threadsafe = ga_true,
 	};
 	if (ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable) m.seek = ss_seek;

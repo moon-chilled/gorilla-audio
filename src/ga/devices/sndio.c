@@ -8,6 +8,8 @@ struct GaXDeviceImpl {
 };
 
 static ga_result gaX_open(GaDevice *dev) {
+	if (dev->format.sample_fmt < 0) return GA_ERR_MIS_UNSUP;
+
 	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_SYS_MEM;
 	dev->impl->hdl = sio_open(SIO_DEVANY, SIO_PLAY, 0/*sync*/);
@@ -15,9 +17,9 @@ static ga_result gaX_open(GaDevice *dev) {
 
 	struct sio_par par;
        	sio_initpar(&par);
-	par.bits = dev->format.bits_per_sample;
-	par.bps = dev->format.bits_per_sample >> 3;
-	par.sig = dev->format.bits_per_sample != 8;
+	par.bits = dev->format.sample_fmt << 3;
+	par.bps = dev->format.sample_fmt;
+	par.sig = dev->format.sample_fmt != GaSampleFormat_U8;
 	par.le = ENDIAN(1, 0);
 	par.pchan = dev->format.num_channels;
 	par.rate = dev->format.sample_rate;
@@ -27,8 +29,13 @@ static ga_result gaX_open(GaDevice *dev) {
 	if (!sio_setpar(dev->impl->hdl, &par)) goto fail;
 	if (par.le != ENDIAN(1, 0)
 	    || par.bps != par.bits >> 3
-	    || par.sig != (dev->format.bits_per_sample != 8)) goto fail;
-	dev->format.bits_per_sample = par.bits;
+	    || par.sig != (dev->format.sample_fmt != GaSampleFormat_U8)) goto fail;
+	switch (par.bits) {
+		case  8: dev->format.sample_fmt = GaSampleFormat_U8;
+		case 16: dev->format.sample_fmt = GaSampleFormat_S16;
+		case 32: dev->format.sample_fmt = GaSampleFormat_S32;
+		default: goto fail;
+	}
 	dev->format.num_channels = par.pchan;
 	dev->format.sample_rate = par.rate;
 	dev->num_samples = par.round;

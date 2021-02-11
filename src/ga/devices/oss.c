@@ -30,18 +30,15 @@ static ga_result gaX_open(GaDevice *dev) {
 	if (ioctl(fd, SNDCTL_DSP_SPEED, &(int){dev->format.sample_rate}) == -1) goto cleanup;
 	if (ioctl(fd, SNDCTL_DSP_CHANNELS, &(int){dev->format.num_channels}) == -1) goto cleanup;
 	int fmt;
-	switch (dev->format.bits_per_sample) {
+	switch (dev->format.sample_fmt) {
 #ifdef AFMT_U8
-		case  8: fmt = AFMT_U8;     break;
+		case GaSampleFormat_U8:  fmt = AFMT_U8;     break;
 #endif
 #ifdef AFMT_S16_NE
-		case 16: fmt = AFMT_S16_NE; break;
-#endif
-#ifdef AFMT_S24_NE
-		case 24: fmt = AFMT_S24_NE; break;
+		case GaSampleFormat_S16: fmt = AFMT_S16_NE; break;
 #endif
 #ifdef AFMT_S32_NE
-		case 32: fmt = AFMT_S32_NE; break;
+		case GaSampleFormat_S32: fmt = AFMT_S32_NE; break;
 #endif
 		default: goto cleanup;
 	}

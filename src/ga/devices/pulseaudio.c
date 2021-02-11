@@ -20,11 +20,11 @@ struct GaXDeviceImpl {
 static ga_result gaX_open(GaDevice *dev) {
 	pa_sample_spec spec;
 
-	switch (dev->format.bits_per_sample) {
-		case  8: spec.format = PA_SAMPLE_U8;    break;
-		case 16: spec.format = PA_SAMPLE_S16NE; break;
-		case 24: spec.format = PA_SAMPLE_S24NE; break;
-		case 32: spec.format = PA_SAMPLE_S32NE; break;
+	switch (dev->format.sample_fmt) {
+		case GaSampleFormat_U8:  spec.format = PA_SAMPLE_U8;        break;
+		case GaSampleFormat_S16: spec.format = PA_SAMPLE_S16NE;     break;
+		case GaSampleFormat_S32: spec.format = PA_SAMPLE_S32NE;     break;
+		case GaSampleFormat_F32: spec.format = PA_SAMPLE_FLOAT32NE; break;
 		default: return GA_ERR_MIS_PARAM;
 	}
 

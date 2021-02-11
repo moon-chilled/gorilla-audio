@@ -6,14 +6,15 @@ CHANGE LOG
 - Zero-copy mixing.
 - Add support for flac and opus, as well as a contrib module for mp3.
 - Transcoding support.
-- Miscellaneous performance improvements, API touch-ups, internal refactors.
+- Performance improvements and code quality improvements.
+- Miscellaneous API touch-ups.
 - Allow user-defined sample and data sources.
 
 0.3.3
-- Add an OSS audio backend
-- XAudio2 is the default backend on windows
-- MSVCRT is linked statically on windows
-- Audio loading functions now take an enum rather than a string for format
+- Add an OSS audio backend.
+- XAudio2 is the default backend on windows.
+- MSVCRT is linked statically on windows.
+- Audio loading functions now take an enum rather than a string for format.
 
 0.3.2
 - Enabled Cygwin builds.

@@ -57,7 +57,7 @@ GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
 	assert(*num_samples >= 128);
 
 	/* Open device */
-	ret->format.bits_per_sample = 16;
+	ret->format.sample_fmt = GaSampleFormat_S16;
 	ret->format.num_channels = 2;
 	ret->format.sample_rate = 48000;
 	ret->device = ga_device_open(dev_type, num_buffers, num_samples, &ret->format);

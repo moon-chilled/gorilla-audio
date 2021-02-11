@@ -177,7 +177,7 @@ GaSampleSource *gau_sample_source_create_vorbis(GaDataSource *data) {
 		ov_clear(&ctx->ogg_file);
 		goto fail;
 	}
-	m.format.bits_per_sample = 16; //s16le ftw!
+	m.format.sample_fmt = GaSampleFormat_S16;
 	m.format.num_channels = ctx->ogg_info->channels;
 	m.format.sample_rate = ctx->ogg_info->rate;
 

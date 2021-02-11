@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 	/* Initialize library + device */
 	ga_initialize_systemops(0);
 	memset(&fmt, 0, sizeof(GaFormat));
-	fmt.bits_per_sample = 16;
+	fmt.sample_fmt = GaSampleFormat_S16;
 	fmt.num_channels = 2;
 	fmt.sample_rate = 44100;
 	numSamples = 2048;

@@ -17,7 +17,7 @@ bool ga_version_compatible(s32 major, s32 minor, s32 rev) {
 
 /* Format Functions */
 u32 ga_format_sample_size(GaFormat *format) {
-	return (format->bits_per_sample >> 3) * format->num_channels;
+	return abs(format->sample_fmt) * format->num_channels;
 }
 
 f32 ga_format_to_seconds(GaFormat *format, usz samples) {
@@ -69,7 +69,7 @@ GaDevice *ga_device_open(GaDeviceType *type,
 
 	u32 num_buffers = pnum_buffers ? *pnum_buffers : 4;
 	u32 num_samples = pnum_samples ? *pnum_samples : 512;
-	GaFormat format = pformat ? *pformat : (GaFormat){.bits_per_sample=16, .num_channels=2, .sample_rate=48000};
+	GaFormat format = pformat ? *pformat : (GaFormat){.sample_fmt=GaSampleFormat_S16, .num_channels=2, .sample_rate=48000};
 
 	GaDevice *ret = memset(ga_alloc(sizeof(GaDevice)), 0, sizeof(GaDevice));
 	ret->dev_type = *type;
@@ -142,6 +142,10 @@ void *ga_device_get_buffer(GaDevice *device) {
 
 ga_result ga_device_queue(GaDevice *device, void *buffer) {
 	return device->procs.queue(device, buffer);
+}
+
+void ga_device_format(GaDevice *device, GaFormat *fmt) {
+	*fmt = device->format;
 }
 
 GaDataSource *ga_data_source_create(const GaDataSourceCreationMinutiae *m) {
@@ -593,7 +597,7 @@ GaMixer *ga_mixer_create(GaFormat *format, u32 num_samples) {
 	ga_list_head(&ret->mix_list);
 	ret->num_samples = num_samples;
 	ret->format = *format;
-	ret->mix_format.bits_per_sample = 32;
+	ret->mix_format.sample_fmt = GaSampleFormat_S32;
 	ret->mix_format.num_channels = format->num_channels;
 	ret->mix_format.sample_rate = format->sample_rate;
 	ret->mix_buffer = ga_alloc(num_samples * ga_format_sample_size(&ret->mix_format));
@@ -638,24 +642,81 @@ static void gaX_mixer_mix_buffer(GaMixer *mixer,
 	f32 cur_pan = last_pan, cur_gain = last_gain;
 	f32 d_pan = (pan - last_pan) / dst_samples;
 	f32 d_gain = (gain - last_gain) / dst_samples;
+	s32 src_bytes = src_samples * sample_size;
 
-	/* TODO: Support 8-bit/16-bit mono/stereo mixer format */
-	switch (src_fmt->bits_per_sample) {
-		case 16: {
-			s32 src_bytes = src_samples * sample_size;
+	/* TODO: Support mono mixing format */
+	switch (src_fmt->sample_fmt) {
+		case GaSampleFormat_U8: {
+			const u8 *src = src_buffer;
+			for (u32 i = 0, j = 0; i < dst_samples * mixer_channels && src_bytes >= (s32)sizeof(u8) * src_channels; i += mixer_channels) {
+				f32 lmul = cur_gain * (cur_pan < 0.5 ? 1 : (1 - cur_pan) * 2);
+				f32 rmul = cur_gain * (cur_pan > 0.5 ? 1 : cur_pan * 2);
+				cur_pan += d_pan;
+				cur_gain += d_gain;
+				dst[i] += (s32)((s32)src[j] * lmul) << 8;
+				dst[i + 1] += (s32)((s32)src[j + ((src_channels == 1) ? 0 : 1)] * rmul) << 8;
+
+				fj += sample_scale * src_channels;
+				srcSamplesRead += sample_scale * src_channels;
+				u32 jP/*j'*/ = (u32)fj & (src_channels == 1 ? ~0u : ~1u);
+				src_bytes -= (jP - j) * sizeof(u8);
+				j = jP;
+			}
+
+			break;
+		}
+		case GaSampleFormat_S16: {
 			const s16 *src = src_buffer;
-			for (u32 i = 0, j = 0; i < dst_samples * mixer_channels && src_bytes >= 2 * src_channels; i += mixer_channels) {
+			for (u32 i = 0, j = 0; i < dst_samples * mixer_channels && src_bytes >= (s32)sizeof(s16) * src_channels; i += mixer_channels) {
 				f32 lmul = cur_gain * (cur_pan < 0.5 ? 1 : (1 - cur_pan) * 2);
 				f32 rmul = cur_gain * (cur_pan > 0.5 ? 1 : cur_pan * 2);
 				cur_pan += d_pan;
 				cur_gain += d_gain;
 				dst[i] += (s32)((s32)src[j] * lmul);
-				dst[i + 1] += (s32)((s32)src[j + ((src_channels == 1) ? 0 : 1)] * rmul);
+				dst[i + 1] += (s32)((s32)src[j + (src_channels > 1)] * rmul);
 
 				fj += sample_scale * src_channels;
 				srcSamplesRead += sample_scale * src_channels;
 				u32 jP/*j'*/ = (u32)fj & (src_channels == 1 ? ~0u : ~1u);
-				src_bytes -= (jP - j) * 2;
+				src_bytes -= (jP - j) * sizeof(s16);
+				j = jP;
+			}
+
+			break;
+		}
+		case GaSampleFormat_S32: {
+			const s32 *src = src_buffer;
+			for (u32 i = 0, j = 0; i < dst_samples * mixer_channels && src_bytes >= (s32)sizeof(s32) * src_channels; i += mixer_channels) {
+				f32 lmul = cur_gain * (cur_pan < 0.5 ? 1 : (1 - cur_pan) * 2);
+				f32 rmul = cur_gain * (cur_pan > 0.5 ? 1 : cur_pan * 2);
+				cur_pan += d_pan;
+				cur_gain += d_gain;
+				dst[i] += (s32)((s32)src[j] * lmul) >> 16;
+				dst[i + 1] += (s32)((s32)src[j + (src_channels > 1)] * rmul) >> 16;
+
+				fj += sample_scale * src_channels;
+				srcSamplesRead += sample_scale * src_channels;
+				u32 jP/*j'*/ = (u32)fj & (src_channels == 1 ? ~0u : ~1u);
+				src_bytes -= (jP - j) * sizeof(s32);
+				j = jP;
+			}
+
+			break;
+		}
+		case GaSampleFormat_F32: {
+			const f32 *src = src_buffer;
+			for (u32 i = 0, j = 0; i < dst_samples * mixer_channels && src_bytes >= (s32)sizeof(f32) * src_channels; i += mixer_channels) {
+				f32 lmul = cur_gain * (cur_pan < 0.5 ? 1 : (1 - cur_pan) * 2);
+				f32 rmul = cur_gain * (cur_pan > 0.5 ? 1 : cur_pan * 2);
+				cur_pan += d_pan;
+				cur_gain += d_gain;
+				dst[i] += clamp(src[j] * lmul, -1, 1) * 32767;
+				dst[i + 1] += clamp(src[j + (src_channels > 1)] * rmul, -1, 1) * 32767; //todo 32768 when negative
+
+				fj += sample_scale * src_channels;
+				srcSamplesRead += sample_scale * src_channels;
+				u32 jP/*j'*/ = (u32)fj & (src_channels == 1 ? ~0u : ~1u);
+				src_bytes -= (jP - j) * sizeof(f32);
 				j = jP;
 			}
 
@@ -720,7 +781,7 @@ ga_result ga_mixer_mix(GaMixer *m, void *buffer) {
 	usz end = m->num_samples * m->format.num_channels;
 
 	if (m->suspended) {
-		memset(buffer, 0, end * m->format.bits_per_sample);
+		memset(buffer, 0, end * abs(m->format.sample_fmt));
 		return GA_OK;
 	}
 
@@ -742,22 +803,30 @@ ga_result ga_mixer_mix(GaMixer *m, void *buffer) {
 
 	/* mix_buffer will already be correct bps */
 	//todo this is wrong
-	switch (m->format.bits_per_sample) {
-		case 8:
-			for (usz i = 0; i < end; ++i) {
+	switch (m->format.sample_fmt) {
+		case GaSampleFormat_U8:
+			for (usz i = 0; i < end; i++) {
 				s32 sample = m->mix_buffer[i];
-				((s8*)buffer)[i] = sample > -128 ? (sample < 127 ? sample : 127) : -128;
+				((u8*)buffer)[i] = (sample + 32767) >> 8;
 			}
 			break;
-		case 16:
-			for (usz i = 0; i < end; ++i) {
+		case GaSampleFormat_S16:
+			for (usz i = 0; i < end; i++) {
 			        s32 sample = m->mix_buffer[i];
 			        ((s16*)buffer)[i] = sample > -32768 ? (sample < 32767 ? sample : 32767) : -32768;
 			}
 			break;
-		case 32:
-			memcpy(buffer, m->mix_buffer, end * 4);
+		case GaSampleFormat_S32:
+			for (usz i = 0; i < end; i++) {
+				((s32*)buffer)[i] = m->mix_buffer[i] << 16;
+			}
 			break;
+		case GaSampleFormat_F32:
+			for (usz i = 0; i < end; i++) {
+				((f32*)buffer)[i] = m->mix_buffer[i] / 32767.0f; //todo sign
+			}
+			break;
+		default: return GA_ERR_MIS_UNSUP;
 	}
 
 	return GA_OK;

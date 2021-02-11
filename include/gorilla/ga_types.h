@@ -45,6 +45,18 @@ typedef float            ga_float32;
 typedef double           ga_float64;
 #define GA_SSIZE_MAX PTRDIFF_MAX
 #define GA_USIZE_MAX SIZE_MAX
+enum {
+	GA_S8_MIN  =        -128,
+	GA_S16_MIN =      -32768,
+	GA_S32_MIN = -2147483648,
+};
+
+#define GA_U8_MAX         255
+#define GA_S8_MAX         127
+#define GA_U16_MAX      65535
+#define GA_S16_MAX      32767
+#define GA_U32_MAX 4294967295
+#define GA_S32_MAX 2147483647
 
 /*********************/
 /**  Result Values  **/

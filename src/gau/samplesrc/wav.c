@@ -119,6 +119,8 @@ GaSampleSource *gau_sample_source_create_wav(GaDataSource *data_src) {
 	if (!ctx) return NULL;
 	if (!ga_isok(sample_source_wav_load_header(data_src, &ctx->wav_header))) goto fail;
 
+	if (ctx->wav_header.bits_per_sample != 16) goto fail;
+
 	GaSampleSourceCreationMinutiae m = {
 		.read = ss_read,
 		.end = ss_end,
@@ -126,7 +128,7 @@ GaSampleSource *gau_sample_source_create_wav(GaDataSource *data_src) {
 		.tell = ss_tell,
 		.close = ss_close,
 		.context = ctx,
-		.format = {.num_channels = ctx->wav_header.channels, .bits_per_sample = ctx->wav_header.bits_per_sample, .sample_rate = ctx->wav_header.sample_rate},
+		.format = {.num_channels = ctx->wav_header.channels, .sample_fmt = ctx->wav_header.bits_per_sample >> 3, .sample_rate = ctx->wav_header.sample_rate},
 		.threadsafe = true,
 	};
 	if (ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable) m.seek = ss_seek;

@@ -105,12 +105,12 @@ static ga_result gaX_queue(GaDevice *dev, void *in_buffer) {
 	ga_result ret = GA_OK;
 	s32 formatOal;
 	ALint state;
-	s32 bps = dev->format.bits_per_sample;
+	GaSampleFormat sf = dev->format.sample_fmt;
 
 	if (dev->format.num_channels == 1)
-		formatOal = (s32)(bps == 16 ? AL_FORMAT_MONO16 : AL_FORMAT_MONO8);
+		formatOal = sf == GaSampleFormat_S16 ? AL_FORMAT_MONO16   : AL_FORMAT_MONO8;
 	else
-		formatOal = (s32)(bps == 16 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO8);
+		formatOal = sf == GaSampleFormat_S16 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO8;
 
 	alBufferData(dev->impl->hw_buffers[dev->impl->next_buffer], formatOal, in_buffer,
 			(ALsizei)dev->num_samples * ga_format_sample_size(&dev->format), dev->format.sample_rate);
