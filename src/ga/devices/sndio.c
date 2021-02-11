@@ -10,7 +10,7 @@ struct GaXDeviceImpl {
 static ga_result gaX_open(GaDevice *dev) {
 	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_SYS_MEM;
-	dev->impl->hdl = sio_open(SIO_DEVANY, SIO_PLAY, 1/*async*/);
+	dev->impl->hdl = sio_open(SIO_DEVANY, SIO_PLAY, 0/*sync*/);
 	if (!dev->impl->hdl) goto fail;
 
 	struct sio_par par;
@@ -33,6 +33,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	dev->format.sample_rate = par.rate;
 	dev->num_samples = par.round;
 	dev->num_buffers = par.appbufsz / par.round;
+	if (!sio_start(dev->impl->hdl)) goto fail;
 
 	return GA_OK;
 
@@ -43,9 +44,10 @@ fail:
 }
 
 static ga_result gaX_close(GaDevice *dev) {
+	ga_result ret = sio_stop(dev->impl->hdl) ? GA_OK : GA_ERR_SYS_LIB;
 	sio_close(dev->impl->hdl);
 	ga_free(dev->impl);
-	return GA_OK;
+	return ret;
 }
 
 static u32 gaX_check(GaDevice *dev) {
@@ -57,4 +59,4 @@ static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	return GA_OK;
 }
 
-GaXDeviceProcs gaX_deviceprocs_sndio = { gaX_open, gaX_check, gaX_queue, gaX_close };
+GaXDeviceProcs gaX_deviceprocs_sndio = { .open=gaX_open, .check=gaX_check, .queue=gaX_queue, .close=gaX_close };
