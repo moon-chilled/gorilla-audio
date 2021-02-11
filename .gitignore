@@ -15,8 +15,8 @@ tags
 
 # What we're here for
 *.obj
+*.o
 *.idb
-/build/
 *.pdb
 *.user
 *.ncb
