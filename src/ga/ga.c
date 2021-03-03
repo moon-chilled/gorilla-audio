@@ -774,7 +774,6 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_frame
 		if (!ga_sample_source_ready(ss, requested)) return;
 	}
 
-	/* TODO: To optimize, we can refactor the _read() interface to be _mix(), avoiding this malloc/copy */
 	void *dst = ga_alloc(needed * ga_format_sample_size(&handle_format));
 	if (mixer->format.sample_rate != handle_format.sample_rate) {
 		void *src = ga_alloc(requested * ga_format_sample_size(&handle_format));
