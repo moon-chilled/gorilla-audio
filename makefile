@@ -41,7 +41,7 @@ ENABLE_ALSA := 0
 ENABLE_OSS := 0
 ENABLE_OPENAL := 0
 
-GA_SRC := src/ga/ga.c src/ga/trans.c src/ga/memory.c src/ga/stream.c src/ga/system.c src/ga/devices/dummy.c src/ga/devices/wav.c
+GA_SRC := src/ga/ga.c src/ga/trans.c src/ga/memory.c src/ga/stream.c src/ga/system.c src/ga/log.c src/ga/devices/dummy.c src/ga/devices/wav.c
 GAU_SRC := src/gau/gau.c src/gau/datasrc/file.c src/gau/datasrc/memory.c src/gau/samplesrc/loop.c src/gau/samplesrc/sound.c src/gau/samplesrc/stream.c src/gau/samplesrc/wav.c src/gau/samplesrc/ogg-vorbis.c src/gau/samplesrc/ogg-opus.c src/gau/samplesrc/flac.c
 OGG_SRC := ext/libogg/src/bitwise.c ext/libogg/src/framing.c
 FLAC_SRC := ext/libflac/src/libFLAC/bitmath.c ext/libflac/src/libFLAC/bitreader.c ext/libflac/src/libFLAC/bitwriter.c ext/libflac/src/libFLAC/cpu.c ext/libflac/src/libFLAC/crc.c ext/libflac/src/libFLAC/fixed.c ext/libflac/src/libFLAC/fixed_intrin_sse2.c ext/libflac/src/libFLAC/fixed_intrin_ssse3.c ext/libflac/src/libFLAC/float.c ext/libflac/src/libFLAC/format.c ext/libflac/src/libFLAC/lpc.c ext/libflac/src/libFLAC/lpc_intrin_sse.c ext/libflac/src/libFLAC/lpc_intrin_sse2.c ext/libflac/src/libFLAC/lpc_intrin_sse41.c ext/libflac/src/libFLAC/lpc_intrin_avx2.c ext/libflac/src/libFLAC/md5.c ext/libflac/src/libFLAC/memory.c ext/libflac/src/libFLAC/metadata_iterators.c ext/libflac/src/libFLAC/metadata_object.c ext/libflac/src/libFLAC/stream_decoder.c ext/libflac/src/libFLAC/stream_encoder.c ext/libflac/src/libFLAC/stream_encoder_intrin_sse2.c ext/libflac/src/libFLAC/stream_encoder_intrin_ssse3.c ext/libflac/src/libFLAC/stream_encoder_intrin_avx2.c ext/libflac/src/libFLAC/stream_encoder_framing.c ext/libflac/src/libFLAC/window.c

@@ -1396,6 +1396,21 @@ void ga_trans_resample_point_s16(GaResamplingState *rs, ga_sint16 *dst, ga_usize
 void ga_trans_resample_linear_s16(GaResamplingState *rs, ga_sint16 *dst, ga_usize dlen, ga_sint16 *src, ga_usize slen);
 ga_usize ga_trans_resample_howmany(GaResamplingState *rs, ga_usize out);
 
+typedef enum {
+	GaLogInfo,
+	GaLogWarn,
+} GaLogCategory;
+
+typedef void (*GaCbLogger)(void *ctx, GaLogCategory category, const char *file, const char *function, int line, const char *message);
+
+void ga_register_logger(GaCbLogger logger, void *ctx);
+ga_result ga_open_logfile(const char *fname);
+
+void ga_do_log(GaLogCategory category, const char *file, const char *function, int line, const char *fmt, ...);
+#define ga_log(category, ...) ga_do_log(category, __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define ga_info(...) ga_do_log(GaLogInfo, __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define ga_warn(...) ga_do_log(GaLogWarn, __FILE__, __func__, __LINE__, __VA_ARGS__)
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

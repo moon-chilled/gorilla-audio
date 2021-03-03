@@ -753,7 +753,10 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_frame
 	// number of frames to request from the handle
 	usz requested = handle->resample_state ? ga_trans_resample_howmany(handle->resample_state, needed) : needed;
 
-	if (!ga_sample_source_ready(ss, requested)) return;
+	if (!ga_sample_source_ready(ss, requested)) {
+		ga_warn("Sample source not ready to play %zu samples; skipped!", requested);
+		return;
+	}
 
 	ga_mutex_lock(handle->mutex);
 	f32 gain = handle->gain;
@@ -771,7 +774,10 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_frame
 		needed = num_frames / pitch;
 		needed = needed * pitch < num_frames ? needed + 1 : needed;
 		requested = handle->resample_state ? ga_trans_resample_howmany(handle->resample_state, needed) : needed;
-		if (!ga_sample_source_ready(ss, requested)) return;
+		if (!ga_sample_source_ready(ss, requested)) {
+			ga_warn("Sample source not ready to play %zu samples; skipped!", requested);
+			return;
+		}
 	}
 
 	void *dst = ga_alloc(needed * ga_format_sample_size(&handle_format));

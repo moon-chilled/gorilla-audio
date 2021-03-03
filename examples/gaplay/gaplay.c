@@ -151,7 +151,6 @@ int main(int argc, char **argv) {
 
 				// escape, maybe arrow key
 				case '\x1b':
-					if (!kbhit()) break;
 					if (!kbhit() || getch() != '[' || !kbhit()) break;
 
 				       	int delta;
