@@ -1397,6 +1397,7 @@ void ga_trans_resample_linear_s16(GaResamplingState *rs, ga_sint16 *dst, ga_usiz
 ga_usize ga_trans_resample_howmany(GaResamplingState *rs, ga_usize out);
 
 typedef enum {
+	GaLogTrace,
 	GaLogInfo,
 	GaLogWarn,
 } GaLogCategory;
@@ -1408,6 +1409,7 @@ ga_result ga_open_logfile(const char *fname);
 
 void ga_do_log(GaLogCategory category, const char *file, const char *function, int line, const char *fmt, ...);
 #define ga_log(category, ...) ga_do_log(category, __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define ga_trace(...) ga_do_log(GaLogTrace, __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define ga_info(...) ga_do_log(GaLogInfo, __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define ga_warn(...) ga_do_log(GaLogWarn, __FILE__, __func__, __LINE__, __VA_ARGS__)
 

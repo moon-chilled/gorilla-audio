@@ -754,7 +754,7 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_frame
 	usz requested = handle->resample_state ? ga_trans_resample_howmany(handle->resample_state, needed) : needed;
 
 	if (!ga_sample_source_ready(ss, requested)) {
-		ga_warn("Sample source not ready to play %zu samples; skipped!", requested);
+		ga_trace("Sample source not ready to play %zu samples; skipped!", requested);
 		return;
 	}
 
@@ -775,7 +775,7 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_frame
 		needed = needed * pitch < num_frames ? needed + 1 : needed;
 		requested = handle->resample_state ? ga_trans_resample_howmany(handle->resample_state, needed) : needed;
 		if (!ga_sample_source_ready(ss, requested)) {
-			ga_warn("Sample source not ready to play %zu samples; skipped!", requested);
+			ga_trace("Sample source not ready to play %zu samples; skipped!", requested);
 			return;
 		}
 	}

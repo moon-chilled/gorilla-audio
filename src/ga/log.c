@@ -4,7 +4,7 @@
 #include "gorilla/ga.h"
 
 static void log_to_file(void *ctx, GaLogCategory category, const char *file, const char *function, int line, const char *msg) {
-	fprintf(ctx, "%s: %s:%s:%d: %s\n", category == GaLogInfo ? "info" : category == GaLogWarn ? "warn" : "<?>", file, function, line, msg);
+	fprintf(ctx, "%s: %s:%s:%d: %s\n", category == GaLogTrace ? "trace" : category == GaLogInfo ? "info" : category == GaLogWarn ? "warn" : "<?>", file, function, line, msg);
 }
 static void null_logger(void *ctx, GaLogCategory category, const char *file, const char *function, int line, const char *msg) {}
 
