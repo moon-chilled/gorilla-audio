@@ -177,6 +177,7 @@ typedef enum {
 
 struct GaHandle {
 	GaMixer *mixer;
+	GaResamplingState *resample_state; //non-null iff format.sample_rate != mixerformat.sample_rate
 	GaCbHandleFinish callback;
 	void *context;
 	GaHandleState state;

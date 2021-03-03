@@ -437,6 +437,12 @@ static void gaX_handle_init(GaHandle *handle, GaMixer *mixer) {
 	handle->gain = handle->last_gain = 1;
 	handle->pan = handle->last_pan = 0;
 	ga_mutex_create(&handle->mutex); //todo errhandle
+
+	GaFormat fmt;
+	ga_sample_source_format(handle->sample_src, &fmt);
+	//todo channelnum should be min()
+	if (fmt.sample_rate != mixer->format.sample_rate) handle->resample_state = ga_trans_resample_setup(mixer->format.sample_rate, fmt.sample_rate, fmt.num_channels);
+	else handle->resample_state = NULL;
 }
 
 GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *src) {
@@ -466,6 +472,7 @@ ga_result ga_handle_destroy(GaHandle *handle) {
 
 static ga_result gaX_handle_cleanup(GaHandle *handle) {
 	/* May only be called from the dispatch thread */
+	if (handle->resample_state) ga_trans_resample_teardown(handle->resample_state);
 	ga_sample_source_release(handle->sample_src);
 	ga_mutex_destroy(handle->mutex);
 	ga_free(handle);
@@ -633,7 +640,7 @@ static void gaX_mixer_mix_buffer(GaMixer *mixer,
 			  f32 gain, f32 last_gain, f32 pan, f32 last_pan, f32 pitch) {
 	u32 mixer_channels = dst_fmt->num_channels;
 	s32 src_channels = src_fmt->num_channels;
-	f32 sample_scale = src_fmt->sample_rate / (f32)dst_fmt->sample_rate * pitch; //todo interpolate?
+	f32 sample_scale = 1 / pitch; //todo interpolate?
 	f32 fj = 0.0;
 	f32 srcSamplesRead = 0.0;
 	u32 sample_size = ga_format_sample_size(src_fmt);
@@ -725,7 +732,7 @@ static void gaX_mixer_mix_buffer(GaMixer *mixer,
 	}
 }
 
-static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_samples) {
+static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_frames) {
 	GaSampleSource *ss = handle->sample_src;
 	if (ga_sample_source_end(ss)) {
 		/* Stream is finished! */
@@ -736,16 +743,17 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_sampl
 		return;
 	}
 	if (handle->state != GaHandleState_Playing) return;
-	GaFormat handleFormat;
-	ga_sample_source_format(ss, &handleFormat);
+	GaFormat handle_format;
+	ga_sample_source_format(ss, &handle_format);
 	/* Check if we have enough samples to stream a full buffer */
-	u32 srcSampleSize = ga_format_sample_size(&handleFormat);
-	f32 oldPitch = handle->pitch;
-	f32 dstToSrc = handleFormat.sample_rate / (f32)mixer->format.sample_rate * oldPitch;
-	usz requested = num_samples * dstToSrc;
-	requested = requested / dstToSrc < num_samples ? requested + 1 : requested;
+	f32 old_pitch = handle->pitch;
+	// number of frames to mix (after resampling)
+	usz needed = num_frames / old_pitch;
+	needed = needed * old_pitch < num_frames ? needed + 1 : needed;
+	// number of frames to request from the handle
+	usz requested = handle->resample_state ? ga_trans_resample_howmany(handle->resample_state, needed) : needed;
 
-	if (requested <= 0 || !ga_sample_source_ready(ss, requested)) return;
+	if (!ga_sample_source_ready(ss, requested)) return;
 
 	ga_mutex_lock(handle->mutex);
 	f32 gain = handle->gain;
@@ -759,22 +767,40 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_sampl
 
 	/* We avoided a mutex lock by using pitch to check if buffer has enough dst samples */
 	/* If it has changed since then, we re-test to make sure we still have enough samples */
-	if (oldPitch != pitch) {
-		dstToSrc = handleFormat.sample_rate / (f32)mixer->format.sample_rate * pitch;
-		requested = (s32)(num_samples * dstToSrc);
-		requested = requested / dstToSrc < num_samples ? requested + 1 : requested;
-		if (requested <= 0 || !ga_sample_source_ready(ss, requested)) return;
+	if (old_pitch != pitch) {
+		needed = num_frames / pitch;
+		needed = needed * pitch < num_frames ? needed + 1 : needed;
+		requested = handle->resample_state ? ga_trans_resample_howmany(handle->resample_state, needed) : needed;
+		if (!ga_sample_source_ready(ss, requested)) return;
 	}
 
 	/* TODO: To optimize, we can refactor the _read() interface to be _mix(), avoiding this malloc/copy */
-	void *src = ga_alloc(requested * srcSampleSize);
-	s32 numRead = 0;
-	numRead = ga_sample_source_read(ss, src, requested, NULL, NULL);
+	void *dst = ga_alloc(needed * ga_format_sample_size(&handle_format));
+	if (mixer->format.sample_rate != handle_format.sample_rate) {
+		void *src = ga_alloc(requested * ga_format_sample_size(&handle_format));
+		usz num_read = ga_sample_source_read(ss, src, requested, NULL, NULL);
+		if (num_read != requested) {
+			f32 r = needed / (f32)requested;
+			requested = num_read;
+			needed = requested * r;
+		}
+		ga_trans_resample_linear_s16(handle->resample_state, dst, needed, src, requested);
+		ga_free(src);
+	} else {
+		usz num_read = ga_sample_source_read(ss, dst, needed, NULL, NULL);
+
+		if (num_read != requested) {
+			f32 r = needed / (f32)requested;
+			requested = num_read;
+			needed = requested * r;
+		}
+	}
+
 	gaX_mixer_mix_buffer(mixer,
-	                     src, numRead, &handleFormat,
-	                     mixer->mix_buffer, num_samples, &mixer->format,
+	                     dst, needed, &handle_format,
+	                     mixer->mix_buffer, num_frames, &mixer->format,
 	                     gain, last_gain, pan, last_pan, pitch);
-	ga_free(src);
+	ga_free(dst);
 }
 
 ga_result ga_mixer_mix(GaMixer *m, void *buffer) {

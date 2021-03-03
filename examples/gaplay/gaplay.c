@@ -34,8 +34,8 @@ const char *sampleformatname(GaSampleFormat fmt) {
 		case GaSampleFormat_S16: return "s16";
 		case GaSampleFormat_S32: return "s32";
 		case GaSampleFormat_F32: return "f32";
-		default: return "???";
 	}
+	return "???";
 }
 const char *devicetypename(GaDeviceType type) {
 	switch (type) {
@@ -48,11 +48,8 @@ const char *devicetypename(GaDeviceType type) {
 		case GaDeviceType_Sndio: return "sndio";;
 		case GaDeviceType_ALSA: return "alsa";
 		case GaDeviceType_OpenAL: return "al";
-		default: return "???";
 	}
-}
-
-void enable_raw_mode(void) {
+	return "???";
 }
 
 void done(int status) {
@@ -94,8 +91,6 @@ int main(int argc, char **argv) {
 	ga_initialize_systemops(NULL);
 	GaDeviceType dev_type = GaDeviceType_Default;
 	GauManager *mgr = check(gau_manager_create_custom(&dev_type, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
-	GaMixer *mixer = check(gau_manager_mixer(mgr), "Unable to get mixer from manager");
-	GaStreamManager *smgr = gau_manager_stream_manager(mgr);
 
 	GaHandle *handle;
 	{
@@ -114,7 +109,7 @@ int main(int argc, char **argv) {
 		}
 	}
 	check(handle, ":(");
-	//ga_handle_set_paramf(handle, GaHandleParam_Pan, 0);
+	//ga_handle_set_paramf(handle, GaHandleParam_Gain, 0);
 
 	ga_handle_play(handle);
 

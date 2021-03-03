@@ -4,8 +4,11 @@ LFLAGS = -Wl,-rpath=../../o/debug -L../../o/debug -lgorilla
 O := gaplay.o ../../contrib/mp3/mp3dec.o
 
 ifeq ($(ASAN),1)
-	CFLAGS += -fsanitize=address
-	LFLAGS += -fsanitize=address
+	CFLAGS += -fsanitize=address -fsanitize=undefined
+	LFLAGS += -fsanitize=address -fsanitize=undefined
+else ifeq ($(TSAN),1)
+	CFLAGS += -fsanitize=thread -fsanitize=undefined
+	LFLAGS += -fsanitize=thread -fsanitize=undefined
 endif
 
 gaplay: $(O) ../../o/debug/libgorilla.a

@@ -1388,6 +1388,14 @@ void ga_stream_acquire(GaBufferedStream *stream);
  */
 void ga_stream_release(GaBufferedStream *stream);
 
+typedef struct GaResamplingState GaResamplingState;
+
+GaResamplingState *ga_trans_resample_setup(ga_uint32 drate, ga_uint32 srate, ga_uint32 nch);
+void ga_trans_resample_teardown(GaResamplingState *rs);
+void ga_trans_resample_point_s16(GaResamplingState *rs, ga_sint16 *dst, ga_usize dlen, ga_sint16 *src, ga_usize slen);
+void ga_trans_resample_linear_s16(GaResamplingState *rs, ga_sint16 *dst, ga_usize dlen, ga_sint16 *src, ga_usize slen);
+ga_usize ga_trans_resample_howmany(GaResamplingState *rs, ga_usize out);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
