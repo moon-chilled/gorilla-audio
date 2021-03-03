@@ -83,6 +83,7 @@ static void flac_metadata(const FLAC__StreamDecoder *decoder, const FLAC__Stream
 	switch (ctx->flacbps) {
 		case 16: ctx->fmt.sample_fmt = GaSampleFormat_S16; break;
 		case 24: ctx->fmt.sample_fmt = GaSampleFormat_S32; break;
+		default: assert(0);
 	}
 
 	ctx->bufcap = metadata->data.stream_info.max_blocksize * ctx->fmt.num_channels;
