@@ -12,16 +12,16 @@ struct GaSampleSourceContext {
 	GaDataSource *data_src;
 };
 
-void *mp3_alloc(ga_usize sz, void *data) { return ga_alloc(sz); }
-void *mp3_realloc(void *p, ga_usize sz, void *data) { return ga_realloc(p, sz); }
-void mp3_free(void *p, void *data) { return ga_free(p); }
+static void *mp3_alloc(ga_usize sz, void *data) { return ga_alloc(sz); }
+static void *mp3_realloc(void *p, ga_usize sz, void *data) { return ga_realloc(p, sz); }
+static void mp3_free(void *p, void *data) { return ga_free(p); }
 
 static drmp3_allocation_callbacks mp3_allocator = {.onMalloc = mp3_alloc, .onRealloc = mp3_realloc, .onFree = mp3_free};
 
-ga_usize mp3_read(void *ctx, void *buf, ga_usize l) {
+static ga_usize mp3_read(void *ctx, void *buf, ga_usize l) {
 	return ga_data_source_read(ctx, buf, 1, l);
 }
-drmp3_bool32 mp3_seek(void *ctx, int offset, drmp3_seek_origin origin) {
+static drmp3_bool32 mp3_seek(void *ctx, int offset, drmp3_seek_origin origin) {
 	switch (origin) {
 		case drmp3_seek_origin_start: return ga_isok(ga_data_source_seek(ctx, offset, GaSeekOrigin_Set));
 		case drmp3_seek_origin_current: return ga_isok(ga_data_source_seek(ctx, offset, GaSeekOrigin_Cur));
