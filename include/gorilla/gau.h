@@ -58,7 +58,7 @@ GauManager *gau_manager_create(void);
 GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
                                        GauThreadPolicy thread_policy,
                                        ga_uint32 *num_buffers,
-                                       ga_uint32 *num_samples);
+                                       ga_uint32 *num_frames);
 
 /** Updates an audio manager.
  *
