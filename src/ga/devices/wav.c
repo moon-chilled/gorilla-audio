@@ -24,9 +24,9 @@ static ga_result gaX_open(GaDevice *dev) {
 	ciwrite4(fp, 16); //subchunk size
 	ciwrite2(fp, 1); //pcm
 	ciwrite2(fp, dev->format.num_channels);
-	ciwrite4(fp, dev->format.sample_rate);
-	ciwrite4(fp, ga_format_sample_size(&dev->format) * dev->format.sample_rate);
-	ciwrite2(fp, ga_format_sample_size(&dev->format));
+	ciwrite4(fp, dev->format.frame_rate);
+	ciwrite4(fp, ga_format_frame_size(&dev->format) * dev->format.frame_rate);
+	ciwrite2(fp, ga_format_frame_size(&dev->format));
 	ciwrite2(fp, dev->format.sample_fmt << 3);
 
 	cbwrite(fp, "data", 4);
@@ -63,7 +63,7 @@ static u32 gaX_check(GaDevice *dev) {
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	//todo bswap on be
-	if (fwrite(buf, ga_format_sample_size(&dev->format), dev->num_samples, (FILE*)dev->impl) != dev->num_samples) return GA_ERR_SYS_IO;
+	if (fwrite(buf, ga_format_frame_size(&dev->format), dev->num_frames, (FILE*)dev->impl) != dev->num_frames) return GA_ERR_SYS_IO;
 	return GA_OK;
 }
 

@@ -104,10 +104,10 @@ static usz ss_read(GaSampleSourceContext *ctx, void *odst, usz num_samples,
 static bool ss_end(GaSampleSourceContext *ctx) {
 	return ctx->end_of_samples;
 }
-static ga_result ss_seek(GaSampleSourceContext *ctx, usz sample_offset) {
+static ga_result ss_seek(GaSampleSourceContext *ctx, usz frame_offset) {
 	int res;
 	with_mutex(ctx->ogg_mutex) {
-		res = ov_pcm_seek(&ctx->ogg_file, sample_offset);
+		res = ov_pcm_seek(&ctx->ogg_file, frame_offset);
 		ctx->end_of_samples = false;
 	}
 	switch (res) {
@@ -123,7 +123,7 @@ static ga_result ss_seek(GaSampleSourceContext *ctx, usz sample_offset) {
 static ga_result ss_tell(GaSampleSourceContext *ctx, usz *cur, usz *ototal) {
 	ga_result ret = GA_OK;
 	with_mutex(ctx->ogg_mutex) {
-		/* TODO: Decide whether to support total samples for OGG files */
+		/* TODO: Decide whether to support total frames for OGG files */
 		if (ototal) {
 			s64 ctotal = ov_pcm_total(&ctx->ogg_file, -1); /* Note: This isn't always valid when the stream is poorly-formatted */
 			if (ctotal < 0) ret = GA_ERR_MIS_UNSUP;
@@ -179,7 +179,7 @@ GaSampleSource *gau_sample_source_create_vorbis(GaDataSource *data) {
 	}
 	m.format.sample_fmt = GaSampleFormat_S16;
 	m.format.num_channels = ctx->ogg_info->channels;
-	m.format.sample_rate = ctx->ogg_info->rate;
+	m.format.frame_rate = ctx->ogg_info->rate;
 
 	GaSampleSource *ret = ga_sample_source_create(&m);
 	if (!ret) goto fail;

@@ -19,7 +19,7 @@ struct GaSampleSourceContext {
 
 	GaFormat fmt;
 
-	usz sample_off;
+	usz frame_off;
 
 	bool seeking;
 
@@ -76,7 +76,7 @@ static void flac_metadata(const FLAC__StreamDecoder *decoder, const FLAC__Stream
 
 	if (metadata->type != FLAC__METADATA_TYPE_STREAMINFO) return;
 
-	ctx->fmt.sample_rate = metadata->data.stream_info.sample_rate;
+	ctx->fmt.frame_rate = metadata->data.stream_info.sample_rate;
 	ctx->fmt.num_channels = metadata->data.stream_info.channels;
 	ctx->flacbps = metadata->data.stream_info.bits_per_sample;
 
@@ -153,9 +153,9 @@ static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_frames, GaCbOn
 		memcpy(sdst, ctx->buffer + ctx->bufoff * ctx->fmt.sample_fmt, samples_read * ctx->fmt.sample_fmt);
 		sdst += samples_read * ctx->fmt.sample_fmt;
 		frames_read += samples_read/ctx->fmt.num_channels;
+		ctx->frame_off += samples_read/ctx->fmt.num_channels;
 		ctx->bufoff += samples_read;
 		samples_left -= samples_read;
-		ctx->sample_off += samples_read;
 
 		if (ctx->bufoff+1 >= ctx->bufmax) {
 			ctx->bufoff = ctx->bufmax = 0;
@@ -166,13 +166,13 @@ static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_frames, GaCbOn
 	return frames_read;
 }
 
-static ga_result ss_seek(GaSampleSourceContext *ctx, usz sample_offset) {
+static ga_result ss_seek(GaSampleSourceContext *ctx, usz frame_offset) {
 	FLAC__bool res;
 	with_mutex(ctx->mutex) {
 		ctx->seeking = true;
-		res = FLAC__stream_decoder_seek_absolute(ctx->flac, sample_offset);
+		res = FLAC__stream_decoder_seek_absolute(ctx->flac, frame_offset);
 		if (res) {
-			ctx->sample_off = sample_offset;
+			ctx->frame_off = frame_offset;
 			ctx->bufmax = ctx->bufoff = 0;
 		}
 		ctx->seeking = false;
@@ -182,7 +182,7 @@ static ga_result ss_seek(GaSampleSourceContext *ctx, usz sample_offset) {
 static ga_result ss_tell(GaSampleSourceContext *ctx, usz *cur, usz *total) {
 	ga_mutex_lock(ctx->mutex);
 	if (total) *total = FLAC__stream_decoder_get_total_samples(ctx->flac);
-	if (cur) *cur = ctx->sample_off;
+	if (cur) *cur = ctx->frame_off;
 	ga_mutex_unlock(ctx->mutex);
 	return GA_OK;
 }

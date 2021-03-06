@@ -90,7 +90,7 @@ typedef struct GaXDeviceImpl GaXDeviceImpl;
 struct GaDevice {
 	GaDeviceType dev_type;
 	u32 num_buffers;
-	u32 num_samples;
+	u32 num_frames;
 	GaFormat format;
 
 	// use iff get_buffer is missing to avoid spurious allocations
@@ -159,7 +159,7 @@ struct GaMemory {
 struct GaSound {
 	GaMemory *memory;
 	GaFormat format;
-	usz num_samples;
+	usz num_frames;
 	RC refCount;
 };
 
@@ -196,7 +196,7 @@ struct GaHandle {
 struct GaMixer {
 	GaFormat format;
 	GaFormat mix_format;
-	u32 num_samples;
+	u32 num_frames;
 	s32 *mix_buffer;
 	GaLink dispatch_list;
 	GaMutex dispatch_mutex;
@@ -222,10 +222,10 @@ struct GaBufferedStream {
 	GaLink tell_jumps;
 	GaFormat format;
 	usz buffer_size;
-	s32 seek;
-	s32 tell;
-	s32 next_sample;
-	s32 end;
+	ssz seek;
+	usz tell;
+	usz next_frame;
+	bool end;
 	GaDataAccessFlags flags;
 };
 

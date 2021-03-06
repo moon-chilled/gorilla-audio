@@ -175,10 +175,10 @@ GaBufferedStream *ga_stream_create(GaStreamManager *mgr, GaSampleSource *src, us
 	ga_sample_source_format(src, &ret->format);
 	ga_list_head(&ret->tell_jumps);
 	ret->inner_src = src;
-	ret->next_sample = 0;
+	ret->next_frame = 0;
 	ret->seek = 0;
 	ret->tell = 0;
-	ret->end = 0;
+	ret->end = false;
 	ret->buffer_size = buffer_size;
 	ret->flags = ga_sample_source_flags(src);
 	assert(ret->flags & GaDataAccessFlag_Threadsafe);
@@ -189,44 +189,43 @@ GaBufferedStream *ga_stream_create(GaStreamManager *mgr, GaSampleSource *src, us
 	ret->stream_link = (GaLink*)gaX_stream_manager_add(mgr, ret);
 	return ret;
 }
-static void gaX_stream_onSeek(s32 sample, s32 delta, void *seekContext) {
+static void gaX_stream_onSeek(usz frame, ssz delta, void *seekContext) {
 	GaBufferedStream *s = (GaBufferedStream*)seekContext;
-	usz samplesAvail;
+	usz frames_avail;
 	GaFormat fmt;
 	ga_sample_source_format(s->inner_src, &fmt);
-	u32 sample_size = ga_format_sample_size(&fmt);
 	ga_mutex_lock(s->read_mutex);
 	ga_mutex_lock(s->seek_mutex);
-	samplesAvail = ga_buffer_bytes_avail(s->buffer) / sample_size;
-	gauX_tell_jump_push(&s->tell_jumps, samplesAvail + sample, delta);
+	frames_avail = ga_buffer_bytes_avail(s->buffer) / ga_format_frame_size(&fmt);
+	gauX_tell_jump_push(&s->tell_jumps, frames_avail + frame, delta);
 	ga_mutex_unlock(s->seek_mutex);
 	ga_mutex_unlock(s->read_mutex);
 }
-s32 gaX_read_samples_into_stream(GaBufferedStream *stream,
-                                      GaCircBuffer *b,
-                                      s32 samples,
-				      GaSampleSource *sampleSrc) {
+usz gaX_read_samples_into_stream(GaBufferedStream *stream,
+                                 GaCircBuffer *b,
+                                 usz frames,
+				 GaSampleSource *sampleSrc) {
 	void *dataA;
 	void *dataB;
 	usz sizeA = 0;
 	usz sizeB = 0;
-	usz numWritten = 0;
+	usz frames_written = 0;
 	GaFormat fmt;
-	u32 sample_size;
+	u32 frame_size;
 	ga_sample_source_format(sampleSrc, &fmt);
-	sample_size = ga_format_sample_size(&fmt);
-	u8 num_buffers = ga_buffer_get_free(b, samples * sample_size, &dataA, &sizeA, &dataB, &sizeB);
+	frame_size = ga_format_frame_size(&fmt);
+	u8 num_buffers = ga_buffer_get_free(b, frames * frame_size, &dataA, &sizeA, &dataB, &sizeB);
 	if (num_buffers >= 1) {
-		numWritten = ga_sample_source_read(sampleSrc, dataA, sizeA / sample_size, &gaX_stream_onSeek, stream);
-		if (num_buffers == 2 && numWritten == sizeA)
-			numWritten += ga_sample_source_read(sampleSrc, dataB, sizeB / sample_size, &gaX_stream_onSeek, stream);
+		frames_written = ga_sample_source_read(sampleSrc, dataA, sizeA / frame_size, &gaX_stream_onSeek, stream);
+		if (num_buffers == 2 && frames_written == sizeA)
+			frames_written += ga_sample_source_read(sampleSrc, dataB, sizeB / frame_size, &gaX_stream_onSeek, stream);
 	}
-	ga_buffer_produce(b, numWritten * sample_size);
-	return numWritten;
+	ga_buffer_produce(b, frames_written * frame_size);
+	return frames_written;
 }
 void ga_stream_produce(GaBufferedStream *s) {
 	GaCircBuffer *b = s->buffer;
-	u32 sample_size = ga_format_sample_size(&s->format);
+	u32 frame_size = ga_format_frame_size(&s->format);
 	usz bytes_free = ga_buffer_bytes_free(b);
 	if (s->seek >= 0) {
 		ga_mutex_lock(s->read_mutex);
@@ -234,11 +233,9 @@ void ga_stream_produce(GaBufferedStream *s) {
 
 		/* Check again now that we're mutexed */
 		if (s->seek >= 0) {
-			s32 samplePos = s->seek;
-			s->tell = samplePos;
+			s->tell = s->next_frame = s->seek;
 			s->seek = -1;
-			s->next_sample = samplePos;
-			ga_sample_source_seek(s->inner_src, samplePos);
+			ga_sample_source_seek(s->inner_src, s->tell);
 			ga_buffer_consume(s->buffer, ga_buffer_bytes_avail(s->buffer)); /* Clear buffer */
 			gauX_tell_jump_clear(&s->tell_jumps); /* Clear tell-jump list */
 		}
@@ -247,78 +244,78 @@ void ga_stream_produce(GaBufferedStream *s) {
 	}
 
 	while (bytes_free) {
-		s32 samplesWritten = 0;
-		s32 bytesWritten = 0;
-		s32 bytesToWrite = bytes_free;
-		samplesWritten = gaX_read_samples_into_stream(s, b, bytesToWrite / sample_size, s->inner_src);
-		bytesWritten = samplesWritten * sample_size;
-		bytes_free -= bytesWritten;
-		s->next_sample += samplesWritten;
-		if (bytesWritten < bytesToWrite && ga_sample_source_end(s->inner_src)) {
-			s->end = 1;
+		usz frames_written = 0;
+		usz bytes_written = 0;
+		usz bytes_to_write = bytes_free;
+		frames_written = gaX_read_samples_into_stream(s, b, bytes_to_write / frame_size, s->inner_src);
+		bytes_written = frames_written * frame_size;
+		bytes_free -= bytes_written;
+		s->next_frame += frames_written;
+		if (bytes_written < bytes_to_write && ga_sample_source_end(s->inner_src)) {
+			s->end = true;
 			break;
 		}
 	}
 }
-usz ga_stream_read(GaBufferedStream *s, void *dst, usz num_samples) {
+usz ga_stream_read(GaBufferedStream *s, void *dst, usz num_frames) {
 	GaCircBuffer *b = s->buffer;
 
 	/* Read the samples */
-	usz samplesConsumed = 0;
+	usz frames_consumed = 0;
 	ga_mutex_lock(s->read_mutex);
 
 	void *dataA;
 	void *dataB;
 	usz sizeA, sizeB;
-	usz totalBytes = 0;
-	usz sample_size = ga_format_sample_size(&s->format);
-	usz dstBytes = num_samples * sample_size;
+	usz total_bytes = 0;
+	u32 frame_size = ga_format_frame_size(&s->format);
+	usz dst_bytes = num_frames * frame_size;
 	usz avail = ga_buffer_bytes_avail(b);
-	dstBytes = dstBytes > avail ? avail : dstBytes;
-	if (ga_buffer_get_avail(b, dstBytes, &dataA, &sizeA, &dataB, &sizeB) >= 1) {
-		usz bytesToRead = min(dstBytes, sizeA);
-		memcpy(dst, dataA, bytesToRead);
-		totalBytes += bytesToRead;
-		if (dstBytes > 0 && dataB) {
-			usz dstBytesLeft = dstBytes - bytesToRead;
-			bytesToRead = min(dstBytesLeft, sizeB);
-			memcpy((char*)dst + totalBytes, dataB, bytesToRead);
-			totalBytes += bytesToRead;
+	dst_bytes = dst_bytes > avail ? avail : dst_bytes;
+	if (ga_buffer_get_avail(b, dst_bytes, &dataA, &sizeA, &dataB, &sizeB) >= 1) {
+		usz bytes_to_read = min(dst_bytes, sizeA);
+		memcpy(dst, dataA, bytes_to_read);
+		total_bytes += bytes_to_read;
+		if (dst_bytes > 0 && dataB) {
+			usz dstBytesLeft = dst_bytes - bytes_to_read;
+			bytes_to_read = min(dstBytesLeft, sizeB);
+			memcpy((char*)dst + total_bytes, dataB, bytes_to_read);
+			total_bytes += bytes_to_read;
 		}
 	}
-	samplesConsumed = totalBytes / sample_size;
-	ga_buffer_consume(b, totalBytes);
+	frames_consumed = total_bytes / frame_size;
+	ga_buffer_consume(b, total_bytes);
 
 	/* Update the tell pos */
 	ga_mutex_lock(s->seek_mutex);
-	s->tell += samplesConsumed;
-	ssz delta = gauX_tell_jump_process(&s->tell_jumps, samplesConsumed);
+	s->tell += frames_consumed;
+	ssz delta = gauX_tell_jump_process(&s->tell_jumps, frames_consumed);
 	s->tell += delta;
 	ga_mutex_unlock(s->seek_mutex);
 	ga_mutex_unlock(s->read_mutex);
-	return samplesConsumed;
+	return frames_consumed;
 }
-bool ga_stream_ready(GaBufferedStream *s, usz num_samples) {
+bool ga_stream_ready(GaBufferedStream *s, usz num_frames) {
 	usz avail = ga_buffer_bytes_avail(s->buffer);
-	return s->end || (avail >= num_samples * ga_format_sample_size(&s->format) && avail > s->buffer_size / 2.0f);
+	return s->end || (avail >= num_frames * ga_format_frame_size(&s->format) && avail > s->buffer_size / 2.0f);
 }
 bool ga_stream_end(GaBufferedStream *s) {
 	GaCircBuffer *b = s->buffer;
 	usz bytes_avail = ga_buffer_bytes_avail(b);
 	return s->end && bytes_avail == 0;
 }
-ga_result ga_stream_seek(GaBufferedStream *s, usz sampleOffset) {
+ga_result ga_stream_seek(GaBufferedStream *s, usz frame_offset) {
 	ga_mutex_lock(s->seek_mutex);
-	s->seek = sampleOffset;
+	s->seek = frame_offset;
 	ga_mutex_unlock(s->seek_mutex);
 	return GA_OK;
 }
-ga_result ga_stream_tell(GaBufferedStream *s, usz *samples, usz *totalSamples) {
-	ga_result res = ga_sample_source_tell(s->inner_src, samples, totalSamples);
+ga_result ga_stream_tell(GaBufferedStream *s, usz *frames, usz *totalSamples) {
+	ga_result res = ga_sample_source_tell(s->inner_src, frames, totalSamples);
 	if (!ga_isok(res)) return res;
-	if (samples) {
+	if (frames) {
 		ga_mutex_lock(s->seek_mutex);
-		*samples = s->seek >= 0 ? s->seek : s->tell;
+		*frames = s->seek >= 0 ? (usz)s->seek : s->tell;
 		ga_mutex_unlock(s->seek_mutex);
 	}
 	return GA_OK;

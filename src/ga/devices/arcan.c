@@ -10,7 +10,7 @@ struct GaXDeviceImpl {
 
 static ga_result gaX_open(GaDevice *dev) {
 	dev->format.sample_fmt = sizeof(AUDIO_SAMPLE_TYPE); //will break when AUDIO_SAMPLE_TYPE is float
-	dev->format.sample_rate = ARCAN_SHMIF_SAMPLERATE;
+	dev->format.frame_rate = ARCAN_SHMIF_SAMPLERATE;
 	dev->format.num_channels = ARCAN_SHMIF_ACHANNELS;
 	if (!(dev->impl = ga_alloc(sizeof(GaXDeviceImpl)))) return GA_ERR_SYS_MEM;
 	dev->impl->homemade = false;
@@ -30,15 +30,15 @@ static ga_result gaX_open(GaDevice *dev) {
 	}
 	if (!arcan_shmif_lock(acon)) return GA_ERR_SYS_LIB;
 	if (!arcan_shmif_resize_ext(acon, acon->w, acon->h, (struct shmif_resize_ext){
-		.abuf_sz = dev->num_samples * ga_format_sample_size(&dev->format),
+		.abuf_sz = dev->num_frames * ga_format_frame_size(&dev->format),
 		.abuf_cnt = dev->num_buffers,
-		//.samplerate = dev->format.sample_rate, // ignored by arcan
+		//.samplerate = dev->format.frame_rate, // ignored by arcan
 	})) {
 		arcan_shmif_unlock(acon);
 		return GA_ERR_SYS_LIB;
 	}
 	if (!arcan_shmif_unlock(acon)) return GA_ERR_SYS_LIB;
-	if (acon->abufsize != dev->num_samples * ga_format_sample_size(&dev->format)
+	if (acon->abufsize != dev->num_frames * ga_format_frame_size(&dev->format)
 	    || dev->num_buffers != acon->abuf_cnt) return GA_ERR_SYS_LIB;;
 
 	dev->impl->acon = acon;
@@ -57,7 +57,7 @@ static ga_result gaX_close(GaDevice *dev) {
 
 static u32 gaX_check(GaDevice *dev) {
 	struct arcan_shmif_cont *c = dev->impl->acon;
-	return (c->abufsize - c->abufused) / (dev->num_samples * ga_format_sample_size(&dev->format));
+	return (c->abufsize - c->abufused) / (dev->num_frames * ga_format_frame_size(&dev->format));
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
@@ -74,7 +74,7 @@ static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	}
 
 	if (!arcan_shmif_lock(c)) return GA_ERR_SYS_LIB;
-	usz desired = dev->num_samples * ga_format_sample_size(&dev->format);
+	usz desired = dev->num_frames * ga_format_frame_size(&dev->format);
 	usz avail = c->abufsize - c->abufused;
 	if (avail < desired) return GA_ERR_INTERNAL;
 	memcpy(c->audb + c->abufused, buf, desired);

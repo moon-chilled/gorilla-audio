@@ -113,7 +113,7 @@ static ga_result gaX_queue(GaDevice *dev, void *in_buffer) {
 		formatOal = sf == GaSampleFormat_S16 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO8;
 
 	alBufferData(dev->impl->hw_buffers[dev->impl->next_buffer], formatOal, in_buffer,
-			(ALsizei)dev->num_samples * ga_format_sample_size(&dev->format), dev->format.sample_rate);
+			(ALsizei)dev->num_frames * ga_format_frame_size(&dev->format), dev->format.frame_rate);
 	CHECK_AL_ERROR(goto done);
 
 	alSourceQueueBuffers(dev->impl->hw_source, 1, &dev->impl->hw_buffers[dev->impl->next_buffer]);

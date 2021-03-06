@@ -5,39 +5,39 @@
 
 struct GaSampleSourceContext {
 	GaSound *sound;
-	u32 sample_size;
-	usz num_samples;
+	u32 frame_size;
+	usz num_frames;
 	GaMutex pos_mutex;
 	usz pos;
 };
 
-static usz read(GaSampleSourceContext *ctx, void *dst, usz num_samples, GaCbOnSeek onseek, void *seek_ctx) {
+static usz read(GaSampleSourceContext *ctx, void *dst, usz num_frames, GaCbOnSeek onseek, void *seek_ctx) {
 	ga_mutex_lock(ctx->pos_mutex);
 	usz pos = ctx->pos;
-	usz avail = ctx->num_samples - pos;
-	usz num_read = min(avail, num_samples);
+	usz avail = ctx->num_frames - pos;
+	usz num_read = min(avail, num_frames);
 	ctx->pos += num_read;
 	ga_mutex_unlock(ctx->pos_mutex);
 
-	char *src = (char*)ga_sound_data(ctx->sound) + pos * ctx->sample_size;
-	memcpy(dst, src, num_read * ctx->sample_size);
+	char *src = (char*)ga_sound_data(ctx->sound) + pos * ctx->frame_size;
+	memcpy(dst, src, num_read * ctx->frame_size);
 
 	return num_read;
 }
 static bool end(GaSampleSourceContext *ctx) {
-	return ctx->pos >= ctx->num_samples;
+	return ctx->pos >= ctx->num_frames;
 }
-static ga_result seek(GaSampleSourceContext *ctx, usz sample_offset) {
-	if (sample_offset > ctx->num_samples)
+static ga_result seek(GaSampleSourceContext *ctx, usz frame_offset) {
+	if (frame_offset > ctx->num_frames)
 		return GA_ERR_MIS_PARAM;
 	ga_mutex_lock(ctx->pos_mutex);
-	ctx->pos = sample_offset;
+	ctx->pos = frame_offset;
 	ga_mutex_unlock(ctx->pos_mutex);
 	return GA_OK;
 }
 static ga_result tell(GaSampleSourceContext *ctx, usz *pos, usz *total) {
 	if (pos) *pos = ctx->pos;
-	if (total) *total = ctx->num_samples;
+	if (total) *total = ctx->num_frames;
 	return GA_OK;
 }
 static void close(GaSampleSourceContext *ctx) {
@@ -64,8 +64,8 @@ GaSampleSource *gau_sample_source_create_sound(GaSound *sound) {
 	ga_sound_format(sound, &m.format);
 
 	ctx->sound = sound;
-	ctx->sample_size = ga_format_sample_size(&m.format);
-	ctx->num_samples = ga_sound_num_samples(sound);
+	ctx->frame_size = ga_format_frame_size(&m.format);
+	ctx->num_frames = ga_sound_num_frames(sound);
 	ctx->pos = 0;
 
 	GaSampleSource *ret = ga_sample_source_create(&m);

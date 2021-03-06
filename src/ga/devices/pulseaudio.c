@@ -29,7 +29,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	}
 
 	spec.channels = dev->format.num_channels;
-	spec.rate = dev->format.sample_rate;
+	spec.rate = dev->format.frame_rate;
 
 	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_SYS_MEM;
@@ -52,10 +52,10 @@ static ga_result gaX_open(GaDevice *dev) {
 	
 
 	pa_buffer_attr ba = {
-		.maxlength = dev->num_samples * ga_format_sample_size(&dev->format) * dev->num_buffers,
-		.tlength   = dev->num_samples * ga_format_sample_size(&dev->format) * dev->num_buffers,
+		.maxlength = dev->num_frames * ga_format_frame_size(&dev->format) * dev->num_buffers,
+		.tlength   = dev->num_frames * ga_format_frame_size(&dev->format) * dev->num_buffers,
 		.prebuf    = -1, //should be 0?
-		.minreq    = dev->num_samples * ga_format_sample_size(&dev->format),
+		.minreq    = dev->num_frames * ga_format_frame_size(&dev->format),
 	};
 
 	//todo PA_STREAM_FIX_FORMAT, FIX_CHANNELS
@@ -70,8 +70,8 @@ static ga_result gaX_open(GaDevice *dev) {
 
 	const pa_buffer_attr *na = pa_stream_get_buffer_attr(dev->impl->stream);
 	if (!na) goto fail;
-	dev->num_samples = na->minreq / ga_format_sample_size(&dev->format);
-	dev->num_buffers = na->tlength / dev->num_samples;
+	dev->num_frames = na->minreq / ga_format_frame_size(&dev->format);
+	dev->num_buffers = na->tlength / dev->num_frames;
 
 	return GA_OK;
 
@@ -104,14 +104,14 @@ static u32 gaX_check(GaDevice *dev) {
 	dev->impl->looped = true;
 	usz r = pa_stream_writable_size(dev->impl->stream);
 	if (r == (usz)-1) return 0;
-	return r / (dev->num_samples * ga_format_sample_size(&dev->format));
+	return r / (dev->num_frames * ga_format_frame_size(&dev->format));
 }
 
 static void *gaX_get_buffer(GaDevice *dev) {
 	void *ret;
-	usz l = dev->num_samples * ga_format_sample_size(&dev->format);
+	usz l = dev->num_frames * ga_format_frame_size(&dev->format);
 	if (pa_stream_begin_write(dev->impl->stream, &ret, &l) != 0 || ret == NULL) return NULL;
-	if (l < dev->num_samples * ga_format_sample_size(&dev->format)) {
+	if (l < dev->num_frames * ga_format_frame_size(&dev->format)) {
 		pa_stream_cancel_write(dev->impl->stream);
 		return NULL;
 	}
@@ -122,7 +122,7 @@ static void *gaX_get_buffer(GaDevice *dev) {
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	if (!dev->impl->looped) pa_mainloop_iterate(dev->impl->mainloop, 0, NULL);
 	dev->impl->looped = false;
-	int res = pa_stream_write(dev->impl->stream, buf, dev->num_samples * ga_format_sample_size(&dev->format), NULL, 0, PA_SEEK_RELATIVE);
+	int res = pa_stream_write(dev->impl->stream, buf, dev->num_frames * ga_format_frame_size(&dev->format), NULL, 0, PA_SEEK_RELATIVE);
 	return res==0 ? GA_OK : GA_ERR_SYS_LIB;
 }
 

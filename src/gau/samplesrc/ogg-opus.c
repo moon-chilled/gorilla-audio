@@ -34,7 +34,6 @@ static long ogg_tell(void *datasource) {
 
 struct GaSampleSourceContext {
 	GaDataSource *data_src;
-	u32 sample_size;
 	bool end_of_samples;
 	GaFormat format;
 	OggOpusFile *ogg_file;
@@ -67,10 +66,10 @@ static usz ss_read(GaSampleSourceContext *ctx, void *odst, usz num_frames,
 static bool ss_end(GaSampleSourceContext *ctx) {
 	return ctx->end_of_samples;
 }
-static ga_result ss_seek(GaSampleSourceContext *ctx, usz sample_offset) {
+static ga_result ss_seek(GaSampleSourceContext *ctx, usz frame_offset) {
 	int res;
 	with_mutex(ctx->ogg_mutex) {
-		res = op_pcm_seek(ctx->ogg_file, sample_offset);
+		res = op_pcm_seek(ctx->ogg_file, frame_offset);
 		ctx->end_of_samples = false;
 	}
 	switch (res) {
@@ -85,9 +84,8 @@ static ga_result ss_seek(GaSampleSourceContext *ctx, usz sample_offset) {
 static ga_result ss_tell(GaSampleSourceContext *ctx, usz *cur, usz *ototal) {
 	ga_result ret = GA_OK;
 	with_mutex(ctx->ogg_mutex) {
-		/* TODO: Decide whether to support total samples for OGG files */
 		if (ototal) {
-			s64 ctotal = op_pcm_total(ctx->ogg_file, -1); /* Note: This isn't always valid when the stream is poorly-formatted */
+			s64 ctotal = op_pcm_total(ctx->ogg_file, -1);
 			if (ctotal < 0) ret = GA_ERR_MIS_UNSUP;
 			else *ototal = (usz)ctotal;
 		}
@@ -134,7 +132,7 @@ GaSampleSource *gau_sample_source_create_opus(GaDataSource *data) {
 
 	m.format.sample_fmt = GaSampleFormat_F32;
 	m.format.num_channels = op_head(ctx->ogg_file, 0)->channel_count;
-	m.format.sample_rate = 48000;
+	m.format.frame_rate = 48000;
 	ctx->format = m.format;
 	bool is_valid_ogg = m.format.num_channels <= 2;
 	if (!is_valid_ogg) {

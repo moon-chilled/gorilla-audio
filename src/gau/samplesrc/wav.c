@@ -8,7 +8,7 @@
 typedef struct {
 	s32 file_size;
 	s16 fmt_tag, channels, block_align, bits_per_sample;
-	s32 fmt_size, sample_rate, bytes_per_sec;
+	s32 fmt_size, frame_rate, bytes_per_sec;
 	s32 data_offset, data_size;
 } GaWavData;
 
@@ -53,7 +53,7 @@ static ga_result sample_source_wav_load_header(GaDataSource *data_src, GaWavData
 			//todo endian
 			ga_data_source_read(data_src, &wav_data->fmt_tag, sizeof(s16), 1);
 			ga_data_source_read(data_src, &wav_data->channels, sizeof(s16), 1);
-			ga_data_source_read(data_src, &wav_data->sample_rate, sizeof(s32), 1);
+			ga_data_source_read(data_src, &wav_data->frame_rate, sizeof(s32), 1);
 			ga_data_source_read(data_src, &wav_data->bytes_per_sec, sizeof(s32), 1);
 			ga_data_source_read(data_src, &wav_data->block_align, sizeof(s16), 1);
 			ga_data_source_read(data_src, &wav_data->bits_per_sample, sizeof(s16), 1);
@@ -76,35 +76,35 @@ static ga_result sample_source_wav_load_header(GaDataSource *data_src, GaWavData
 struct GaSampleSourceContext {
 	GaDataSource *data_src;
 	GaWavData wav_header;
-	u32 sample_size;
+	u32 frame_size;
 	atomic_usz pos;
 	GaMutex pos_mutex;
 };
 
-static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_samples, GaCbOnSeek onseek, void *seek_ctx) {
+static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_frames, GaCbOnSeek onseek, void *seek_ctx) {
 	usz num_res = 0;
-	usz total_samples = ctx->wav_header.data_size / ctx->sample_size;
+	usz total_frames = ctx->wav_header.data_size / ctx->frame_size;
 	with_mutex(ctx->pos_mutex) {
-		if (ctx->pos + num_samples > total_samples) num_samples = total_samples - ctx->pos;
-		num_res = ga_data_source_read(ctx->data_src, dst, ctx->sample_size, num_samples);
+		if (ctx->pos + num_frames > total_frames) num_frames = total_frames - ctx->pos;
+		num_res = ga_data_source_read(ctx->data_src, dst, ctx->frame_size, num_frames);
 		ctx->pos += num_res;
 	}
 	return num_res;
 }
 static bool ss_end(GaSampleSourceContext *ctx) {
-	usz total_samples = ctx->wav_header.data_size / ctx->sample_size;
-	return atomic_load(&ctx->pos) == total_samples;
+	usz total_frames = ctx->wav_header.data_size / ctx->frame_size;
+	return atomic_load(&ctx->pos) == total_frames;
 }
-static ga_result ss_seek(GaSampleSourceContext *ctx, usz sample_offset) {
+static ga_result ss_seek(GaSampleSourceContext *ctx, usz frame_offset) {
 	ga_result ret;
 	with_mutex(ctx->pos_mutex) {
-		ret = ga_data_source_seek(ctx->data_src, ctx->wav_header.data_offset + sample_offset * ctx->sample_size, GaSeekOrigin_Set);
-		if (ret == GA_OK) ctx->pos = sample_offset;
+		ret = ga_data_source_seek(ctx->data_src, ctx->wav_header.data_offset + frame_offset * ctx->frame_size, GaSeekOrigin_Set);
+		if (ret == GA_OK) ctx->pos = frame_offset;
 	}
 	return ret;
 }
 static ga_result ss_tell(GaSampleSourceContext *ctx, usz *cur, usz *total) {
-	if (total) *total = ctx->wav_header.data_size / ctx->sample_size;
+	if (total) *total = ctx->wav_header.data_size / ctx->frame_size;
 	if (cur) *cur = atomic_load(&ctx->pos);
 	return GA_OK;
 }
@@ -128,7 +128,7 @@ GaSampleSource *gau_sample_source_create_wav(GaDataSource *data_src) {
 		.tell = ss_tell,
 		.close = ss_close,
 		.context = ctx,
-		.format = {.num_channels = ctx->wav_header.channels, .sample_fmt = ctx->wav_header.bits_per_sample >> 3, .sample_rate = ctx->wav_header.sample_rate},
+		.format = {.num_channels = ctx->wav_header.channels, .sample_fmt = ctx->wav_header.bits_per_sample >> 3, .frame_rate = ctx->wav_header.frame_rate},
 		.threadsafe = true,
 	};
 	if (ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable) m.seek = ss_seek;
@@ -138,7 +138,7 @@ GaSampleSource *gau_sample_source_create_wav(GaDataSource *data_src) {
 
 	ctx->pos = 0;
 	ctx->data_src = data_src;
-	ctx->sample_size = ga_format_sample_size(&m.format);
+	ctx->frame_size = ga_format_frame_size(&m.format);
 	if (!ga_isok(ga_mutex_create(&ctx->pos_mutex))) goto fail;
 
 	ga_data_source_acquire(data_src);

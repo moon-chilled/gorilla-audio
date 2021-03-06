@@ -22,9 +22,9 @@ static ga_result gaX_open(GaDevice *dev) {
 	par.sig = dev->format.sample_fmt != GaSampleFormat_U8;
 	par.le = ENDIAN(1, 0);
 	par.pchan = dev->format.num_channels;
-	par.rate = dev->format.sample_rate;
-	par.appbufsz = dev->num_buffers * dev->num_samples;
-	par.round = dev->num_samples;
+	par.rate = dev->format.frame_rate;
+	par.appbufsz = dev->num_buffers * dev->num_frames;
+	par.round = dev->num_frames;
 	par.xrun = SIO_SYNC;
 	if (!sio_setpar(dev->impl->hdl, &par)) goto fail;
 	if (par.le != ENDIAN(1, 0)
@@ -37,8 +37,8 @@ static ga_result gaX_open(GaDevice *dev) {
 		default: goto fail;
 	}
 	dev->format.num_channels = par.pchan;
-	dev->format.sample_rate = par.rate;
-	dev->num_samples = par.round;
+	dev->format.frame_rate = par.rate;
+	dev->num_frames = par.round;
 	dev->num_buffers = par.appbufsz / par.round;
 	if (!sio_start(dev->impl->hdl)) goto fail;
 
@@ -62,7 +62,7 @@ static u32 gaX_check(GaDevice *dev) {
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
-	if (sio_write(dev->impl->hdl, buf, ga_format_sample_size(&dev->format) * dev->num_samples) != ga_format_sample_size(&dev->format) * dev->num_samples) return GA_ERR_SYS_LIB;
+	if (sio_write(dev->impl->hdl, buf, ga_format_frame_size(&dev->format) * dev->num_frames) != ga_format_frame_size(&dev->format) * dev->num_frames) return GA_ERR_SYS_LIB;
 	return GA_OK;
 }
 

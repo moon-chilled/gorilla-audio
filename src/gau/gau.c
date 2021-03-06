@@ -46,25 +46,25 @@ GauManager *gau_manager_create(void) {
 GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
                                        GauThreadPolicy thread_policy,
                                        u32 *num_buffers,
-				       u32 *num_samples) {
+				       u32 *num_frames) {
 	GauManager *ret = memset(ga_alloc(sizeof(GauManager)), 0, sizeof(GauManager));
 
 	assert(thread_policy == GauThreadPolicy_Single
 	       || thread_policy == GauThreadPolicy_Multi);
 	num_buffers = num_buffers ? num_buffers : &(u32){4};
-	num_samples = num_samples ? num_samples : &(u32){512};
+	num_frames = num_frames ? num_frames : &(u32){512};
 	assert(*num_buffers >= 2);
-	assert(*num_samples >= 128);
+	assert(*num_frames >= 128);
 
 	/* Open device */
 	ret->format.sample_fmt = GaSampleFormat_S16;
 	ret->format.num_channels = 2;
-	ret->format.sample_rate = 48000;
-	ret->device = ga_device_open(dev_type, num_buffers, num_samples, &ret->format);
+	ret->format.frame_rate = 48000;
+	ret->device = ga_device_open(dev_type, num_buffers, num_frames, &ret->format);
 	if (!ret->device) goto fail;
 
 	/* Initialize mixer */
-	ret->mixer = ga_mixer_create(&ret->format, *num_samples);
+	ret->mixer = ga_mixer_create(&ret->format, *num_frames);
 	if (!ret->mixer) goto fail;
 	ret->stream_mgr = ga_stream_manager_create();
 	if (!ret->stream_mgr) goto fail;

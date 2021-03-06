@@ -27,7 +27,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	if (ioctl(fd, SNDCTL_DSP_POLICY, &(int){3}) == -1) goto cleanup;
 #endif
 
-	if (ioctl(fd, SNDCTL_DSP_SPEED, &(int){dev->format.sample_rate}) == -1) goto cleanup;
+	if (ioctl(fd, SNDCTL_DSP_SPEED, &(int){dev->format.frame_rate}) == -1) goto cleanup;
 	if (ioctl(fd, SNDCTL_DSP_CHANNELS, &(int){dev->format.num_channels}) == -1) goto cleanup;
 	int fmt;
 	switch (dev->format.sample_fmt) {
@@ -47,7 +47,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	audio_buf_info info;
 	if (ioctl(fd, SNDCTL_DSP_GETOSPACE, &info) == -1) goto cleanup;
 	dev->num_buffers = info.fragstotal;
-	dev->num_samples = info.fragsize / ga_format_sample_size(&dev->format);
+	dev->num_frames = info.fragsize / ga_format_frame_size(&dev->format);
 	if (dev->num_buffers < 2) goto cleanup;
 
 	dev->impl = (void*)(usz)fd;
@@ -72,7 +72,7 @@ static u32 gaX_check(GaDevice *dev) {
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
-	ssz sz = dev->num_samples * ga_format_sample_size(&dev->format);
+	ssz sz = dev->num_frames * ga_format_frame_size(&dev->format);
 	ssz written = write((int)(usz)dev->impl, buf, sz);
 	return sz==written ? GA_OK : GA_ERR_SYS_IO;
 }

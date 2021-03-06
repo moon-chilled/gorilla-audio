@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
 	GaFormat hfmt, dfmt;
 	ga_handle_format(handle, &hfmt);
 	ga_device_format(dev, &dfmt);
-	printf("gaplay [%s %iHz %ich -> %s (%s %iHz %ich)] %s\n", sampleformatname(hfmt.sample_fmt), hfmt.sample_rate, hfmt.num_channels, devicetypename(dev_type), sampleformatname(dfmt.sample_fmt), dfmt.sample_rate, dfmt.num_channels, argv[1]);
+	printf("gaplay [%s %iHz %ich -> %s (%s %iHz %ich)] %s\n", sampleformatname(hfmt.sample_fmt), hfmt.frame_rate, hfmt.num_channels, devicetypename(dev_type), sampleformatname(dfmt.sample_fmt), dfmt.frame_rate, dfmt.num_channels, argv[1]);
 
 	ga_usize cur, dur, sdur;
 	assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
@@ -162,8 +162,8 @@ int main(int argc, char **argv) {
 						default: goto cont;
 					}
 
-					int sample = clamp(ga_format_to_samples(&hfmt, cur + delta), 0, sdur - 1);
-					ga_handle_seek(handle, sample);
+					int frame = clamp(ga_format_to_frames(&hfmt, cur + delta), 0, sdur - 1);
+					ga_handle_seek(handle, frame);
 
 					assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
 					cur = ga_format_to_seconds(&hfmt, cur);

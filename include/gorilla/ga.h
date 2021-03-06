@@ -140,45 +140,45 @@ typedef enum {
 
 /** Audio format data structure [\ref POD].
  *
- *  Stores the format (sample rate+format, channels) for PCM audio data.
+ *  Stores the format (frame rate, sample format, channels) for PCM audio data.
  *
  *  This object may be used on any thread.
  *
  *  \ingroup GaFormat
  */
 typedef struct {
-	ga_uint32 sample_rate;
+	ga_uint32 frame_rate;
 	GaSampleFormat sample_fmt;
 	ga_uint32 num_channels;
 } GaFormat;
 
-/** Retrieves the sample size (in bytes) of a specified format.
+/** Retrieves the frame size (in bytes) of a specified format.
  *
  *  \ingroup GaFormat
  *  \param format Format of the PCM data
  *  \return Sample size (in bytes) of the specified format
  */
-ga_uint32 ga_format_sample_size(GaFormat *format);
+ga_uint32 ga_format_frame_size(GaFormat *format);
 
-/** Converts a discrete number of PCM samples into the duration (in seconds) it
+/** Converts a discrete number of PCM frames into the duration (in seconds) it
  *  will take to play back.
  *
  *  \ingroup GaFormat
- *  \param format Format of PCM sample data
- *  \param samples Number of PCM samples
+ *  \param format Format of PCM data
+ *  \param frames Number of PCM frames
  *  \return Duration (in seconds) it will take to play back
  */
-ga_float32 ga_format_to_seconds(GaFormat *format, ga_usize samples);
+ga_float32 ga_format_to_seconds(GaFormat *format, ga_usize frames);
 
-/** Converts a duration (in seconds) into the discrete number of PCM samples it
+/** Converts a duration (in seconds) into the discrete number of PCM frames it
  *  will take to play for that long.
  *
  *  \ingroup GaFormat
- *  \param format Format of PCM sample data
+ *  \param format Format of PCM data
  *  \param seconds Duration (in seconds)
- *  \return Number of PCM samples it will take to play back for the given time
+ *  \return Number of PCM frames it will take to play back for the given time
  */
-ga_sint32 ga_format_to_samples(GaFormat *format, ga_float32 seconds);
+ga_sint32 ga_format_to_frames(GaFormat *format, ga_float32 seconds);
 
 
 /************/
@@ -219,7 +219,7 @@ typedef enum {
  *
  *  \ingroup GaDevice
  *  \warning You can only have one device open at-a-time.
- *  \todo Create a way to query the actual buffers/samples/format of the opened device.
+ *  \todo Create a way to query the actual buffers/frames/format of the opened device.
  *        ga_device_check() does not work in all use cases (such as GauManager))
  */
 typedef struct GaDevice GaDevice;
@@ -229,10 +229,10 @@ typedef struct GaDevice GaDevice;
  *  \ingroup GaDevice
  *  \param type Requested and received device type (former is usually GaDeviceType_Default).
  *  \param num_buffers Requested and received number of buffers.
- *  \param num_samples Requested and received sample buffer size.
+ *  \param num_frames Requested and received buffer size.
  *  \param format Requested device output format (usually 16-bit/48000/stereo).
  *  \return Concrete instance of the requested device type.  NULL if a suitable device could not be opened.
- *  \warning num_buffers, num_samples, and format are /requests/ to the audio
+ *  \warning num_buffers, num_frames, and format are /requests/ to the audio
  *           device and may not necessarily be fulfilled.  The actually
  *           received values (as well as type, when it is GaDeviceType_Default)
  *           will be written back out to the same locations.  If you pass in
@@ -240,7 +240,7 @@ typedef struct GaDevice GaDevice;
  */
 GaDevice *ga_device_open(GaDeviceType *type,
                          ga_uint32 *num_buffers,
-                         ga_uint32 *num_samples,
+                         ga_uint32 *num_frames,
                          GaFormat *format);
 
 /** Checks the number of free (unqueued) buffers.
@@ -479,7 +479,7 @@ void ga_data_source_release(GaDataSource *dataSrc);
 
 /** Abstract sample source data structure [\ref MULTI_CLIENT].
  *
- *  A sample source is a source of PCM audio samples. These samples are usually
+ *  A sample source is a source of PCM audio. These samples are usually
  *  generated from a compatible data source or sample source, which is transformed
  *  or decoded into the resulting PCM audio data.
  *
@@ -499,22 +499,22 @@ typedef struct GaSampleSourceContext GaSampleSourceContext;
  *  features within the sample source pipeline.
  *
  *  \ingroup GaSampleSource
- *  \param sample The sample the sample source was at when the seek happened.
+ *  \param frame The frame the sample source was at when the seek happened.
  *  \param delta The signed distance from the old position to the new position.
  *  \param seekContext The user-specified context provided in ga_sample_source_read().
  */
-typedef void (*GaCbOnSeek)(ga_sint32 sample, ga_sint32 delta, void *seekContext); //todo delta → ssz, sample → usz
+typedef void (*GaCbOnSeek)(ga_usize frame, ga_ssize delta, void *seekContext);
 /** \ref ga_sample_source_read */
-typedef ga_usize (*GaCbSampleSource_Read)(GaSampleSourceContext *context, void *dst, ga_usize num_samples,
-				     GaCbOnSeek onseek, void *seek_ctx);
+typedef ga_usize (*GaCbSampleSource_Read)(GaSampleSourceContext *context, void *dst, ga_usize num_frames,
+				          GaCbOnSeek onseek, void *seek_ctx);
 /** \ref ga_sample_source_end */
 typedef ga_bool (*GaCbSampleSource_End)(GaSampleSourceContext *context);
 /** \ref ga_sample_source_ready */
-typedef ga_bool (*GaCbSampleSource_Ready)(GaSampleSourceContext *context, ga_usize num_samples);
+typedef ga_bool (*GaCbSampleSource_Ready)(GaSampleSourceContext *context, ga_usize num_frames);
 /** \ref ga_sample_source_seek */
-typedef ga_result (*GaCbSampleSource_Seek)(GaSampleSourceContext *context, ga_usize sample_offset);
+typedef ga_result (*GaCbSampleSource_Seek)(GaSampleSourceContext *context, ga_usize frame_offset);
 /** \ref ga_sample_source_tell */
-typedef ga_result (*GaCbSampleSource_Tell)(GaSampleSourceContext *context, ga_usize *samples, ga_usize *total_samples);
+typedef ga_result (*GaCbSampleSource_Tell)(GaSampleSourceContext *context, ga_usize *frames, ga_usize *total_frames);
 /** \ref ga_sample_source_release */
 typedef void (*GaCbSampleSource_Close)(GaSampleSourceContext *context);
 
@@ -542,13 +542,13 @@ GaSampleSource *ga_sample_source_create(const GaSampleSourceCreationMinutiae *mi
  *  \ingroup GaSampleSource
  *  \param sample_src Sample source from which to read.
  *  \param dst Destination buffer into which samples should be read. Must
- *                be at least (num_samples * sample-size) bytes in size.
- *  \param num_samples Number of samples to read.
+ *             be at least (num_frames * frame-size) bytes in size.
+ *  \param num_frames Number of frames to read.
  *  \param onseek The on-seek callback function for this read operation.
  *  \param seek_ctx User-specified context for the on-seek function.
  *  \return Total number of bytes read into the destination buffer.
  */
-ga_usize ga_sample_source_read(GaSampleSource *sample_src, void *dst, ga_usize num_samples,
+ga_usize ga_sample_source_read(GaSampleSource *sample_src, void *dst, ga_usize num_frames,
                                GaCbOnSeek onseek, void *seek_ctx);
 
 /** Checks whether a sample source has reached the end of the stream.
@@ -560,42 +560,42 @@ ga_usize ga_sample_source_read(GaSampleSource *sample_src, void *dst, ga_usize n
 ga_bool ga_sample_source_end(GaSampleSource *sample_src);
 
 /** Checks whether a sample source has at least a given number of available
- *  samples.
+ *  frames.
  *
- *  If the sample source has fewer than num_samples samples left before it
+ *  If the sample source has fewer than num_frames frames left before it
  *  finishes, this function will returns GA_TRUE regardless of the number of
- *  samples.
+ *  frames.
  *
  *  \ingroup GaSampleSource
  *  \param sample_src Sample source to check.
- *  \param num_samples The minimum number of samples required for the sample
+ *  \param num_frames The minimum number of frames required for the sample
  *                       source to be considered ready.
  *  \return Whether the sample source has at least a given number of available
- *          samples.
+ *          frames.
  */
-ga_bool ga_sample_source_ready(GaSampleSource *sample_src, ga_usize num_samples);
+ga_bool ga_sample_source_ready(GaSampleSource *sample_src, ga_usize num_frames);
 
-/** Seek to an offset (in samples) within a sample source.
+/** Seek to an offset (in frames) within a sample source.
  *
  *  \ingroup GaSampleSource
  *  \param sample_src Sample source to seek within.
- *  \param sample_offset Offset (in samples) from the start of the sample stream.
+ *  \param frame_offset Offset (in frames) from the start of the sample stream.
  *  \return GA_OK iff seek succeeds.  See \ref ga_data_source_seek
  *  \warning Only sample sources with GaDataAccessFlag_Seekable can have ga_sample_source_seek()
  *           called on them.
  */
-ga_result ga_sample_source_seek(GaSampleSource *sample_src, ga_usize sample_offset);
+ga_result ga_sample_source_seek(GaSampleSource *sample_src, ga_usize framme_offset);
 
-/** Tells the current sample number of a sample source.
+/** Tells the current frame number of a sample source.
  *
  *  \ingroup GaSampleSource
- *  \param sample_src Sample source to tell the current sample number of.
- *  \param samples If set, the current sample source number will be stored here.
- *  \param total_samples If set, the total number of samples in the sample
+ *  \param sample_src Sample source to tell the current frame number of.
+ *  \param frames If set, the current frame source number will be stored here.
+ *  \param total_frames If set, the total number of frames in the sample
  *         source will be stored here.
  *  \return GA_OK iff the telling was successful.
  */
-ga_result ga_sample_source_tell(GaSampleSource *sample_src, ga_usize *samples, ga_usize *total_samples);
+ga_result ga_sample_source_tell(GaSampleSource *sample_src, ga_usize *frames, ga_usize *total_frames);
 
 /** Returns the bitfield of flags set for a sample source (see \ref globDefs).
  *
@@ -609,8 +609,8 @@ GaDataAccessFlags ga_sample_source_flags(GaSampleSource *sample_src);
  *
  *  \ingroup GaSampleSource
  *  \param sample_src Sample source whose format should should be retrieved.
- *  \param format This value will be set to the same sample format
- *                    as samples in the sample source. Output parameter.
+ *  \param format This value will be set to the same format
+ *                as PCM data in the sample source. Output parameter.
  *  \todo Either return a copy of the format, or make it a const* return value.
  */
 void ga_sample_source_format(GaSampleSource *sample_src, GaFormat *format);
@@ -785,7 +785,7 @@ GaSound *ga_sound_create_sample_source(GaSampleSource *sample_src);
  *  \return Pointer to the sound object's stored data.
  *  \warning Never manually free the pointer returned by this function.
  */
-void *ga_sound_data(GaSound *sound);
+const void *ga_sound_data(GaSound *sound);
 
 /** Retrieve the size (in bytes) of a sound object's stored data.
  *
@@ -795,13 +795,13 @@ void *ga_sound_data(GaSound *sound);
  */
 ga_usize ga_sound_size(GaSound *sound);
 
-/** Retrieve the number of samples in a sound object's stored PCM data.
+/** Retrieve the number of frames in a sound object's stored PCM data.
  *
  *  \ingroup GaSound
- *  \param sound Sound object whose number of samples should be retrieved.
- *  \return Number of samples in the sound object's stored PCM data.
+ *  \param sound Sound object whose number of frames should be retrieved.
+ *  \return Number of frames in the sound object's stored PCM data.
  */
-ga_usize ga_sound_num_samples(GaSound *sound);
+ga_usize ga_sound_num_frames(GaSound *sound);
 
 /** Retrieves the PCM sample format for a sound.
  *
@@ -846,11 +846,11 @@ void ga_sound_release(GaSound *sound);
 
 /** Audio mixer data structure [\ref SINGLE_CLIENT].
  *
- *  The mixer mixes PCM samples from multiple audio handles into a single buffer
- *  of PCM samples. The mixer is responsible for applying handle parameters
- *  such as gain, pan, and pitch. The mixer has a fixed sample size and format
+ *  The mixer mixes PCM data from multiple audio handles into a single buffer
+ *  of PCM data. The mixer is responsible for applying handle parameters
+ *  such as gain, pan, and pitch. The mixer has a fixed size and format
  *  that must be specified upon creation. Buffers passed in must be large enough
- *  to hold the specified number of samples of the specified format.
+ *  to hold the specified number of frames of the specified format.
  *
  *  This object may only be used on the main thread.
  *
@@ -858,16 +858,16 @@ void ga_sound_release(GaSound *sound);
  */
 typedef struct GaMixer GaMixer;
 
-/** Creates a mixer object with the specified number and format of PCM samples.
+/** Creates a mixer object with the specified number and format of PCM frames.
  *
  *  \ingroup GaMixer
- *  \param format Format for the PCM samples produced by the buffer.
- *  \param num_samples Number of samples to be mixed at a time (must be a power-of-two).
+ *  \param format Format for the PCM frames produced by the buffer.
+ *  \param num_frames Number of frames to be mixed at a time (must be a power of two).
  *  \return Newly-created mixer object.
- *  \warning The number of samples must be a power-of-two.
+ *  \warning The number of frames must be a power-of-two.
  *  \todo Remove the requirement that the buffer be a power-of-two in size.
  */
-GaMixer *ga_mixer_create(GaFormat *format, ga_uint32 num_samples);
+GaMixer *ga_mixer_create(GaFormat *format, ga_uint32 num_frames);
 
 /** Suspends the mixer, preventing it from consuming any of its inputs.  If you
  ** attempt to mix from it in this state, it will produce all zeroes
@@ -886,7 +886,7 @@ ga_result ga_mixer_suspend(GaMixer *mixer);
  */
 ga_result ga_mixer_unsuspend(GaMixer *mixer);
 
-/** Retrieves the PCM sample format for a mixer object.
+/** Retrieves the PCM format for a mixer object.
  *
  *  \ingroup GaMixer
  *  \param mixer Mixer whose format should should be retrieved.
@@ -894,13 +894,13 @@ ga_result ga_mixer_unsuspend(GaMixer *mixer);
  */
 void ga_mixer_format(GaMixer *mixer, GaFormat *fmt);
 
-/** Retrieve the number of samples in a mixer object's mix buffer.
+/** Retrieve the number of frames in a mixer object's mix buffer.
  *
  *  \ingroup GaMixer
- *  \param mixer Mixer object whose number of samples should be retrieved.
- *  \return Number of samples in a mixer object's mix buffer.
+ *  \param mixer Mixer object whose number of frames should be retrieved.
+ *  \return Number of frames in a mixer object's mix buffer.
  */
-ga_uint32 ga_mixer_num_samples(GaMixer *mixer);
+ga_uint32 ga_mixer_num_frames(GaMixer *mixer);
 
 /** Mixes samples from all ready handles into a single output buffer.
  *
@@ -990,13 +990,13 @@ typedef enum {
  *  \defgroup tellParams Tell Parameters
  */
 typedef enum {
-	GaTellParam_Current,  /**< Current playback position (in samples). \ingroup tellParams */
-	GaTellParam_Total,    /**< Total samples in this handle's sample source. \ingroup tellParams */
+	GaTellParam_Current,  /**< Current playback position (in frames). \ingroup tellParams */
+	GaTellParam_Total,    /**< Total frames in this handle's sample source. \ingroup tellParams */
 } GaTellParam;
 
 /** Prototype for handle-finished-playback callback.
  *
- *  This callback will be called when the internal sampleSource ends. Stopping a handle
+ *  This callback will be called when the internal sample source ends. Stopping a handle
  *  does not generate this callback. Looping sample sources will never generate this
  *  callback.
  *
@@ -1165,21 +1165,21 @@ ga_result ga_handle_set_parami(GaHandle *handle,
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
 ga_result ga_handle_get_parami(GaHandle *handle,
-                              GaHandleParam param,
-                              ga_sint32 *value);
+                               GaHandleParam param,
+                               ga_sint32 *value);
 
-/** Seek to an offset (in samples) within a handle.
+/** Seek to an offset (in frames) within a handle.
  *
  *  \ingroup GaHandle
  *  \param handle Handle to seek within.
- *  \param sample_offset Offset (in samples) from the start of the handle.
+ *  \param frame_offset Offset (in frames) from the start of the handle.
  *  \return If seek succeeds, returns 0, otherwise returns -1 (invalid seek request).
  *  \warning Only handles containing sample sources with GaDataAccessFlag_Seekable can
  *           have ga_handle_seek() called on them.
  */
-ga_result ga_handle_seek(GaHandle *handle, ga_usize sample_offset);
+ga_result ga_handle_seek(GaHandle *handle, ga_usize frame_offset);
 
-/** Tells the current playback sample number or total samples of a handle.
+/** Tells the current playback frame number or total frames of a handle.
  *
  *  \ingroup GaHandle
  *  \param handle Handle to query.
@@ -1189,18 +1189,18 @@ ga_result ga_handle_seek(GaHandle *handle, ga_usize sample_offset);
  */
 ga_result ga_handle_tell(GaHandle *handle, GaTellParam param, ga_usize *out);
 
-/** Checks whether a handle has at least a given number of available samples.
+/** Checks whether a handle has at least a given number of available frames.
  *
- *  If the handle has fewer than num_samples samples left before it finishes,
- *  this function will returns GA_TRUE regardless of the number of samples.
+ *  If the handle has fewer than num_frames frames left before it finishes,
+ *  this function will returns GA_TRUE regardless of the number of frames.
  *
  *  \ingroup GaHandle
  *  \param handle Handle to check.
- *  \param num_samples The minimum number of samples required for the handle
+ *  \param num_frames The minimum number of frames required for the handle
  *                       to be considered ready.
- *  \return Whether the handle has at least a given number of available samples.
+ *  \return Whether the handle has at least a given number of available frames.
  */
-ga_bool ga_handle_ready(GaHandle *handle, ga_usize num_samples);
+ga_bool ga_handle_ready(GaHandle *handle, ga_usize num_frames);
 
 /** Retrieves the PCM sample format for a handle.
  *
@@ -1305,11 +1305,11 @@ void ga_stream_produce(GaBufferedStream *stream); /* Can be called from a second
  *  \ingroup GaBufferedStream
  *  \param stream Buffered stream from which to read.
  *  \param dst Destination buffer into which samples should be read. Must
- *                be at least (num_samples * sample size) bytes in size.
- *  \param num_samples Number of samples to read.
+ *                be at least (num_frames * frame size) bytes in size.
+ *  \param num_frames Number of frames to read.
  *  \return Total number of bytes read into the destination buffer.
  */
-ga_usize ga_stream_read(GaBufferedStream *stream, void *dst, ga_usize num_samples);
+ga_usize ga_stream_read(GaBufferedStream *stream, void *dst, ga_usize num_frames);
 
 /** Checks whether a buffered stream has reached the end of the stream.
  *
@@ -1320,44 +1320,44 @@ ga_usize ga_stream_read(GaBufferedStream *stream, void *dst, ga_usize num_sample
 ga_bool ga_stream_end(GaBufferedStream *stream);
 
 /** Checks whether a buffered stream has at least a given number of available
- *  samples.
+ *  frames.
  *
- *  If the sample source has fewer than num_samples samples left before it
+ *  If the sample source has fewer than num_frames frames left before it
  *  finishes, this function will returns GA_TRUE regardless of the number of
- *  samples.
+ *  frames.
  *
  *  \ingroup GaBufferedStream
  *  \param stream Buffered stream to check.
- *  \param num_samples The minimum number of samples required for the
- *                       buffered stream to be considered ready.
+ *  \param num_frames The minimum number of frames required for the
+ *                    buffered stream to be considered ready.
  *  \return Whether the buffered stream has at least a given number of available
- *          samples.
+ *          frames.
  */
-ga_bool ga_stream_ready(GaBufferedStream *stream, ga_usize num_samples);
+ga_bool ga_stream_ready(GaBufferedStream *stream, ga_usize num_frames);
 
-/** Seek to an offset (in samples) within a buffered stream.
+/** Seek to an offset (in frames) within a buffered stream.
  *
  *  \ingroup GaBufferedStream
  *  \param stream Buffered stream to seek within.
- *  \param sample_offset Offset (in samples) from the start of the contained
+ *  \param frame_offset Offset (in frames) from the start of the contained
  *                         sample source.
  *  \return GA_OK iff seek succeeds.  See \ref ga_data_source_seek.
  *  \warning Only buffered streams with GaDataAccessFlag_Seekable can have ga_stream_seek()
  *           called on them.
  */
-ga_result ga_stream_seek(GaBufferedStream *stream, ga_usize sample_offset);
+ga_result ga_stream_seek(GaBufferedStream *stream, ga_usize frame_offset);
 
-/** Tells the current sample number of a buffered stream.
+/** Tells the current frame number of a buffered stream.
  *
  *  \ingroup GaBufferedStream
- *  \param stream Buffered stream to tell the current sample number of.
+ *  \param stream Buffered stream to tell the current frame number of.
  *
- *  \param samples If set, the current sample source sample number will be stored here.
- *  \param total_samples If set, the total number of samples in the contained sample
+ *  \param frames If set, the current sample source frame number will be stored here.
+ *  \param total_frames If set, the total number of frames in the contained sample
  *         source will be stored here.
  *  \return GA_OK iff the telling was successful
  */
-ga_result ga_stream_tell(GaBufferedStream *stream, ga_usize *samples, ga_usize *total_samples);
+ga_result ga_stream_tell(GaBufferedStream *stream, ga_usize *frames, ga_usize *total_frames);
 
 /** Returns the bitfield of flags set for a buffered stream (see \ref globDefs).
  *

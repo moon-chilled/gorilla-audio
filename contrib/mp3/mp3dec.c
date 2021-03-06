@@ -29,19 +29,18 @@ static drmp3_bool32 mp3_seek(void *ctx, int offset, drmp3_seek_origin origin) {
 	}
 }
 
-static ga_usize ss_read(GaSampleSourceContext *ctx, void *dst, ga_usize num_samples, GaCbOnSeek onseek, void *seek_ctx) {
-	//drmp3_uint64 frames = num_samples / ctx->mp3.channels;
+static ga_usize ss_read(GaSampleSourceContext *ctx, void *dst, ga_usize num_frames, GaCbOnSeek onseek, void *seek_ctx) {
 	ga_mutex_lock(ctx->mutex);
-	drmp3_uint64 res = drmp3_read_pcm_frames_s16(&ctx->mp3, num_samples, dst);
+	drmp3_uint64 res = drmp3_read_pcm_frames_s16(&ctx->mp3, num_frames, dst);
 	ga_mutex_unlock(ctx->mutex);
-	return res;// * ctx->mp3.channels;
+	return res;
 }
 static ga_bool ss_end(GaSampleSourceContext *ctx) {
 	return ctx->mp3.atEnd;
 }
-static ga_result ss_seek(GaSampleSourceContext *ctx, ga_usize sample_offset) {
+static ga_result ss_seek(GaSampleSourceContext *ctx, ga_usize frame_offset) {
 	ga_mutex_lock(ctx->mutex);
-	drmp3_bool32 res = drmp3_seek_to_pcm_frame(&ctx->mp3, sample_offset/* / ctx->mp3.channels*/);
+	drmp3_bool32 res = drmp3_seek_to_pcm_frame(&ctx->mp3, frame_offset);
 	ga_mutex_unlock(ctx->mutex);
 	return res ? GA_OK : GA_ERR_GENERIC;
 }
@@ -50,11 +49,11 @@ static ga_result ss_tell(GaSampleSourceContext *ctx, ga_usize *cur, ga_usize *to
 	ga_result res = GA_OK;
 
 	ga_mutex_lock(ctx->mutex);
-	if (cur) *cur = ctx->mp3.currentPCMFrame;// * ctx->mp3.channels;
+	if (cur) *cur = ctx->mp3.currentPCMFrame;
 	if (total) {
 		drmp3_uint64 tot_frames_pcm;
 		if (!drmp3_get_mp3_and_pcm_frame_count(&ctx->mp3, NULL, &tot_frames_pcm)) res = GA_ERR_GENERIC;
-		*total = tot_frames_pcm;// * ctx->mp3.channels;
+		*total = tot_frames_pcm;
 	}
 	ga_mutex_unlock(ctx->mutex);
 
@@ -81,7 +80,7 @@ GaSampleSource *ga_contrib_sample_source_create_mp3(GaDataSource *data_src) {
 		.tell = ss_tell,
 		.close = ss_close,
 		.context = ctx,
-		.format = {.num_channels = ctx->mp3.channels, .sample_fmt = GaSampleFormat_S16, .sample_rate = ctx->mp3.sampleRate},
+		.format = {.num_channels = ctx->mp3.channels, .sample_fmt = GaSampleFormat_S16, .frame_rate = ctx->mp3.sampleRate},
 		.threadsafe = ga_true,
 	};
 	if (ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable) m.seek = ss_seek;
