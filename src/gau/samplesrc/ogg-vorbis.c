@@ -1,3 +1,5 @@
+#include <limits.h>
+
 #define OV_EXCLUDE_STATIC_CALLBACKS
 #include "vorbis/vorbisfile.h"
 
@@ -39,67 +41,36 @@ static int ogg_close(void *datasource) {
 
 struct GaSampleSourceContext {
 	GaDataSource *data_src;
-	u32 sample_size;
 	bool end_of_samples;
 	OggVorbis_File ogg_file;
 	vorbis_info *ogg_info;
 	GaMutex ogg_mutex;
 };
 
-static usz ss_read(GaSampleSourceContext *ctx, void *odst, usz num_samples,
-                                            GaCbOnSeek onseek, void *seek_ctx) {
-	s32 samples_left = num_samples;
-	s32 samples_read;
-	s32 channels = ctx->ogg_info->channels;
+static usz ss_read(GaSampleSourceContext *ctx, void *odst, usz num_frames,
+                   GaCbOnSeek onseek, void *seek_ctx) {
+	usz samples_left = num_frames;
+	long samples_read;
 	usz total_samples = 0;
+	f32 *dst = odst;
 	do {
 		f32 **samples;
-		s32 i;
-		s16 *dst;
-		s32 channel;
-		ga_mutex_lock(ctx->ogg_mutex);
-		samples_read = ov_read_float(&ctx->ogg_file, &samples, samples_left, NULL);
-		if (samples_read == 0) ctx->end_of_samples = true;
-		ga_mutex_unlock(ctx->ogg_mutex);
+		with_mutex(ctx->ogg_mutex)
+			samples_read = ov_read_float(&ctx->ogg_file, &samples, min(samples_left, INT_MAX), NULL);
+		if (samples_read <= 0) ctx->end_of_samples = true;
 		if (samples_read > 0) {
 			samples_left -= samples_read;
-			dst = (s16*)odst + total_samples * channels;
 			total_samples += samples_read;
-			for (i = 0; i < samples_read; ++i) {
-				for (channel = 0; channel < channels; ++channel, ++dst) {
-					f32 sample = samples[channel][i] * 32768.0f;
-					s32 int32Sample = (s32)sample;
-					s16 int16Sample;
-					int32Sample = int32Sample > 32767 ? 32767 : int32Sample < -32768 ? -32768 : int32Sample;
-					int16Sample = (s16)int32Sample;
-					*dst = int16Sample;
+
+			for (u32 i = 0; i < samples_read; ++i) {
+				for (s32 channel = 0; channel < ctx->ogg_info->channels; ++channel) {
+					*dst++ = samples[channel][i];
 				}
 			}
 		}
 	} while (samples_read > 0 && samples_left);
 	return total_samples;
 }
-#if 0
-static usz ss_read(GaSampleSourceContext *ctx, void *odst, usz num_samples,
-                                            GaCbOnSeek onseek, void *seek_ctx) {
-	ssz samples_left = num_samples;
-	usz total_samples = 0;
-	ssz samples_read;
-
-	char *dst = odst;
-
-	do {
-		long bytes_read = ov_read(&ctx->ogg_file, dst, num_samples * ctx->ogg_info->channels * ctx->sample_size, 0/*little endian*/, ctx->sample_size, 1/*signed, todo not true for 8bit*/, NULL);
-		if (bytes_read < 0) break;
-		dst += bytes_read;
-
-		samples_read = bytes_read / (ctx->ogg_info->channels * ctx->sample_size);
-		total_samples += samples_read;
-		samples_left -= samples_read;
-	} while (samples_read > 0 && samples_left);
-	return total_samples;
-}
-#endif
 
 static bool ss_end(GaSampleSourceContext *ctx) {
 	return ctx->end_of_samples;
@@ -177,7 +148,7 @@ GaSampleSource *gau_sample_source_create_vorbis(GaDataSource *data) {
 		ov_clear(&ctx->ogg_file);
 		goto fail;
 	}
-	m.format.sample_fmt = GaSampleFormat_S16;
+	m.format.sample_fmt = GaSampleFormat_F32;
 	m.format.num_channels = ctx->ogg_info->channels;
 	m.format.frame_rate = ctx->ogg_info->rate;
 
