@@ -9,7 +9,11 @@ struct GaXDeviceImpl {
 };
 
 static ga_result gaX_open(GaDevice *dev) {
-	dev->format.sample_fmt = sizeof(AUDIO_SAMPLE_TYPE); //will break when AUDIO_SAMPLE_TYPE is float
+	dev->format.sample_fmt = _Generic((AUDIO_SAMPLE_TYPE)0,
+		u8 : GaSampleFormat_U8,
+		s16: GaSampleFormat_S16,
+		s32: GaSampleFormat_S32,
+		f32: GaSampleFormat_F32);
 	dev->format.frame_rate = ARCAN_SHMIF_SAMPLERATE;
 	dev->format.num_channels = ARCAN_SHMIF_ACHANNELS;
 	if (!(dev->impl = ga_alloc(sizeof(GaXDeviceImpl)))) return GA_ERR_SYS_MEM;
