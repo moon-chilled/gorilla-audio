@@ -119,7 +119,8 @@ GaSampleSource *gau_sample_source_create_wav(GaDataSource *data_src) {
 	if (!ctx) return NULL;
 	if (!ga_isok(sample_source_wav_load_header(data_src, &ctx->wav_header))) goto fail;
 
-	if (ctx->wav_header.bits_per_sample != 16) goto fail;
+	if (ctx->wav_header.bits_per_sample != 16
+	 && ctx->wav_header.bits_per_sample !=  8) goto fail;
 
 	GaSampleSourceCreationMinutiae m = {
 		.read = ss_read,
