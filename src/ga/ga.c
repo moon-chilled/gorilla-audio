@@ -16,15 +16,18 @@ bool ga_version_compatible(s32 major, s32 minor, s32 rev) {
 }
 
 /* Format Functions */
-u32 ga_format_frame_size(GaFormat *format) {
-	return abs(format->sample_fmt) * format->num_channels;
+u32 ga_format_sample_size(GaSampleFormat fmt) {
+	return abs(fmt);
+}
+u32 ga_format_frame_size(const GaFormat *format) {
+	return ga_format_sample_size(format->sample_fmt) * format->num_channels;
 }
 
-f32 ga_format_to_seconds(GaFormat *format, usz frames) {
+f32 ga_format_to_seconds(const GaFormat *format, usz frames) {
 	return frames / (f32)format->frame_rate;
 }
 
-s32 ga_format_to_frames(GaFormat *format, f32 seconds) {
+s32 ga_format_to_frames(const GaFormat *format, f32 seconds) {
 	return seconds * format->frame_rate;
 }
 
@@ -441,7 +444,7 @@ static void gaX_handle_init(GaHandle *handle, GaMixer *mixer) {
 	GaFormat fmt;
 	ga_sample_source_format(handle->sample_src, &fmt);
 	//todo channelnum should be min()
-	if (fmt.frame_rate != mixer->format.frame_rate) handle->resample_state = ga_trans_resample_setup(mixer->format.frame_rate, fmt.frame_rate, fmt.num_channels);
+	if (fmt.frame_rate != mixer->format.frame_rate) assert(handle->resample_state = ga_trans_resample_setup(mixer->format.frame_rate, fmt));
 	else handle->resample_state = NULL;
 }
 
@@ -658,8 +661,8 @@ static void gaX_mixer_mix_buffer(GaMixer *mixer,
 				f32 rmul = cur_gain * (cur_pan > 0.5 ? 1 : cur_pan * 2);
 				cur_pan += d_pan;
 				cur_gain += d_gain;
-				dst[i] += (s32)((s32)src[j] * lmul) << 8;
-				dst[i + 1] += (s32)((s32)src[j + ((src_channels == 1) ? 0 : 1)] * rmul) << 8;
+				dst[i] += (s32)(((s32)src[j] - 128) * lmul) << 8;
+				dst[i + 1] += (s32)(((s32)src[j + ((src_channels == 1) ? 0 : 1)] - 128) * rmul) << 8;
 
 				fj += sample_scale * src_channels;
 				srcSamplesRead += sample_scale * src_channels;
@@ -787,7 +790,8 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_frame
 			requested = num_read;
 			needed = requested * r;
 		}
-		ga_trans_resample_linear_s16(handle->resample_state, dst, needed, src, requested);
+		ga_trans_resample_linear(handle->resample_state, dst, needed, src, requested);
+		//ga_trans_resample_point(handle->resample_state, dst, needed, src, requested);
 		ga_free(src);
 	} else {
 		usz num_read = ga_sample_source_read(ss, dst, needed, NULL, NULL);

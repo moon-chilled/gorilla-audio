@@ -152,13 +152,21 @@ typedef struct {
 	ga_uint32 num_channels;
 } GaFormat;
 
-/** Retrieves the frame size (in bytes) of a specified format.
+/** Retrieves the sample size (in bytes) of a specified format.
  *
  *  \ingroup GaFormat
  *  \param format Format of the PCM data
  *  \return Sample size (in bytes) of the specified format
  */
-ga_uint32 ga_format_frame_size(GaFormat *format);
+ga_uint32 ga_format_sample_size(GaSampleFormat format);
+
+/** Retrieves the frame size (in bytes) of a specified format.
+ *
+ *  \ingroup GaFormat
+ *  \param format Format of the PCM data
+ *  \return Frame size (in bytes) of the specified format
+ */
+ga_uint32 ga_format_frame_size(const GaFormat *format);
 
 /** Converts a discrete number of PCM frames into the duration (in seconds) it
  *  will take to play back.
@@ -168,7 +176,7 @@ ga_uint32 ga_format_frame_size(GaFormat *format);
  *  \param frames Number of PCM frames
  *  \return Duration (in seconds) it will take to play back
  */
-ga_float32 ga_format_to_seconds(GaFormat *format, ga_usize frames);
+ga_float32 ga_format_to_seconds(const GaFormat *format, ga_usize frames);
 
 /** Converts a duration (in seconds) into the discrete number of PCM frames it
  *  will take to play for that long.
@@ -178,7 +186,7 @@ ga_float32 ga_format_to_seconds(GaFormat *format, ga_usize frames);
  *  \param seconds Duration (in seconds)
  *  \return Number of PCM frames it will take to play back for the given time
  */
-ga_sint32 ga_format_to_frames(GaFormat *format, ga_float32 seconds);
+ga_sint32 ga_format_to_frames(const GaFormat *format, ga_float32 seconds);
 
 
 /************/
@@ -1390,10 +1398,11 @@ void ga_stream_release(GaBufferedStream *stream);
 
 typedef struct GaResamplingState GaResamplingState;
 
-GaResamplingState *ga_trans_resample_setup(ga_uint32 drate, ga_uint32 srate, ga_uint32 nch);
+GaResamplingState *ga_trans_resample_setup(ga_uint32 drate, GaFormat fmt);
 void ga_trans_resample_teardown(GaResamplingState *rs);
-void ga_trans_resample_point_s16(GaResamplingState *rs, ga_sint16 *dst, ga_usize dlen, ga_sint16 *src, ga_usize slen);
-void ga_trans_resample_linear_s16(GaResamplingState *rs, ga_sint16 *dst, ga_usize dlen, ga_sint16 *src, ga_usize slen);
+// lengths are in frames, not bytes or samples
+void ga_trans_resample_point(GaResamplingState *rs, void *dst, ga_usize dlen, void *src, ga_usize slen);
+void ga_trans_resample_linear(GaResamplingState *rs, void *dst, ga_usize dlen, void *src, ga_usize slen);
 ga_usize ga_trans_resample_howmany(GaResamplingState *rs, ga_usize out);
 
 typedef enum {
