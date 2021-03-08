@@ -41,7 +41,7 @@ static ga_result stream_thread(void *context) {
 	return GA_OK;
 }
 GauManager *gau_manager_create(void) {
-	return gau_manager_create_custom(NULL, GauThreadPolicy_Single, NULL, NULL);
+	return gau_manager_create_custom(NULL, GauThreadPolicy_Multi, NULL, NULL);
 }
 GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
                                        GauThreadPolicy thread_policy,
