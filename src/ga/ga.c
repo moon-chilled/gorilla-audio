@@ -37,7 +37,7 @@ static void *gaX_get_buffer_nozerocopy(GaDevice *dev) { return dev->buffer; }
 GaDevice *ga_device_open(GaDeviceType *type,
                           u32 *num_buffers,
                           u32 *num_frames,
-			  GaFormat *format) {
+                          GaFormat *format) {
 	type = type ? type : &(GaDeviceType){GaDeviceType_Default};
 	num_buffers = num_buffers ? num_buffers : &(u32){4};
 	num_frames = num_frames ? num_frames : &(u32){512};
