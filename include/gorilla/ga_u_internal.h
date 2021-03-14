@@ -2,7 +2,6 @@
 #ifndef _GORILLA_GA_U_INTERNAL_H
 #define _GORILLA_GA_U_INTERNAL_H
 
-#include <stdatomic.h>
 #include <assert.h>
 
 typedef ga_uint8  u8;
@@ -21,6 +20,8 @@ typedef ga_ssize ssz;
 typedef ga_float32 f32;
 typedef ga_float64 f64;
 
+#ifndef __cplusplus
+#include <stdatomic.h>
 typedef ga_bool bool;
 #define true ga_true
 #define false ga_false
@@ -31,7 +32,7 @@ typedef struct {
 typedef _Atomic bool atomic_bool;
 typedef _Atomic u8  atomic_u8;
 typedef _Atomic u32 atomic_u32;
-typedef ga_atomic_usize atomic_usz;
+typedef _Atomic usz atomic_usz;
 typedef _Atomic ssz atomic_ssz;
 
 static inline ga_bool decref(RC *count) {
@@ -45,6 +46,9 @@ static inline void incref(RC *count) {
 static inline RC rc_new(void) {
 	return (RC){1};
 }
+#else
+typedef struct { volatile u32 rc; } RC;
+#endif
 
 #define with_mutex(m) for (bool done = (ga_mutex_lock(m),false); !done; ga_mutex_unlock(m),done=true)
 

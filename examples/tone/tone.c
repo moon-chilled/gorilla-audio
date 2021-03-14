@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
 	GaFormat fmt = {
 		.sample_fmt = GaSampleFormat_S16,
 		.num_channels = 2,
-		.sample_rate = 48000,
+		.frame_rate = 48000,
 	};
 	GaDevice *dev;
 	ga_uint32 num_frames = 2048;

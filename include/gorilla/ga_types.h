@@ -34,13 +34,18 @@ typedef  int16_t         ga_sint16;
 typedef  int32_t         ga_sint32;
 typedef  int64_t         ga_sint64;
 
+#ifdef __cplusplus
+typedef bool             ga_bool;
+# define ga_true         true
+# define ga_false        false
+#else
 typedef _Bool            ga_bool;
-#define ga_true          ((ga_bool)1)
-#define ga_false         ((ga_bool)0)
+# define ga_true         ((ga_bool)1)
+# define ga_false        ((ga_bool)0)
+#endif
 
 typedef size_t           ga_usize;
 typedef ptrdiff_t        ga_ssize;
-typedef _Atomic size_t   ga_atomic_usize;
 typedef float            ga_float32;
 typedef double           ga_float64;
 #define GA_SSIZE_MAX PTRDIFF_MAX
@@ -120,12 +125,16 @@ static inline ga_bool ga_isok(ga_result res) {
  *           is only one owner responsible for creation/destruction of the
  *           thread.
  */
-typedef struct {
+typedef struct GaCircBuffer GaCircBuffer;
+
+#ifndef __cplusplus //_Atomic not nice
+struct GaCircBuffer {
 	ga_uint8 *data;
 	ga_usize data_size;
-	ga_atomic_usize next_avail;
-	ga_atomic_usize next_free;
-} GaCircBuffer;
+	_Atomic ga_usize next_avail;
+	_Atomic ga_usize next_free;
+};
+#endif
 
 /** Create a circular buffer object.
  *

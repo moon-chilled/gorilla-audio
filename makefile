@@ -3,7 +3,7 @@
 #######
 TARGET :=
 ifeq ($(OS),Windows_NT)
-	TARGET := win32
+	TARGET := mingw
 else ifeq ($(shell uname),Darwin)
 	TARGET := macos
 else ifeq ($(shell uname),Linux)
@@ -21,10 +21,11 @@ MODE ?= debug
 CFLAGS := -Iext/libflac/include -Iext/libogg/include -Iext/libopus/include -Iext/opusfile/include -Iext/libvorbis/include
 CFLAGS_release :=
 CFLAGS_debug :=
-CXXFLAGS :=
+CXXFLAGS := $(CFLAGS)
 LFLAGS :=
 
 CC ?= cc
+CXX ?= c++
 CCLD ?= $(CC)
 ifneq ($(CC),tcc)
 	CFLAGS += -MMD
@@ -45,10 +46,15 @@ GA_SRC := src/ga/ga.c src/ga/trans.c src/ga/memory.c src/ga/stream.c src/ga/syst
 GAU_SRC := src/gau/gau.c src/gau/datasrc/file.c src/gau/datasrc/memory.c src/gau/samplesrc/loop.c src/gau/samplesrc/sound.c src/gau/samplesrc/stream.c src/gau/samplesrc/wav.c src/gau/samplesrc/ogg-vorbis.c src/gau/samplesrc/ogg-opus.c src/gau/samplesrc/flac.c
 OGG_SRC := ext/libogg/src/bitwise.c ext/libogg/src/framing.c
 FLAC_SRC := ext/libflac/src/libFLAC/bitmath.c ext/libflac/src/libFLAC/bitreader.c ext/libflac/src/libFLAC/bitwriter.c ext/libflac/src/libFLAC/cpu.c ext/libflac/src/libFLAC/crc.c ext/libflac/src/libFLAC/fixed.c ext/libflac/src/libFLAC/fixed_intrin_sse2.c ext/libflac/src/libFLAC/fixed_intrin_ssse3.c ext/libflac/src/libFLAC/float.c ext/libflac/src/libFLAC/format.c ext/libflac/src/libFLAC/lpc.c ext/libflac/src/libFLAC/lpc_intrin_sse.c ext/libflac/src/libFLAC/lpc_intrin_sse2.c ext/libflac/src/libFLAC/lpc_intrin_sse41.c ext/libflac/src/libFLAC/lpc_intrin_avx2.c ext/libflac/src/libFLAC/md5.c ext/libflac/src/libFLAC/memory.c ext/libflac/src/libFLAC/metadata_iterators.c ext/libflac/src/libFLAC/metadata_object.c ext/libflac/src/libFLAC/stream_decoder.c ext/libflac/src/libFLAC/stream_encoder.c ext/libflac/src/libFLAC/stream_encoder_intrin_sse2.c ext/libflac/src/libFLAC/stream_encoder_intrin_ssse3.c ext/libflac/src/libFLAC/stream_encoder_intrin_avx2.c ext/libflac/src/libFLAC/stream_encoder_framing.c ext/libflac/src/libFLAC/window.c
+ifeq ($(TARGET),mingw)
+	FLAC_SRC += ext/libflac/src/libFLAC/windows_unicode_filenames.c
+endif
+
 OPUSFILE_SRC := ext/opusfile/src/opusfile.c ext/opusfile/src/info.c ext/opusfile/src/internal.c ext/opusfile/src/stream.c 
 VORBIS_SRC := ext/libvorbis/lib/analysis.c ext/libvorbis/lib/bitrate.c ext/libvorbis/lib/block.c ext/libvorbis/lib/codebook.c ext/libvorbis/lib/envelope.c ext/libvorbis/lib/floor0.c ext/libvorbis/lib/floor1.c ext/libvorbis/lib/info.c ext/libvorbis/lib/lpc.c ext/libvorbis/lib/lsp.c ext/libvorbis/lib/mapping0.c ext/libvorbis/lib/mdct.c ext/libvorbis/lib/psy.c ext/libvorbis/lib/registry.c ext/libvorbis/lib/res0.c ext/libvorbis/lib/sharedbook.c ext/libvorbis/lib/smallft.c ext/libvorbis/lib/synthesis.c ext/libvorbis/lib/vorbisfile.c ext/libvorbis/lib/window.c
 
 GA_CFLAGS := -Iinclude
+GA_CXXFLAGS := -Iinclude
 FLAC_CFLAGS := -Iext/libflac/src/libFLAC/include -DHAVE_STDINT_H -DHAVE_LROUND -DFLAC__HAS_OGG=0 -DPACKAGE_VERSION="\"(gorilla audio)\""
 OPUS_CFLAGS := -Iext/libopus/celt -Iext/libopus/silk -Iext/libopus/silk/float -DOPUS_BUILD -DUSE_ALLOCA -DHAVE_LRINT -DHAVE_LRINTF -DHAVE_STDINT_H -DPACKAGE_VERSION="\"(gorilla audio)\"" -DSKIP_CONFIG_H
 
@@ -60,28 +66,34 @@ else ifeq ($(TSAN),1)
 	LFLAGS += -fsanitize=thread -fsanitize=undefined
 endif
 
-ifeq ($(TARGET),win32)
-	CFLAGS += -DUNICODE -D_UNICODE -D_CRT_SECURE_NO_WARNINGS
-	CFLAGS_debug += /Zi  #this is only cl; todo figure out clang/mingw
-	CFLAGS += /MT /MTd   #should these be linker opts?
-else
-	CFLAGS += -Wall -Wextra -Wno-unused-parameter
-	CFLAGS += -fPIC
-	CFLAGS += -std=c99
-	CFLAGS_debug += -Werror
-	CFLAGS_debug += -g
-	CFLAGS_release += -O2
-	LFLAGS += -lpthread -lm
-
-	FLAC_CFLAGS += -DHAVE_FSEEKO
+ifeq ($(TARGET),mingw)
+	CFLAGS += -DFLAC__NO_DLL
 endif
+
+# cl:
+#CFLAGS += -DUNICODE -D_UNICODE -D_CRT_SECURE_NO_WARNINGS
+#CFLAGS_debug += /Zi  #this is only cl; todo figure out clang/mingw
+#CFLAGS += /MT /MTd   #should these be linker opts?
+
+CFLAGS += -Wall -Wextra -Wno-unused-parameter
+CFLAGS += -fPIC
+CFLAGS += -std=c99
+#CFLAGS_debug += -Werror
+CFLAGS_debug += -g
+CFLAGS_release += -O2
+LFLAGS += -lm
+ifneq ($(TARGET),mingw)
+	LFLAGS += -lpthread
+endif
+
+FLAC_CFLAGS += -DHAVE_FSEEKO
 
 ifeq ($(TARGET),macos)
 	CFLAGS += -mmacosx-version-min=10.5
 	LFLAGS += -mmacosx-version-min=10.5
 endif
 
-ifeq ($(TARGET),win32)
+ifeq ($(TARGET),mingw)
 	ENABLE_XAUDIO2 := 1
 else ifeq ($(TARGET),macos)
 	ENABLE_OPENAL := 1
@@ -102,6 +114,7 @@ ifeq ($(ENABLE_XAUDIO2),1)
 	# todo dx sdk (or, better yet, replace xaudio2 with wasapi)
 	CFLAGS += -DENABLE_XAUDIO2
 	CXXFLAGS += -DENABLE_XAUDIO2
+	LFLAGS += -lxaudio2_8 -lole32
 	GA_SRC += src/ga/devices/xaudio2.cc
 endif
 ifeq ($(ENABLE_ARCAN),1)
@@ -162,6 +175,9 @@ $(OGG_SRC): ext/libogg/include/ogg/config_types.h
 o/$(MODE)/src/%.o: src/%.c
 	@mkdir -p `dirname $@`
 	$(CC) -c -o $@ $(CFLAGS) $(CFLAGS_$(MODE)) $(GA_CFLAGS) $<
+o/$(MODE)/src/%.o: src/%.cc
+	@mkdir -p `dirname $@`
+	$(CXX) -c -o $@ $(CXXFLAGS) $(CXXFLAGS_$(MODE)) $(GA_CXXFLAGS) $<
 o/$(MODE)/ext/%.o: ext/%.c
 	@mkdir -p `dirname $@`
 	$(CC) -c -o $@ $(CFLAGS) $(CFLAGS_$(MODE)) $<
@@ -178,9 +194,10 @@ include ext/libopus/opus_sources.mk
 OPUS_SRC := $(patsubst %,ext/libopus/%,$(SILK_SOURCES) $(SILK_SOURCES_FLOAT) $(CELT_SOURCES) $(OPUS_SOURCES) $(OPUS_SOURCES_FLOAT))
 
 OBJ := $(patsubst %.c,o/$(MODE)/%.o,$(GA_SRC) $(GAU_SRC) $(OGG_SRC) $(FLAC_SRC) $(OPUS_SRC) $(OPUSFILE_SRC) $(VORBIS_SRC))
+OBJ := $(patsubst %.cc,o/$(MODE)/%.o,$(OBJ))
 o/$(MODE)/libgorilla.so: $(OBJ)
 	@mkdir -p o/$(MODE)
-	$(CCLD) -shared $(LFLAGS) -o o/$(MODE)/libgorilla.so $(OBJ)
+	$(CCLD) -shared -o o/$(MODE)/libgorilla.so $(OBJ) $(LFLAGS)
 o/$(MODE)/libgorilla.a: $(OBJ)
 	@mkdir -p o/$(MODE)
 	ar rcs o/$(MODE)/libgorilla.a $(OBJ)

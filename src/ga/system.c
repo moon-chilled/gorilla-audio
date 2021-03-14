@@ -92,7 +92,7 @@ GaThread *ga_thread_create(GaCbThreadFunc thread_func, void *context,
 	ret->stack_size = stack_size;
 	ret->thread_obj->h = CreateThread(0, stack_size, (LPTHREAD_START_ROUTINE)thread_func, context, CREATE_SUSPENDED, (LPDWORD)&ret->id);
 	SetThreadPriority(ret->thread_obj->h, priority_lut[priority]);
-	ResumeThread(thread->thread_obj->h);
+	ResumeThread(ret->thread_obj->h);
 	return ret;
 }
 void ga_thread_join(GaThread *thread) {
@@ -107,9 +107,9 @@ void ga_thread_destroy(GaThread *thread) {
 	ga_free(thread);
 }
 
-ga_result ga_mutex_create(GaMutex *es) {
+ga_result ga_mutex_create(GaMutex *res) {
 	res->mutex = ga_alloc(sizeof(CRITICAL_SECTION));
-	InitializeCriticalSection((CRITICAL_SECTION*)ret->mutex);
+	InitializeCriticalSection((CRITICAL_SECTION*)res->mutex);
 	return GA_OK;
 }
 void ga_mutex_destroy(GaMutex mutex) {

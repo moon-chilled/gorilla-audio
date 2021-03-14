@@ -202,7 +202,7 @@ struct GaMixer {
 	GaMutex dispatch_mutex;
 	GaLink mix_list;
 	GaMutex mix_mutex;
-	atomic_bool suspended;
+	/*atomic_*/bool suspended;
 };
 
 
