@@ -175,19 +175,49 @@ typedef enum {
 	GaHandleState_Destroyed,
 } GaHandleState;
 
+typedef enum {
+	GaXHandleParam_Pitch,
+	GaXHandleParam_Pan,
+	GaXHandleParam_Gain,
+	GaXHandleParam_LastPan,
+	GaXHandleParam_LastGain,
+	GaXHandleParam_Max,
+} GaXHandleParam;
+
+typedef struct {
+	f32 pitch;
+	f32 gain, last_gain;
+	f32 pan, last_pan;
+} JukeboxState;
+
 struct GaHandle {
 	GaMixer *mixer;
 	GaResamplingState *resample_state; //non-null iff format.sample_rate != mixerformat.sample_rate
 	GaCbHandleFinish callback;
 	void *context;
 	GaHandleState state;
-	f32 pitch;
-	f32 gain, last_gain;
-	f32 pan, last_pan;
+	JukeboxState jukebox; //point either to def_jukebox, or group->jukebox
+	u32 jukebox_stamps[GaXHandleParam_Max];
 	GaLink dispatch_link;
 	GaLink mix_link;
 	GaMutex mutex;
 	GaSampleSource *sample_src;
+
+	GaHandleGroup *group;
+	GaLink group_link;
+
+	//JukeboxState def_jukebox;
+};
+
+struct GaHandleGroup {
+	GaMixer *mixer;
+
+	GaLink handles;
+
+	GaMutex mutex;
+
+	JukeboxState jukebox;
+	u32 jukebox_stamps[GaXHandleParam_Max];
 };
 
 /************/
@@ -202,7 +232,8 @@ struct GaMixer {
 	GaMutex dispatch_mutex;
 	GaLink mix_list;
 	GaMutex mix_mutex;
-	/*atomic_*/bool suspended;
+	GaHandleGroup handle_group;
+	atomic_bool suspended;
 };
 
 
@@ -228,6 +259,8 @@ struct GaBufferedStream {
 	bool end;
 	GaDataAccessFlags flags;
 };
+
+#define ga_list_iterate(T, obj, head) for (T *_next, *obj, *link = (T*)(void*)(head)->next; (_next = (T*)(void*)((GaLink*)link)->next), (obj = ((GaLink*)(void*)link)->data), ((GaLink*)(void*)link != (head)); link = (T*)(void*)(GaLink*)_next)
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 # define ENDIAN(little, big) little

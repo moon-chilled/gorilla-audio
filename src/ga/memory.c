@@ -133,4 +133,14 @@ void ga_list_unlink(GaLink *link) {
 	link->next = NULL;
 	link->data = NULL;
 }
+void ga_list_merge(GaLink *dst, GaLink *src) {
+	if (src->next->prev == src) return;
 
+	src->prev->next = dst->next;
+	dst->next->prev = src->prev;
+
+	dst->next = src->next;
+	dst->next->prev = dst;
+
+	ga_list_head(src);
+}

@@ -257,6 +257,12 @@ void ga_list_link(GaLink *head, GaLink *link, void *data);
  */
 void ga_list_unlink(GaLink *link);
 
+/** Moves links from head_src to head_dst.
+ *
+ *  \ingroup GaLink
+ */
+void ga_list_merge(GaLink *head_dst, GaLink *head_src);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

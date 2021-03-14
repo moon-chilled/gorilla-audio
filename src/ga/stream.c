@@ -169,8 +169,14 @@ void ga_stream_manager_destroy(GaStreamManager *mgr) {
 
 /* Stream */
 GaBufferedStream *ga_stream_create(GaStreamManager *mgr, GaSampleSource *src, usz buffer_size) {
-	GaBufferedStream *ret = ga_alloc(sizeof(GaBufferedStream));
+	GaBufferedStream *ret = memset(ga_alloc(sizeof(GaBufferedStream)), 0, sizeof(*ret));
+	if (!ret) return NULL;
 	ret->refCount = rc_new();
+	ret->flags = ga_sample_source_flags(src);
+	assert(ret->flags & GaDataAccessFlag_Threadsafe);
+	if (!ga_isok(ga_mutex_create(&ret->produce_mutex))) goto fail;
+	if (!ga_isok(ga_mutex_create(&ret->seek_mutex))) goto fail;
+	if (!ga_isok(ga_mutex_create(&ret->read_mutex))) goto fail;
 	ga_sample_source_acquire(src);
 	ga_sample_source_format(src, &ret->format);
 	ga_list_head(&ret->tell_jumps);
@@ -180,14 +186,15 @@ GaBufferedStream *ga_stream_create(GaStreamManager *mgr, GaSampleSource *src, us
 	ret->tell = 0;
 	ret->end = false;
 	ret->buffer_size = buffer_size;
-	ret->flags = ga_sample_source_flags(src);
-	assert(ret->flags & GaDataAccessFlag_Threadsafe);
-	if (!ga_isok(ga_mutex_create(&ret->produce_mutex))) {} //todo
-	if (!ga_isok(ga_mutex_create(&ret->seek_mutex))) {} //todo
-	if (!ga_isok(ga_mutex_create(&ret->read_mutex))) {} //todo
 	ret->buffer = ga_buffer_create(buffer_size);
 	ret->stream_link = (GaLink*)gaX_stream_manager_add(mgr, ret);
 	return ret;
+
+fail:
+	ga_mutex_destroy(&ret->produce_mutex);
+	ga_mutex_destroy(&ret->seek_mutex);
+	ga_mutex_destroy(&ret->read_mutex);
+	return NULL;
 }
 static void gaX_stream_onSeek(usz frame, ssz delta, void *seekContext) {
 	GaBufferedStream *s = (GaBufferedStream*)seekContext;

@@ -19,6 +19,10 @@
 extern "C" {
 #endif
 
+#ifdef __GNUC__
+# define ga_result /*__attribute__((mustuse))*/ ga_result
+#endif
+
 /** Data structures and functions.
  *
  *  \defgroup external Audio API (GA)
@@ -975,6 +979,8 @@ ga_result ga_mixer_destroy(GaMixer *mixer);
  */
 typedef struct GaHandle GaHandle;
 
+typedef struct GaHandleGroup GaHandleGroup;
+
 /** Enumerated handle parameter values.
  *
  *  Used when calling \ref ga_handle_set_paramf() "ga_handle_set_param*()"
@@ -984,9 +990,8 @@ typedef struct GaHandle GaHandle;
  *  \defgroup handleParams Handle Parameters
  */
 typedef enum {
-	GaHandleParam_Unknown,  /**< Unknown parameter. \ingroup handleParams */
-	GaHandleParam_Pan,      /**< Left <-> right pan (center -> 0.0, left -> -1.0, right -> 1.0). Floating-point parameter. \ingroup handleParams */
 	GaHandleParam_Pitch,    /**< Pitch/speed multiplier (normal -> 1.0). Floating-point parameter. \ingroup handleParams */
+	GaHandleParam_Pan,      /**< Left <-> right pan (center -> 0.0, left -> -1.0, right -> 1.0). Floating-point parameter. \ingroup handleParams */
 	GaHandleParam_Gain,     /**< Gain/volume (silent -> 0.0, normal -> 1.0). Floating-point parameter. \ingroup handleParams */
 } GaHandleParam;
 
@@ -1009,13 +1014,13 @@ typedef enum {
  *  callback.
  *
  *  \ingroup GaHandle
- *  \param finishedHandle The handle that has finished playback.
+ *  \param finished_handle The handle that has finished playback.
  *  \param context The user-specified callback context.
  *  \warning This callback is thrown once the handle has finished playback,
  *           after which the handle can no longer be used except to destroy it.
  *  \todo Allow handles with GaDataAccessFlag_Seekable to be rewound/reused once finished.
  */
-typedef void (*GaCbHandleFinish)(GaHandle *finishedHandle, void *context);
+typedef void (*GaCbHandleFinish)(GaHandle *finished_handle, void *context);
 
 /** Creates an audio playback control handle.
  *
@@ -1029,6 +1034,60 @@ typedef void (*GaCbHandleFinish)(GaHandle *finishedHandle, void *context);
  *  \todo Provide a way to query handles for flags.
  */
 GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *sample_src);
+
+
+/******************/
+/*  Handle group  */
+/******************/
+/** Encapsulates a set of handles.
+ *
+ *  Every handle belongs to a handle group; if you do not explicitly assign
+ *  one, the default is a master group which belongs to the mixer (see \ref ga_mixer_handle_group).
+ *
+ *  Handle groups allow you to change attributes like volume or play state
+ *  synchronously for all the handles they own.  These attributes can
+ *  temporarily be overridden by the handles themselves.  For example:
+ *
+ *  HangleGroup H contains paused handles {a, b, c}
+ *  ga_handle_group_play(H) ⇒ a, b, and c are all playing
+ *  ga_handle_stop(c) ⇒ a and b are still playing, c is stopped
+ *  ga_handle_group_play(H) ⇒ c will start playing again; it has not permanently escaped H's influence
+ *
+ *
+ *  \ingroup external
+ *  \defgroup GaHandleGroup HandleGroup
+ */
+GaHandleGroup *ga_handle_group_create(GaMixer *mixer);
+
+/** Disowns all handles associated with a handle group.
+ *
+ *  They will be moved into the mixer's master handlegroup; this is the same as
+ *  ga_handle_group_transfer(group, ga_mixer_handle_group(ga_handle_group_mixer(group)))
+ */
+void ga_handle_group_disown(GaHandleGroup *group);
+
+/** Transfers all handles associated with one handle group into another.
+ *
+ *  If group is the same as target, this is a no-op.  If target is null, the
+ *  group's mixer's master group will be used.
+ */
+void ga_handle_group_transfer(GaHandleGroup *group, GaHandleGroup *target);
+
+/** Destroys a handle group
+ *  
+ *  If the handle group is associated with any handles, they will also be
+ *  destroyed; if you do not want this to happen, call
+ *  ga_handle_group_disown() or ga_handle_group_transfer() first.
+ */
+void ga_handle_group_destroy(GaHandleGroup *group);
+
+/** Adds a handle to a handle group.
+ *
+ *  If the handle is already in another handle group, it will be removed.
+ *  If the handle is already in this handle group, nothing will happen.
+ *  \ingroup GaHandleGroup
+ */
+void ga_handle_group_add(GaHandleGroup *group, GaHandle *handle);
 
 /** Destroys an audio playback handle.
  *
@@ -1404,6 +1463,45 @@ void ga_trans_resample_teardown(GaResamplingState *rs);
 void ga_trans_resample_point(GaResamplingState *rs, void *dst, ga_usize dlen, void *src, ga_usize slen);
 void ga_trans_resample_linear(GaResamplingState *rs, void *dst, ga_usize dlen, void *src, ga_usize slen);
 ga_usize ga_trans_resample_howmany(GaResamplingState *rs, ga_usize out);
+static inline u8 ga_trans_u8_of_s16(s16 s) {
+	return ((s32)s + 32768) >> 8;
+}
+static inline u8 ga_trans_u8_of_s32(s32 s) {
+	return ((s32)s + 2147483648) >> 8;
+}
+static inline u8 ga_trans_u8_of_f32(f32 f) {
+	return 128 + f * (127.f + (f < 0));
+}
+
+static inline s16 ga_trans_s16_of_u8(u8 u) {
+	return ((s32)u - 128) << 8;
+}
+static inline s16 ga_trans_s16_of_s32(s32 s) {
+	return s >> 16;
+}
+static inline s16 ga_trans_s16_of_f32(f32 f) {
+	return f * (32767.f + (f < 0));
+}
+
+static inline s32 ga_trans_s32_of_u8(u8 u) {
+	return ((s32)u - 128) << 24;
+}
+static inline s32 ga_trans_s32_of_s16(s16 s) {
+	return s << 16;
+}
+static inline s32 ga_trans_s32_of_f32(f32 f) {
+	return f * (2147483647.f + (f < 0));
+}
+
+static inline f32 ga_trans_f32_of_u8(u8 u) {
+	return (u - 128) / (127.f + (u <= 128));
+}
+static inline f32 ga_trans_f32_of_s16(s16 s) {
+	return s / (32767.f + (s < 0));
+}
+static inline f32 ga_trans_f32_of_s32(s32 s) {
+	return s / (2147483647.f + (s < 0));
+}
 
 typedef enum {
 	GaLogTrace,
@@ -1421,6 +1519,10 @@ void ga_do_log(GaLogCategory category, const char *file, const char *function, i
 #define ga_trace(...) ga_do_log(GaLogTrace, __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define ga_info(...) ga_do_log(GaLogInfo, __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define ga_warn(...) ga_do_log(GaLogWarn, __FILE__, __func__, __LINE__, __VA_ARGS__)
+
+#ifdef __GNUC__
+# undef ga_result //__attribute__((mustuse)) ga_result
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

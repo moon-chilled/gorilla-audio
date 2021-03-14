@@ -93,6 +93,7 @@ fail:
 void gau_manager_update(GauManager *mgr) {
 	ga_mixer_dispatch(mgr->mixer);
 	if (mgr->thread_policy == GauThreadPolicy_Multi) return;
+
 	GaMixer *mixer = mgr->mixer;
 	GaDevice *dev = mgr->device;
 	u32 numToQueue = ga_device_check(dev);
