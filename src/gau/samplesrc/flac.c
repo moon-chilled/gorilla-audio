@@ -60,9 +60,13 @@ static FLAC__bool flac_eof(const FLAC__StreamDecoder *sd, void *context) {
 
 static FLAC__StreamDecoderLengthStatus flac_length(const FLAC__StreamDecoder *decoder, FLAC__uint64 *stream_length, void *context) {
 	GaSampleSourceContext *ctx = context;
-	*stream_length = ctx->datalen;
-	return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
-	//todo experiment with returning FLAC__STREAM_DECODER_LENGTH_STATUS_UNSUPPORTED
+
+	if (ctx->datalen) {
+		*stream_length = ctx->datalen;
+		return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
+	} else {
+		return FLAC__STREAM_DECODER_LENGTH_STATUS_UNSUPPORTED;
+	}
 }
 
 static void flac_error(const FLAC__StreamDecoder *decoder, FLAC__StreamDecoderErrorStatus status, void *context) {
@@ -197,7 +201,7 @@ static void ss_close(GaSampleSourceContext *ctx) {
 GaSampleSource *gau_sample_source_create_flac(GaDataSource *data_src) {
 	bool seekable = ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable;
 
-	usz datalen;
+	usz datalen = 0;
 	if (seekable) {
 		if (!ga_isok(ga_data_source_seek(data_src, 0, GaSeekOrigin_End))) return NULL;
 		datalen = ga_data_source_tell(data_src);
