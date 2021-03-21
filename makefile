@@ -85,6 +85,7 @@ endif
 #CFLAGS += /MT /MTd   #should these be linker opts?
 
 CFLAGS += -Wall -Wextra -Wno-unused-parameter
+CFLAGS += -fwrapv -fno-delete-null-pointer-checks
 CFLAGS += -fPIC
 CFLAGS += -std=c99
 CFLAGS_debug += -Werror

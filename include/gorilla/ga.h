@@ -12,15 +12,18 @@
 #ifndef GORILLA_GA_H
 #define GORILLA_GA_H
 
+#ifdef __GNUC__
+# define GCC(...) __attribute__((__VA_ARGS__))
+#else
+# define GCC(...)
+#endif
+
+
 #include "gorilla/ga_types.h"
 #include "gorilla/ga_system.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-#ifdef __GNUC__
-# define ga_result /*__attribute__((mustuse))*/ ga_result
 #endif
 
 /** Data structures and functions.
@@ -1514,18 +1517,16 @@ typedef void (*GaCbLogger)(void *ctx, GaLogCategory category, const char *file, 
 void ga_register_logger(GaCbLogger logger, void *ctx);
 ga_result ga_open_logfile(const char *fname);
 
-void ga_do_log(GaLogCategory category, const char *file, const char *function, int line, const char *fmt, ...);
+void ga_do_log(GaLogCategory category, const char *file, const char *function, int line, const char *fmt, ...) GCC(format(printf, 5, 6));
 #define ga_log(category, ...) ga_do_log(category, __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define ga_trace(...) ga_do_log(GaLogTrace, __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define ga_info(...) ga_do_log(GaLogInfo, __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define ga_warn(...) ga_do_log(GaLogWarn, __FILE__, __func__, __LINE__, __VA_ARGS__)
 
-#ifdef __GNUC__
-# undef ga_result //__attribute__((mustuse)) ga_result
-#endif
-
 #ifdef __cplusplus
 } // extern "C"
 #endif
+
+#undef GCC
 
 #endif // GORILLA_GA_H

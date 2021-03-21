@@ -28,12 +28,12 @@ static bool eof(GaDataSourceContext *ctx) {
 static void close(GaDataSourceContext *ctx) {
 	fclose((FILE*)ctx);
 }
-static GaDataSource *gau_data_source_create_fp(FILE *fp) {
+
+GaDataSource *gau_data_source_create_file(const char *fname) {
+	FILE *fp = fopen(fname, "rb");
 	if (!fp) return NULL;
 
-	rewind(fp);
-
-	return ga_data_source_create(&(GaDataSourceCreationMinutiae){
+	GaDataSource *ret = ga_data_source_create(&(GaDataSourceCreationMinutiae){
 		.read = read,
 		.seek = seek,
 		.tell = tell,
@@ -42,12 +42,7 @@ static GaDataSource *gau_data_source_create_fp(FILE *fp) {
 		.context = (GaDataSourceContext*)fp,
 		.threadsafe = true,
 	});
-}
 
-GaDataSource *gau_data_source_create_file(const char *fname) {
-	FILE *fp = fopen(fname, "rb");
-	if (!fp) return NULL;
-	GaDataSource *ret = gau_data_source_create_fp(fp);
 	if (!ret) fclose(fp);
 	return ret;
 }
