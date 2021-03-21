@@ -6,6 +6,9 @@ O := gaplay.o ../../contrib/mp3/mp3dec.o
 ifeq ($(ASAN),1)
 	CFLAGS += -fsanitize=address -fsanitize=undefined
 	LFLAGS += -fsanitize=address -fsanitize=undefined
+else ifeq ($(MSAN),1)
+	CFLAGS += -fsanitize=memory -fsanitize=undefined
+	LFLAGS += -fsanitize=memory -fsanitize=undefined
 else ifeq ($(TSAN),1)
 	CFLAGS += -fsanitize=thread -fsanitize=undefined
 	LFLAGS += -fsanitize=thread -fsanitize=undefined

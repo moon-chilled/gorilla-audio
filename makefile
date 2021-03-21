@@ -70,6 +70,9 @@ OPUS_CFLAGS := -Iext/libopus/celt -Iext/libopus/silk -Iext/libopus/silk/float -D
 ifeq ($(ASAN),1)
 	CFLAGS += -fsanitize=address -fsanitize=undefined
 	LFLAGS += -fsanitize=address -fsanitize=undefined
+else ifeq ($(MSAN),1)
+	CFLAGS += -fsanitize=memory -fsanitize=undefined
+	LFLAGS += -fsanitize=memory -fsanitize=undefined
 else ifeq ($(TSAN),1)
 	CFLAGS += -fsanitize=thread -fsanitize=undefined
 	LFLAGS += -fsanitize=thread -fsanitize=undefined
@@ -88,7 +91,7 @@ CFLAGS += -Wall -Wextra -Wno-unused-parameter
 CFLAGS += -fwrapv -fno-delete-null-pointer-checks
 CFLAGS += -fPIC
 CFLAGS += -std=c99
-#CFLAGS_debug += -Werror
+CFLAGS_debug += -Werror
 CFLAGS_debug += -g
 CFLAGS_release += -O2
 LFLAGS += -lm

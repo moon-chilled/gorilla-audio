@@ -82,6 +82,11 @@ char getch() {
 	return ret;
 }
 
+static void log_to_file(void *ctx, GaLogCategory category, const char *file, const char *function, int line, const char *msg) {
+	if (category <= GaLogTrace) return;
+	fprintf(ctx, "\n%s: %s:%s:%d: %s\n", category == GaLogTrace ? "trace" : category == GaLogInfo ? "info" : category == GaLogWarn ? "warn" : "<?>", file, function, line, msg);
+}
+
 int main(int argc, char **argv) {
 	if (argc != 2) {
 		printf("Usage: %s <audio-file>\n", argv[0]);
@@ -91,6 +96,8 @@ int main(int argc, char **argv) {
 	ga_initialize_systemops(NULL);
 	GaDeviceType dev_type = GaDeviceType_Default;
 	GauManager *mgr = check(gau_manager_create_custom(&dev_type, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
+
+	ga_register_logger(log_to_file, stderr);
 
 	GaHandle *handle;
 	{

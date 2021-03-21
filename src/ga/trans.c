@@ -142,7 +142,7 @@ void ga_trans_resample_linear(GaResamplingState *rs, void *dst, usz dlen, void *
 
 // I want to get out frames.  How many frames should I put in?
 usz ga_trans_resample_howmany(GaResamplingState *rs, usz out) {
-	return (out * rs->srate + rs->diff) / rs->drate;
+	return (out * rs->srate + rs->diff + rs->drate-1) / rs->drate;
 }
 
 GaResamplingState *ga_trans_resample_setup(u32 drate, GaFormat fmt) {
