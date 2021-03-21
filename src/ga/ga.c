@@ -976,11 +976,13 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_frame
 }
 
 ga_result ga_mixer_mix(GaMixer *m, void *buffer) {
-	memset(buffer, 0, m->num_frames * ga_format_frame_size(&m->format));
-
 	if (m->suspended) {
+		memset(buffer, 0, m->num_frames * ga_format_frame_size(&m->format));
 		return GA_OK;
 	}
+
+	memset(m->mix_buffer, 0, m->num_frames * ga_format_frame_size(&m->mix_format));
+
 
 	ga_list_iterate(GaHandle, h, &m->mix_list) {
 		gaX_mixer_mix_handle(m, h, m->num_frames);
