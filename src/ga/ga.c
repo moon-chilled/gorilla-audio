@@ -452,6 +452,7 @@ GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *src) {
 	h->mixer = mixer;
 	h->callback = NULL;
 	h->context = NULL;
+	memset(h->jukebox_stamps, 0, sizeof(h->jukebox_stamps));
 	init_jukeboxstate(&h->jukebox);
 
 	if (!ga_isok(ga_mutex_create(&h->mutex))) {
@@ -663,6 +664,7 @@ static ga_result gaX_handle_group_init(GaHandleGroup *g, GaMixer *m) {
 	memset(g, 0, sizeof(*g));
 	ga_list_head(&g->handles);
 	g->mixer = m;
+	memset(g->jukebox_stamps, 0, sizeof(g->jukebox_stamps));
 	init_jukeboxstate(&g->jukebox);
 	return ga_mutex_create(&g->mutex);
 
