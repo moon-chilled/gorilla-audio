@@ -191,9 +191,9 @@ GaBufferedStream *ga_stream_create(GaStreamManager *mgr, GaSampleSource *src, us
 	return ret;
 
 fail:
-	ga_mutex_destroy(&ret->produce_mutex);
-	ga_mutex_destroy(&ret->seek_mutex);
-	ga_mutex_destroy(&ret->read_mutex);
+	ga_mutex_destroy(ret->produce_mutex);
+	ga_mutex_destroy(ret->seek_mutex);
+	ga_mutex_destroy(ret->read_mutex);
 	return NULL;
 }
 static void gaX_stream_onSeek(usz frame, ssz delta, void *seekContext) {

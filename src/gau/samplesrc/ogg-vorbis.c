@@ -6,6 +6,10 @@
 #include "gorilla/gau.h"
 #include "gorilla/ga_u_internal.h"
 
+#if !GAU_SUPPORT_VORBIS
+GaSampleSource *gau_sample_source_create_vorbis(GaDataSource *data) { return NULL; }
+#else
+
 static size_t ogg_read(void *ptr, size_t size, size_t nmemb, void *datasource) {
 	GaDataSource **ds = datasource;
 	return ga_data_source_read(*ds, ptr, size, nmemb);
@@ -162,3 +166,5 @@ fail:
 	ga_free(ctx);
 	return NULL;
 }
+
+#endif //GAU_SUPPORT_VORBIS

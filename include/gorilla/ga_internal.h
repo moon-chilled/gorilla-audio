@@ -260,7 +260,9 @@ struct GaBufferedStream {
 	GaDataAccessFlags flags;
 };
 
-#define ga_list_iterate(T, obj, head) for (T *_next, *obj, *link = (T*)(void*)(head)->next; (_next = (T*)(void*)((GaLink*)link)->next), (obj = ((GaLink*)(void*)link)->data), ((GaLink*)(void*)link != (head)); link = (T*)(void*)(GaLink*)_next)
+#define ga_list_iterate(T, obj, head) \
+	for (GaLink *_dummy = (GaLink*)1, *_next, *_head = (head), *link = _head->next; _dummy; _dummy = NULL) /*conditional constant propagation is coming for you!*/ \
+	for (T *obj; (_next = link->next), (obj = (T*)link->data), (link != _head); link = _next)
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 # define ENDIAN(little, big) little

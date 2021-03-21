@@ -1,0 +1,35 @@
+Gorilla Audio should run on most systems with a c11-conformant compiler.  (It
+will also run with minimal modification on systems with only a c99 compiler;
+contact me if this is something you need.)  Windows support is only cursory at
+the moment--patches welcome!--but the library should work under mingw.
+
+To compile, simply run 'make' (or 'make MODE=release' to build with
+optimizations).  This will generate o/(debug|release)/libgorilla.{a,so} which
+you can link into your projects as needed.  You may need to substitute 'gmake'
+for 'make' on some systems, installing the former if necessary.
+
+The build system is affected by various flags for which reasonable values are
+automatically chosen, but which you can override.  To enable a flag, add
+'FLAG=value' to your command line; for instance, 'make BUILD_STATIC=0'.
+Flags:
+
+Flag                    Description                     Default value
+
+BUILD_STATIC            build a static library          1
+BUILD_DYNAMIC           build a dynamic library         1
+
+ENABLE_XAUDIO2          xaudio2 audio backend           1 only on windows
+ENABLE_ARCAN            arcan audio backend             0
+ENABLE_SNDIO            sndio audio backend             1 only on openbsd
+ENABLE_PULSEAUDIO       pulseaudio audio backend        1 only on linux
+ENABLE_ALSA             alsa audio backend              1 only on linux
+ENABLE_OSS              oss audio backend               1 only on freebsd
+ENABLE_OPENAL           openal audio backend            0
+
+ENABLE_FLAC             support flac encoding           1
+ENABLE_OPUS             support ogg opus                1
+ENABLE_VORBIS           support ogg vorbis              1
+
+MODE                    debug|release                   debug
+ASAN                    detect memory errors            0
+TSAN                    detect threading errors         0

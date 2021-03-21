@@ -9,6 +9,10 @@
 #include "gorilla/gau.h"
 #include "gorilla/ga_u_internal.h"
 
+#if !GAU_SUPPORT_FLAC
+GaSampleSource *gau_sample_source_create_flac(GaDataSource *data) { return NULL; }
+#else
+
 struct GaSampleSourceContext {
 	GaDataSource *data_src;
 	usz datalen; //iff ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable
@@ -249,3 +253,5 @@ fail:
 	ga_free(ctx);
 	return NULL;
 }
+
+#endif //GAU_SUPPORT_FLAC

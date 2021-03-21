@@ -460,7 +460,7 @@ GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *src) {
 	ga_list_link(&mixer->handle_group.handles, &h->group_link, h);
 
 	GaFormat fmt;
-	ga_sample_source_format(h->sample_src, &fmt);
+	ga_handle_format(h, &fmt);
 	//todo channelnum should be min()
 	if (fmt.frame_rate != mixer->format.frame_rate) assert(h->resample_state = ga_trans_resample_setup(mixer->format.frame_rate, fmt));
 	else h->resample_state = NULL;
@@ -708,7 +708,7 @@ void ga_handle_group_transfer(GaHandleGroup *group, GaHandleGroup *target) {
 }
 
 void ga_handle_group_disown(GaHandleGroup *group) {
-	return ga_handle_group_transfer(group, NULL);
+	ga_handle_group_transfer(group, NULL);
 }
 
 static void gaX_handle_group_destroy(GaHandleGroup *group) {
@@ -728,8 +728,32 @@ void ga_handle_group_destroy(GaHandleGroup *group) {
 	ga_free(group);
 }
 
+#if 0
+static void gaX_mixer_reset(GaMixer *m, const GaFormat *format, u32 num_frames) {
+	GaFormat fmt = *format;
+	fmt.sample_fmt = GaSampleFormat_S32;
+
+	if (num_frames != m->num_frames || ga_format_frame_size(&fmt) != ga_format_frame_size(&m->mix_format)) {
+		ga_free(m->mix_buffer);
+		m->mix_buffer = ga_alloc(num_frames * ga_format_frame_size(&fmt));
+	}
+
+	m->num_frames = num_frames;
+
+	with_mutex(m->mix_mutex) {
+		/*
+		GaFormat fmt;
+		ga_handle_format(h, &fmt);
+		//todo channelnum should be min()
+		if (fmt.frame_rate != mixer->format.frame_rate) assert(h->resample_state = ga_trans_resample_setup(mixer->format.frame_rate, fmt));
+		else h->resample_state = NULL;
+		*/
+	}
+}
+#endif
+
 /* Mixer Functions */
-GaMixer *ga_mixer_create(GaFormat *format, u32 num_frames) {
+GaMixer *ga_mixer_create(const GaFormat *format, u32 num_frames) {
 	GaMixer *ret = ga_alloc(sizeof(GaMixer));
 	if (!ret) return NULL;
 	if (!ga_isok(gaX_handle_group_init(&ret->handle_group, ret))) goto fail;
@@ -952,19 +976,12 @@ ga_result ga_mixer_mix(GaMixer *m, void *buffer) {
 		return GA_OK;
 	}
 
-	GaLink *link;
 	memset(m->mix_buffer, 0, m->num_frames * ga_format_frame_size(&m->mix_format));
 
-	link = m->mix_list.next;
-	while (link != &m->mix_list) {
-		GaHandle *h = (GaHandle*)link->data;
-		GaLink *old_link = link;
-		link = link->next;
+	ga_list_iterate(GaHandle, h, &m->mix_list) {
 		gaX_mixer_mix_handle(m, h, m->num_frames);
 		if (ga_handle_finished(h)) {
-			ga_mutex_lock(m->mix_mutex);
-			ga_list_unlink(old_link);
-			ga_mutex_unlock(m->mix_mutex);
+			with_mutex(m->mix_mutex) ga_list_unlink(link);
 		}
 	}
 

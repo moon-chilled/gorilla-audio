@@ -1,8 +1,11 @@
 #include "opusfile.h"
-//#include "internal.h" //opus
 
 #include "gorilla/gau.h"
 #include "gorilla/ga_u_internal.h"
+
+#if !GAU_SUPPORT_OPUS
+GaSampleSource *gau_sample_source_create_opus(GaDataSource *data) { return NULL; }
+#else
 
 static int ogg_read(void *datasource, u8 *ptr, int size) {
 	GaDataSource **ds = datasource;
@@ -150,3 +153,5 @@ fail:
 	ga_free(ctx);
 	return NULL;
 }
+
+#endif //GAU_SUPPORT_OPUS

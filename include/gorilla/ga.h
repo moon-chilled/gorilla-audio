@@ -151,9 +151,9 @@ typedef enum {
  *  \ingroup GaFormat
  */
 typedef struct {
+	ga_uint32 num_channels;
 	ga_uint32 frame_rate;
 	GaSampleFormat sample_fmt;
-	ga_uint32 num_channels;
 } GaFormat;
 
 /** Retrieves the sample size (in bytes) of a specified format.
@@ -879,7 +879,7 @@ typedef struct GaMixer GaMixer;
  *  \warning The number of frames must be a power-of-two.
  *  \todo Remove the requirement that the buffer be a power-of-two in size.
  */
-GaMixer *ga_mixer_create(GaFormat *format, ga_uint32 num_frames);
+GaMixer *ga_mixer_create(const GaFormat *format, ga_uint32 num_frames);
 
 /** Suspends the mixer, preventing it from consuming any of its inputs.  If you
  ** attempt to mix from it in this state, it will produce all zeroes
@@ -1463,43 +1463,43 @@ void ga_trans_resample_teardown(GaResamplingState *rs);
 void ga_trans_resample_point(GaResamplingState *rs, void *dst, ga_usize dlen, void *src, ga_usize slen);
 void ga_trans_resample_linear(GaResamplingState *rs, void *dst, ga_usize dlen, void *src, ga_usize slen);
 ga_usize ga_trans_resample_howmany(GaResamplingState *rs, ga_usize out);
-static inline u8 ga_trans_u8_of_s16(s16 s) {
-	return ((s32)s + 32768) >> 8;
+static inline ga_uint8 ga_trans_u8_of_s16(ga_sint16 s) {
+	return ((ga_sint32)s + 32768) >> 8;
 }
-static inline u8 ga_trans_u8_of_s32(s32 s) {
-	return ((s32)s + 2147483648) >> 8;
+static inline ga_uint8 ga_trans_u8_of_s32(ga_sint32 s) {
+	return ((ga_sint32)s + 2147483648) >> 8;
 }
-static inline u8 ga_trans_u8_of_f32(f32 f) {
+static inline ga_uint8 ga_trans_u8_of_f32(ga_float32 f) {
 	return 128 + f * (127.f + (f < 0));
 }
 
-static inline s16 ga_trans_s16_of_u8(u8 u) {
-	return ((s32)u - 128) << 8;
+static inline ga_sint16 ga_trans_s16_of_u8(ga_uint8 u) {
+	return ((ga_sint32)u - 128) << 8;
 }
-static inline s16 ga_trans_s16_of_s32(s32 s) {
+static inline ga_sint16 ga_trans_s16_of_s32(ga_sint32 s) {
 	return s >> 16;
 }
-static inline s16 ga_trans_s16_of_f32(f32 f) {
+static inline ga_sint16 ga_trans_s16_of_f32(ga_float32 f) {
 	return f * (32767.f + (f < 0));
 }
 
-static inline s32 ga_trans_s32_of_u8(u8 u) {
-	return ((s32)u - 128) << 24;
+static inline ga_sint32 ga_trans_s32_of_u8(ga_uint8 u) {
+	return ((ga_sint32)u - 128) << 24;
 }
-static inline s32 ga_trans_s32_of_s16(s16 s) {
+static inline ga_sint32 ga_trans_s32_of_s16(ga_sint16 s) {
 	return s << 16;
 }
-static inline s32 ga_trans_s32_of_f32(f32 f) {
+static inline ga_sint32 ga_trans_s32_of_f32(ga_float32 f) {
 	return f * (2147483647.f + (f < 0));
 }
 
-static inline f32 ga_trans_f32_of_u8(u8 u) {
+static inline ga_float32 ga_trans_f32_of_u8(ga_uint8 u) {
 	return (u - 128) / (127.f + (u <= 128));
 }
-static inline f32 ga_trans_f32_of_s16(s16 s) {
+static inline ga_float32 ga_trans_f32_of_s16(ga_sint16 s) {
 	return s / (32767.f + (s < 0));
 }
-static inline f32 ga_trans_f32_of_s32(s32 s) {
+static inline ga_float32 ga_trans_f32_of_s32(ga_sint32 s) {
 	return s / (2147483647.f + (s < 0));
 }
 

@@ -42,6 +42,10 @@ ENABLE_ALSA := 0
 ENABLE_OSS := 0
 ENABLE_OPENAL := 0
 
+ENABLE_OPUS := 1
+ENABLE_VORBIS := 1
+ENABLE_FLAC := 1
+
 GA_SRC := src/ga/ga.c src/ga/trans.c src/ga/memory.c src/ga/stream.c src/ga/system.c src/ga/log.c src/ga/devices/dummy.c src/ga/devices/wav.c
 GAU_SRC := src/gau/gau.c src/gau/datasrc/file.c src/gau/datasrc/memory.c src/gau/samplesrc/loop.c src/gau/samplesrc/sound.c src/gau/samplesrc/stream.c src/gau/samplesrc/wav.c src/gau/samplesrc/ogg-vorbis.c src/gau/samplesrc/ogg-opus.c src/gau/samplesrc/flac.c
 OGG_SRC := ext/libogg/src/bitwise.c ext/libogg/src/framing.c
@@ -53,7 +57,12 @@ endif
 OPUSFILE_SRC := ext/opusfile/src/opusfile.c ext/opusfile/src/info.c ext/opusfile/src/internal.c ext/opusfile/src/stream.c 
 VORBIS_SRC := ext/libvorbis/lib/analysis.c ext/libvorbis/lib/bitrate.c ext/libvorbis/lib/block.c ext/libvorbis/lib/codebook.c ext/libvorbis/lib/envelope.c ext/libvorbis/lib/floor0.c ext/libvorbis/lib/floor1.c ext/libvorbis/lib/info.c ext/libvorbis/lib/lpc.c ext/libvorbis/lib/lsp.c ext/libvorbis/lib/mapping0.c ext/libvorbis/lib/mdct.c ext/libvorbis/lib/psy.c ext/libvorbis/lib/registry.c ext/libvorbis/lib/res0.c ext/libvorbis/lib/sharedbook.c ext/libvorbis/lib/smallft.c ext/libvorbis/lib/synthesis.c ext/libvorbis/lib/vorbisfile.c ext/libvorbis/lib/window.c
 
-GA_CFLAGS := -Iinclude
+include ext/libopus/silk_sources.mk
+include ext/libopus/celt_sources.mk
+include ext/libopus/opus_sources.mk
+OPUS_SRC := $(patsubst %,ext/libopus/%,$(SILK_SOURCES) $(SILK_SOURCES_FLOAT) $(CELT_SOURCES) $(OPUS_SOURCES) $(OPUS_SOURCES_FLOAT))
+
+GA_CFLAGS := -Iinclude -DGAU_SUPPORT_FLAC=$(ENABLE_FLAC) -DGAU_SUPPORT_VORBIS=$(ENABLE_VORBIS) -DGAU_SUPPORT_OPUS=$(ENABLE_OPUS)
 GA_CXXFLAGS := -Iinclude
 FLAC_CFLAGS := -Iext/libflac/src/libFLAC/include -DHAVE_STDINT_H -DHAVE_LROUND -DFLAC__HAS_OGG=0 -DPACKAGE_VERSION="\"(gorilla audio)\""
 OPUS_CFLAGS := -Iext/libopus/celt -Iext/libopus/silk -Iext/libopus/silk/float -DOPUS_BUILD -DUSE_ALLOCA -DHAVE_LRINT -DHAVE_LRINTF -DHAVE_STDINT_H -DPACKAGE_VERSION="\"(gorilla audio)\"" -DSKIP_CONFIG_H
@@ -78,7 +87,7 @@ endif
 CFLAGS += -Wall -Wextra -Wno-unused-parameter
 CFLAGS += -fPIC
 CFLAGS += -std=c99
-#CFLAGS_debug += -Werror
+CFLAGS_debug += -Werror
 CFLAGS_debug += -g
 CFLAGS_release += -O2
 LFLAGS += -lm
@@ -152,6 +161,22 @@ ifeq ($(ENABLE_OPENAL),1)
 	GA_SRC += src/ga/devices/openal.c
 endif
 
+ALL_SRC := $(GA_SRC) $(GAU_SRC)
+
+ifeq ($(ENABLE_FLAC),1)
+	ALL_SRC += $(FLAC_SRC)
+endif
+
+ifneq ($(ENABLE_OPUS)$(ENABLE_VORBIS),00)
+	ALL_SRC += $(OGG_SRC)
+endif
+ifeq ($(ENABLE_OPUS),1)
+	ALL_SRC += $(OPUS_SRC) $(OPUSFILE_SRC)
+endif
+ifeq ($(ENABLE_VORBIS),1)
+	ALL_SRC += $(VORBIS_SRC)
+endif
+
 
 ##########
 #TEARDOWN#
@@ -188,12 +213,7 @@ o/$(MODE)/ext/libflac/%.o: ext/libflac/%.c
 	@mkdir -p `dirname $@`
 	$(CC) -c -o $@ $(CFLAGS) $(CFLAGS_$(MODE)) $(FLAC_CFLAGS) $<
 
-include ext/libopus/silk_sources.mk
-include ext/libopus/celt_sources.mk
-include ext/libopus/opus_sources.mk
-OPUS_SRC := $(patsubst %,ext/libopus/%,$(SILK_SOURCES) $(SILK_SOURCES_FLOAT) $(CELT_SOURCES) $(OPUS_SOURCES) $(OPUS_SOURCES_FLOAT))
-
-OBJ := $(patsubst %.c,o/$(MODE)/%.o,$(GA_SRC) $(GAU_SRC) $(OGG_SRC) $(FLAC_SRC) $(OPUS_SRC) $(OPUSFILE_SRC) $(VORBIS_SRC))
+OBJ := $(patsubst %.c,o/$(MODE)/%.o,$(ALL_SRC))
 OBJ := $(patsubst %.cc,o/$(MODE)/%.o,$(OBJ))
 o/$(MODE)/libgorilla.so: $(OBJ)
 	@mkdir -p o/$(MODE)
