@@ -58,12 +58,11 @@ static ga_result gaX_open(GaDevice *dev) {
 
 	x2check(dev->impl->source->Start(0, XAUDIO2_COMMIT_NOW));
 
-	dev->impl->buffers = (void**)ga_alloc(dev->num_buffers * sizeof(void*));
+	dev->impl->buffers = (void**)ga_zalloc(dev->num_buffers * sizeof(void*));
 	if (!dev->impl->buffers) {
 		ret = GA_ERR_SYS_MEM;
 		goto cleanup;
 	}
-	memset(dev->impl->buffers, 0, dev->num_buffers * sizeof(void*));
 	for (usz i = 0; i < dev->num_buffers; ++i)
 		dev->impl->buffers[i] = ga_alloc(dev->num_frames * dev->impl->frame_size);
 

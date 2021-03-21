@@ -79,7 +79,7 @@ GaDevice *ga_device_open(GaDeviceType *type,
 		return NULL;
 	}
 
-	GaDevice *ret = memset(ga_alloc(sizeof(GaDevice)), 0, sizeof(GaDevice));
+	GaDevice *ret = ga_zalloc(sizeof(GaDevice));
 	ret->dev_type = *type;
 	ret->num_buffers = *num_buffers;
 	ret->num_frames = *num_frames;
@@ -435,6 +435,12 @@ void ga_sound_release(GaSound *sound) {
 	if (decref(&sound->refCount)) gaX_sound_destroy(sound);
 }
 
+static void init_jukeboxstate(JukeboxState *state) {
+	state->pitch = 1;
+	state->gain = state->last_gain = 1;
+	state->pan =  state->last_pan = 0;
+}
+
 /* Handle Functions */
 GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *src) {
 	GaHandle *h = ga_alloc(sizeof(GaHandle));
@@ -446,9 +452,7 @@ GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *src) {
 	h->mixer = mixer;
 	h->callback = NULL;
 	h->context = NULL;
-	h->jukebox.pitch = 1;
-	h->jukebox.gain = h->jukebox.last_gain = 1;
-	h->jukebox.pan = h->jukebox.last_pan = 0;
+	init_jukeboxstate(&h->jukebox);
 
 	if (!ga_isok(ga_mutex_create(&h->mutex))) {
 		ga_sample_source_release(src);
@@ -659,6 +663,7 @@ static ga_result gaX_handle_group_init(GaHandleGroup *g, GaMixer *m) {
 	memset(g, 0, sizeof(*g));
 	ga_list_head(&g->handles);
 	g->mixer = m;
+	init_jukeboxstate(&g->jukebox);
 	return ga_mutex_create(&g->mutex);
 
 }
@@ -908,7 +913,7 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_frame
 	f32 old_pitch = *handle_get_paramf(handle, GaXHandleParam_Pitch);
 	// number of frames to mix (after resampling)
 	usz needed = num_frames / old_pitch;
-	needed = needed * old_pitch < num_frames ? needed + 1 : needed;
+	needed = (needed * old_pitch < num_frames) ? needed + 1 : needed;
 	// number of frames to request from the handle
 	usz requested = handle->resample_state ? ga_trans_resample_howmany(handle->resample_state, needed) : needed;
 
@@ -971,12 +976,11 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_frame
 }
 
 ga_result ga_mixer_mix(GaMixer *m, void *buffer) {
+	memset(buffer, 0, m->num_frames * ga_format_frame_size(&m->format));
+
 	if (m->suspended) {
-		memset(buffer, 0, m->num_frames * ga_format_frame_size(&m->format));
 		return GA_OK;
 	}
-
-	memset(m->mix_buffer, 0, m->num_frames * ga_format_frame_size(&m->mix_format));
 
 	ga_list_iterate(GaHandle, h, &m->mix_list) {
 		gaX_mixer_mix_handle(m, h, m->num_frames);

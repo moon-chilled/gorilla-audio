@@ -47,7 +47,8 @@ GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
                                        GauThreadPolicy thread_policy,
                                        u32 *num_buffers,
 				       u32 *num_frames) {
-	GauManager *ret = memset(ga_alloc(sizeof(GauManager)), 0, sizeof(GauManager));
+	GauManager *ret = ga_zalloc(sizeof(GauManager));
+	if (!ret) return NULL;
 
 	assert(thread_policy == GauThreadPolicy_Single
 	       || thread_policy == GauThreadPolicy_Multi);

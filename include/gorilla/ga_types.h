@@ -6,8 +6,12 @@
  *  \defgroup types Core types
  */
 
-#ifndef _GORILLA_GA_TYPES_H
-#define _GORILLA_GA_TYPES_H
+#ifndef GORILLA_GA_TYPES_H
+#define GORILLA_GA_TYPES_H
+
+#ifndef GORILLA_GA_H
+# error Never include this file directly; include ga.h instead.
+#endif
 
 #include <stdint.h>
 #include <stddef.h>
@@ -267,4 +271,4 @@ void ga_list_merge(GaLink *head_dst, GaLink *head_src);
 } // extern "C"
 #endif
 
-#endif /* _GORILLA_GA_TYPES_H */
+#endif /* GORILLA_GA_TYPES_H */

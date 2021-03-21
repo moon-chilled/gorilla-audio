@@ -10,8 +10,12 @@
  *  \defgroup system System API
  */
 
-#ifndef _GORILLA_GA_SYSTEM_H
-#define _GORILLA_GA_SYSTEM_H
+#ifndef GORILLA_GA_SYSTEM_H
+#define GORILLA_GA_SYSTEM_H
+
+#ifndef GORILLA_GA_H
+# error Never include this file directly; include ga.h instead.
+#endif
 
 #include "ga_types.h"
 
@@ -38,9 +42,10 @@ typedef struct {
 	void (*free)(void *ptr);
 } GaSystemOps;
 
-void *ga_alloc(ga_usize size) GCC(alloc_size(1), malloc/*, malloc (ga_free, 1)*/);
-void *ga_realloc(void *ptr, ga_usize size);
 void ga_free(void *ptr);
+void *ga_realloc(void *ptr, ga_usize size);
+void *ga_alloc(ga_usize size) GCC(alloc_size(1), malloc, malloc (ga_free));
+void *ga_zalloc(ga_usize size) GCC(alloc_size(1), malloc, malloc (ga_free));
 
 
 /** Initialize the Gorilla library.
@@ -200,4 +205,4 @@ void ga_mutex_destroy(GaMutex mutex);
 } //extern "C"
 #endif
 
-#endif /* _GORILLA_GA_SYSTEM_H */
+#endif /* GORILLA_GA_SYSTEM_H */

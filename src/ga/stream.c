@@ -171,7 +171,7 @@ void ga_stream_manager_destroy(GaStreamManager *mgr) {
 
 /* Stream */
 GaBufferedStream *ga_stream_create(GaStreamManager *mgr, GaSampleSource *src, usz buffer_size) {
-	GaBufferedStream *ret = memset(ga_alloc(sizeof(GaBufferedStream)), 0, sizeof(*ret));
+	GaBufferedStream *ret = ga_zalloc(sizeof(GaBufferedStream));
 	if (!ret) return NULL;
 	ret->refCount = rc_new();
 	ret->flags = ga_sample_source_flags(src);

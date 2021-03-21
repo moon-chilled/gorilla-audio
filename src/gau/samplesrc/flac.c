@@ -212,7 +212,7 @@ GaSampleSource *gau_sample_source_create_flac(GaDataSource *data_src) {
 		if (!ga_isok(ga_data_source_seek(data_src, 0, GaSeekOrigin_Set))) return NULL;
 	}
 
-	GaSampleSourceContext *ctx = memset(ga_alloc(sizeof(GaSampleSourceContext)), 0, sizeof(GaSampleSourceContext));
+	GaSampleSourceContext *ctx = ga_zalloc(sizeof(GaSampleSourceContext));
 	if (!ctx) return NULL;
 	if (!ga_isok(ga_mutex_create(&ctx->mutex))) goto fail;
 	ctx->data_src = data_src;

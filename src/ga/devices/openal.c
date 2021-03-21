@@ -40,9 +40,8 @@ static s32 AUDIO_ERROR = 0;
 
 static ga_result gaX_open(GaDevice *dev) {
 	ga_result ret;
-	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
+	dev->impl = ga_zalloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_SYS_MEM;
-	memset(dev->impl, 0, sizeof(*dev->impl));
 
 	dev->impl->next_buffer = 0;
 	dev->impl->empty_buffers = dev->num_buffers;

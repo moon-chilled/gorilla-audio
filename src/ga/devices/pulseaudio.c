@@ -31,9 +31,8 @@ static ga_result gaX_open(GaDevice *dev) {
 	spec.channels = dev->format.num_channels;
 	spec.rate = dev->format.frame_rate;
 
-	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
+	dev->impl = ga_zalloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_SYS_MEM;
-	memset(dev->impl, 0, sizeof(*dev->impl));
 
 	ptcheck(dev->impl->mainloop = pa_mainloop_new());
 

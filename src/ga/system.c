@@ -221,30 +221,54 @@ void ga_mutex_unlock(GaMutex mutex) {
 # error Threading primitives not yet implemented for this platform
 #endif
 
+static void *calloc_zalloc(usz sz) { return calloc(1, sz); }
+
 /* System Functions */
-static GaSystemOps default_callbacks = {
+static struct {
+	void *(*alloc)(usz);
+	void *(*zalloc)(usz);
+	void *(*realloc)(void*,usz);
+	void (*free)(void*);
+} default_alloc_callbacks = {
 	.alloc = malloc,
+	.zalloc = calloc_zalloc,
+	.realloc = realloc,
+	.free = free,
+}, alloc_callbacks = {
+	.alloc = malloc,
+	.zalloc = calloc_zalloc,
 	.realloc = realloc,
 	.free = free,
 };
-static GaSystemOps *gaX_ops = &default_callbacks;
+
+static void *alloc_zalloc(usz size) {
+	void *ret = ga_alloc(size);
+	if (!ret) return NULL;
+	return memset(ret, 0, size);
+}
 
 void *ga_alloc(usz size) {
-	return gaX_ops->alloc(size);
+	return alloc_callbacks.alloc(size);
+}
+void *ga_zalloc(usz size) {
+	return alloc_callbacks.zalloc(size);
 }
 void *ga_realloc(void *ptr, usz size) {
-	return gaX_ops->realloc(ptr, size);
+	return alloc_callbacks.realloc(ptr, size);
 }
 void ga_free(void *ptr) {
-	gaX_ops->free(ptr);
+	alloc_callbacks.free(ptr);
 }
 
 ga_result ga_initialize_systemops(GaSystemOps *callbacks) {
 	if (!callbacks || !callbacks->alloc || !callbacks->realloc || !callbacks->free) return GA_ERR_MIS_PARAM;
-	*gaX_ops = *callbacks;
+	alloc_callbacks.alloc = callbacks->alloc;
+	alloc_callbacks.realloc = callbacks->realloc;
+	alloc_callbacks.free = callbacks->free;
+	alloc_callbacks.zalloc = alloc_callbacks.alloc == malloc ? calloc_zalloc : alloc_zalloc;
 	return GA_OK;
 }
 ga_result ga_shutdown_systemops(void) {
-	*gaX_ops = default_callbacks;
+	alloc_callbacks = default_alloc_callbacks;
 	return GA_OK;
 }
