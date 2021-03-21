@@ -77,6 +77,7 @@ typedef struct {
 
 gaX_StreamLink *gaX_stream_link_create(void) {
 	gaX_StreamLink *ret = (gaX_StreamLink*)ga_alloc(sizeof(gaX_StreamLink));
+	if (!ret) return NULL;
 	ret->refCount = rc_new();
 	if (!ga_isok(ga_mutex_create(&ret->produce_mutex))) {
 		ga_free(ret);
@@ -130,6 +131,7 @@ GaStreamManager *ga_stream_manager_create(void) {
 }
 gaX_StreamLink *gaX_stream_manager_add(GaStreamManager *mgr, GaBufferedStream *stream) {
 	gaX_StreamLink *stream_link = gaX_stream_link_create();
+	if (!stream_link) return NULL;
 	gaX_stream_link_acquire(stream_link); /* The new client adds its own refcount */
 	/* It's safe to add() while iterating in stream() because of implicit fault tolerance */
 	/* That is, all possible outcomes are valid, despite the race condition */
