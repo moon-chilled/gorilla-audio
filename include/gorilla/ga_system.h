@@ -145,6 +145,14 @@ void ga_thread_join(GaThread *thread);
  */
 void ga_thread_sleep(ga_uint32 ms);
 
+/** Yields a time slice up to another process.
+ * 
+ *  This is usually used when polling, to avoid needlessly churning CPU.
+ *  
+ *  \ingroup GaThread
+ */
+void ga_thread_yield(void);
+
 /** Destroys a thread object.
  *
  *  \ingroup GaThread

@@ -18,6 +18,8 @@ struct GaXDeviceImpl {
 #define pacheck(e) do { if ((e) < 0) goto fail; } while (0)
 
 static ga_result gaX_open(GaDevice *dev) {
+	dev->class = GaDeviceClass_PushAsync; //I think?
+
 	pa_sample_spec spec;
 
 	switch (dev->format.sample_fmt) {
@@ -98,12 +100,13 @@ static ga_result gaX_close(GaDevice *dev) {
 	return GA_OK;
 }
 
-static u32 gaX_check(GaDevice *dev) {
+static ga_result gaX_check(GaDevice *dev, u32 *num_buffers) {
 	pa_mainloop_iterate(dev->impl->mainloop, 0, NULL);
 	dev->impl->looped = true;
 	usz r = pa_stream_writable_size(dev->impl->stream);
-	if (r == (usz)-1) return 0;
-	return r / (dev->num_frames * ga_format_frame_size(&dev->format));
+	if (r == (usz)-1) return GA_ERR_SYS_LIB;
+	*num_buffers = r / (dev->num_frames * ga_format_frame_size(&dev->format));
+	return GA_OK;
 }
 
 static void *gaX_get_buffer(GaDevice *dev) {

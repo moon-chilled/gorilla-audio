@@ -37,12 +37,16 @@ s32 ga_format_to_frames(const GaFormat *format, f32 seconds) {
 }
 
 static void *gaX_get_buffer_nozerocopy(GaDevice *dev) { return dev->buffer; }
+static ga_result dummy_queue(GaDevice *dev, void *buffer) { return GA_ERR_MIS_UNSUP; }
+static ga_result dummy_register_queuer(GaDevice *dev, GaCbDeviceQueuer queuer, void *ctx) { return GA_ERR_MIS_UNSUP; }
 
 /* Device Functions */
 GaDevice *ga_device_open(GaDeviceType *type,
-                          u32 *num_buffers,
-                          u32 *num_frames,
-                          GaFormat *format) {
+                         GaDeviceClass *class,
+                         u32 *num_buffers,
+                         u32 *num_frames,
+                         GaFormat *format) {
+	class = class ? class : &(GaDeviceClass){GaDeviceClass_PushSync};
 	type = type ? type : &(GaDeviceType){GaDeviceType_Default};
 	num_buffers = num_buffers ? num_buffers : &(u32){4};
 	num_frames = num_frames ? num_frames : &(u32){512};
@@ -51,7 +55,7 @@ GaDevice *ga_device_open(GaDeviceType *type,
 
 	// todo allow overriding with an environment variable
 	if (*type == GaDeviceType_Default) {
-#define try(t) *type = t; if ((ret = ga_device_open(type, num_buffers, num_frames, format))) return ret
+#define try(t) *type = t; if ((ret = ga_device_open(type, class, num_buffers, num_frames, format))) return ret
 		GaDevice *ret;
 #if defined(ENABLE_OSS)
 		try(GaDeviceType_OSS);
@@ -80,7 +84,8 @@ GaDevice *ga_device_open(GaDeviceType *type,
 	}
 
 	GaDevice *ret = ga_zalloc(sizeof(GaDevice));
-	ret->dev_type = *type;
+	ret->type = *type;
+	ret->class = *class;
 	ret->num_buffers = *num_buffers;
 	ret->num_frames = *num_frames;
 	ret->format = *format;
@@ -113,7 +118,11 @@ GaDevice *ga_device_open(GaDeviceType *type,
 	}
 
 	if (ret->procs.open(ret) != GA_OK) goto fail;
-	*type = ret->dev_type;
+	if (!ret->procs.register_queuer && !ret->procs.queue) {
+		ret->procs.close(ret);
+		goto fail;
+	}
+	*type = ret->type;
 	if (!ret->procs.get_buffer) {
 		ret->procs.get_buffer = gaX_get_buffer_nozerocopy;
 		ret->buffer = ga_alloc(ret->num_frames * ga_format_frame_size(&ret->format));
@@ -122,6 +131,9 @@ GaDevice *ga_device_open(GaDeviceType *type,
 			goto fail;
 		}
 	}
+	if (!ret->procs.register_queuer) ret->procs.register_queuer = dummy_register_queuer;
+	if (!ret->procs.queue) ret->procs.queue = dummy_queue;
+	*class = ret->class;
 	*num_buffers = ret->num_buffers;
 	*num_frames = ret->num_frames;
 	*format = ret->format;
@@ -140,8 +152,8 @@ ga_result ga_device_close(GaDevice *device) {
 	return ret;
 }
 
-u32 ga_device_check(GaDevice *device) {
-	return device->procs.check(device);
+ga_result ga_device_check(GaDevice *device, u32 *num_buffers) {
+	return device->procs.check(device, num_buffers);
 }
 
 void *ga_device_get_buffer(GaDevice *device) {
@@ -152,8 +164,15 @@ ga_result ga_device_queue(GaDevice *device, void *buffer) {
 	return device->procs.queue(device, buffer);
 }
 
+ga_result ga_device_register_queuer(GaDevice *device, GaCbDeviceQueuer queuer, void *ctx) {
+	return device->procs.register_queuer(device, queuer, ctx);
+}
+
 void ga_device_format(GaDevice *device, GaFormat *fmt) {
 	*fmt = device->format;
+}
+GaDeviceClass ga_device_class(GaDevice *device) {
+	return device->class;
 }
 
 GaDataSource *ga_data_source_create(const GaDataSourceCreationMinutiae *m) {
@@ -546,7 +565,14 @@ ga_result ga_handle_set_paramf(GaHandle *handle, GaHandleParam param, f32 value)
 	switch (param) {
 		case GaHandleParam_Pitch: handle->jukebox.pitch = value; break;
 		case GaHandleParam_Gain:  handle->jukebox.gain = value;  break;
-		case GaHandleParam_Pan:   handle->jukebox.pan = value;   break;
+		case GaHandleParam_Pan:
+			if (param == GaHandleParam_Pan && (value < -1 || value > 1)) {
+				ga_mutex_unlock(handle->mutex);
+				return GA_ERR_MIS_RANGE;
+			}
+
+			handle->jukebox.pan = value;
+			break;
 		default:
 			ga_mutex_unlock(handle->mutex);
 			return GA_ERR_MIS_PARAM;

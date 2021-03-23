@@ -43,6 +43,8 @@ static ga_result gaX_open(GaDevice *dev) {
 	dev->impl = ga_zalloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_SYS_MEM;
 
+	dev->class = GaDeviceClass_PushAsync;
+
 	dev->impl->next_buffer = 0;
 	dev->impl->empty_buffers = dev->num_buffers;
 
@@ -85,19 +87,19 @@ static ga_result gaX_close(GaDevice *dev) {
 	return GA_OK;
 }
 
-static u32 gaX_check(GaDevice *dev) {
+static ga_result gaX_check(GaDevice *dev, u32 *num_buffers) {
 	ga_result ret;
 	s32 whichBuf = 0;
 	s32 numProcessed = 0;
 	alGetSourcei(dev->impl->hw_source, AL_BUFFERS_PROCESSED, &numProcessed);
-	CHECK_AL_ERROR(;);
+	CHECK_AL_ERROR(return ret);
 	while (numProcessed--) {
 		whichBuf = (dev->impl->next_buffer + dev->impl->empty_buffers++) % dev->num_buffers;
 		alSourceUnqueueBuffers(dev->impl->hw_source, 1, &dev->impl->hw_buffers[whichBuf]);
-		CHECK_AL_ERROR(;);
+		CHECK_AL_ERROR(return ret);
 	}
-	(void)ret;
-	return dev->impl->empty_buffers;
+	*num_buffers = dev->impl->empty_buffers;
+	return GA_OK;
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *in_buffer) {

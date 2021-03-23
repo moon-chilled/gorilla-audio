@@ -227,4 +227,6 @@ o/$(MODE)/libgorilla.a: $(OBJ)
 	ar rcs o/$(MODE)/libgorilla.a $(OBJ)
 
 clean:
+	rm -rf o/*/src
+spotless:
 	rm -rf o

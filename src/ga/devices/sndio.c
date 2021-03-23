@@ -8,6 +8,8 @@ struct GaXDeviceImpl {
 };
 
 static ga_result gaX_open(GaDevice *dev) {
+	dev->class = GaDeviceClass_PushSync;
+
 	if (dev->format.sample_fmt < 0) return GA_ERR_MIS_UNSUP;
 
 	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
@@ -57,8 +59,8 @@ static ga_result gaX_close(GaDevice *dev) {
 	return ret;
 }
 
-static u32 gaX_check(GaDevice *dev) {
-	return dev->num_buffers; //TODO
+static ga_result gaX_check(GaDevice *dev, u32 *num_buffers) {
+	return GA_ERR_MIS_UNSUP; //TODO
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {

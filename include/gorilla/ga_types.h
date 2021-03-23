@@ -91,6 +91,7 @@ typedef enum {
 	GA_ERR_MIS_PARAM =      /**< Parameter was invalid (for example, attempted to open a file but the filename was null). */
 	GA_ERR_MIS,
 	GA_ERR_MIS_UNSUP,       /**< Requested operation was not supportted on the given object (for example, attempted to seek an unseekable data source). */
+	GA_ERR_MIS_RANGE,       /**< Some parameter was out of the allowable range. */
 
 	GA_ERR_SYS = 1 << 29,   /**< SYS category: errors that result from interactions with tye system. */
 	GA_ERR_SYS_IO =         /**< The system was unable to perform some requisite I/O operation. */

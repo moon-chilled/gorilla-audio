@@ -3,12 +3,19 @@ CHANGE LOG
 
 0.4.0
 - Add support for ALSA, Arcan, PulseAudio, and sndio.  Add dummy and wav audio devices.
-- Zero-copy mixing.
+- Zero-copy mixing (on supported platforms).
 - Add support for flac and opus, as well as a contrib module for mp3.
 - Transcoding support.
 - Performance improvements and code quality improvements.
 - Miscellaneous API touch-ups.
 - Allow user-defined sample and data sources.
+- Add handlegroups.
+- Add support for u8, f32, and s32 sample formats.
+- Add logging infrastructure.
+- Improve build system.
+- Automatically detect file formats.
+- Explicitly distinguish sync/async audio devices in the API.  Tentative support 'pull' style APIs (jack).
+
 
 0.3.3
 - Add an OSS audio backend.

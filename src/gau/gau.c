@@ -20,18 +20,48 @@ struct GauManager {
 
 static ga_result mix_thread(void *context) {
 	GauManager *ctx = context;
-	while (!ctx->kill_threads) {
-		u32 numToQueue = ga_device_check(ctx->device);
-		while (numToQueue--) {
+
+	if (ga_device_class(ctx->device) == GaDeviceClass_PushAsync) {
+		while (!ctx->kill_threads) {
+			u32 num_to_queue;
+			ga_result res;
+			for (u32 failure_count = 0; failure_count < 5 && !ga_isok(res = ga_device_check(ctx->device, &num_to_queue)); failure_count++) {
+				ga_warn("failed to get writable buffer count");
+				ga_thread_sleep(5);
+			}
+
+			if (!ga_isok(res)) return res;
+
+			while (num_to_queue--) {
+				s16 *buf = ga_device_get_buffer(ctx->device);
+				if (!buf) {
+					ga_warn("failed to get buffer from device");
+					continue; //avoid churning cpu, even at the cost of underruns
+				}
+				ga_mixer_mix(ctx->mixer, buf);
+				ga_device_queue(ctx->device, buf);
+			}
+			ga_thread_sleep(5);
+		}
+	} else if (ga_device_class(ctx->device) == GaDeviceClass_PushSync) {
+		while (!ctx->kill_threads) {
 			s16 *buf = ga_device_get_buffer(ctx->device);
-			if (!buf) continue; //avoid churning cpu, even at the cost of underruns
+			if (!buf) {
+				ga_warn("failed to get buffer from device");
+				ga_thread_yield();
+				continue;
+			}
+
 			ga_mixer_mix(ctx->mixer, buf);
 			ga_device_queue(ctx->device, buf);
 		}
-		ga_thread_sleep(5);
+	} else {
+		return GA_ERR_INTERNAL;
 	}
+
 	return GA_OK;
 }
+
 static ga_result stream_thread(void *context) {
 	GauManager *ctx = context;
 	while (!ctx->kill_threads) {
@@ -44,9 +74,9 @@ GauManager *gau_manager_create(void) {
 	return gau_manager_create_custom(NULL, GauThreadPolicy_Multi, NULL, NULL);
 }
 GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
-                                       GauThreadPolicy thread_policy,
-                                       u32 *num_buffers,
-				       u32 *num_frames) {
+                                      GauThreadPolicy thread_policy,
+                                      u32 *num_buffers,
+				      u32 *num_frames) {
 	GauManager *ret = ga_zalloc(sizeof(GauManager));
 	if (!ret) return NULL;
 
@@ -61,8 +91,23 @@ GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
 	ret->format.sample_fmt = GaSampleFormat_S16;
 	ret->format.num_channels = 2;
 	ret->format.frame_rate = 48000;
-	ret->device = ga_device_open(dev_type, num_buffers, num_frames, &ret->format);
+	GaDeviceClass dev_class;
+	ret->device = ga_device_open(dev_type, &dev_class, num_buffers, num_frames, &ret->format);
 	if (!ret->device) goto fail;
+
+	if (dev_class == GaDeviceClass_Callback && thread_policy != GauThreadPolicy_Multi) {
+		ga_err("refusing to associate a callback-based device with a multithreaded manager");
+		ga_device_close(ret->device);
+		ga_free(ret);
+		return NULL;
+	}
+
+	if (dev_class == GaDeviceClass_Callback) {
+		ga_err("callback nyi");
+		ga_device_close(ret->device);
+		ga_free(ret);
+		return NULL;
+	}
 
 	/* Initialize mixer */
 	ret->mixer = ga_mixer_create(&ret->format, *num_frames);
@@ -91,14 +136,29 @@ fail:
 	}
 	return NULL;
 }
+
 void gau_manager_update(GauManager *mgr) {
 	ga_mixer_dispatch(mgr->mixer);
 	if (mgr->thread_policy == GauThreadPolicy_Multi) return;
 
 	GaMixer *mixer = mgr->mixer;
 	GaDevice *dev = mgr->device;
-	u32 numToQueue = ga_device_check(dev);
-	while (numToQueue--) {
+
+	switch (ga_device_class(dev)) {
+		case GaDeviceClass_Callback: return;
+		case GaDeviceClass_PushAsync:
+		case GaDeviceClass_PushSync: break;
+	}
+
+	// don't try multiple times to avoid blocking caller
+	// (what are the failure conditions for this, anyway?  Docs are incredibly sparse.)
+	u32 num_to_queue;
+	if (!ga_isok(ga_device_check(dev, &num_to_queue))) {
+		ga_warn("Unable to get writable buffer count");
+		return;
+	}
+
+	while (num_to_queue--) {
 		s16 *buf = ga_device_get_buffer(dev);
 		if (!buf) continue;
 		ga_mixer_mix(mixer, buf);
@@ -114,7 +174,7 @@ GaStreamManager *gau_manager_stream_manager(GauManager *mgr) {
 	return mgr->stream_mgr;
 }
 GaDevice *gau_manager_device(GauManager *mgr) {
-  return mgr->device;
+	return mgr->device;
 }
 
 void gau_manager_destroy(GauManager *mgr) {
@@ -153,6 +213,8 @@ static GaSampleSource *gau_sample_source_create(GaDataSource *data, GauAudioType
 		char buf[4];
 		if (ga_data_source_read(data, buf, 4, 1) != 1) return NULL;
 		if (!ga_isok(ga_data_source_seek(data, -4, GaSeekOrigin_Cur))) return NULL;
+
+		// ogg, but is it vorbis or opus?
 		if (!memcmp(buf, "OggS", 4)) {
 			// ogg file format is:
 			// 4 'OggS'
@@ -211,8 +273,8 @@ GaSound *gau_load_sound_file(const char *fname, GauAudioType format) {
 }
 
 GaHandle *gau_create_handle_sound(GauManager *mgr, GaSound *sound,
-                                   GaCbHandleFinish callback, void *context,
-				   GauSampleSourceLoop **loop_src) {
+                                  GaCbHandleFinish callback, void *context,
+                                  GauSampleSourceLoop **loop_src) {
 	GaHandle *ret = NULL;
 	GaSampleSource *src = gau_sample_source_create_sound(sound);
 	if (!src) return NULL;

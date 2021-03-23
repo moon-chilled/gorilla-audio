@@ -18,6 +18,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	dev->format.num_channels = ARCAN_SHMIF_ACHANNELS;
 	if (!(dev->impl = ga_alloc(sizeof(GaXDeviceImpl)))) return GA_ERR_SYS_MEM;
 	dev->impl->homemade = false;
+	dev->class = GaDeviceClass_PushAsync;
 
 	struct arcan_shmif_cont *acon = arcan_shmif_primary(SHMIF_INPUT);
 	if (!acon) {
@@ -59,9 +60,10 @@ static ga_result gaX_close(GaDevice *dev) {
 	return GA_OK;
 }
 
-static u32 gaX_check(GaDevice *dev) {
+static ga_result gaX_check(GaDevice *dev, u32 *num_buffers) {
 	struct arcan_shmif_cont *c = dev->impl->acon;
-	return (c->abufsize - c->abufused) / (dev->num_frames * ga_format_frame_size(&dev->format));
+	*num_buffers (c->abufsize - c->abufused) / (dev->num_frames * ga_format_frame_size(&dev->format));
+	return GA_OK;
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
@@ -73,7 +75,7 @@ static ga_result gaX_queue(GaDevice *dev, void *buf) {
 			atomic_u8 resize_pending;
 		} *debedebe = c->user;
 		if (debedebe && debedebe->magic == 0xfeedface) {
-			while (debedebe->resize_pending) ga_thread_sleep(1); /* :| */
+			while (debedebe->resize_pending) ga_thread_yield(1); /* :| */
 		}
 	}
 

@@ -204,11 +204,18 @@ ga_sint32 ga_format_to_frames(const GaFormat *format, ga_float32 seconds);
  *  \ingroup external
  *  \defgroup GaDevice Device
  */
+
+typedef enum {
+	GaDeviceClass_PushAsync, /**< we push buffers to the device, asynchronously; ga_device_check _must_ used for synchronization */
+	GaDeviceClass_PushSync,  /**< we push buffers to the device, but it handles synchronization.  ga_device_check can safely be ignored */
+	GaDeviceClass_Callback,  /**< we present the device with a callback, which it calls */
+} GaDeviceClass;
+
 typedef enum {
 	GaDeviceType_Default    = -1, /**< Default device type (based on hard-coded priorities) */
 	GaDeviceType_Unknown,         /**< Unknown (invalid) device type */
 	GaDeviceType_Dummy,           /**< Dummy device, doesn't actually play anything */
-	GaDeviceType_WAV,             /**< Write audio to WAV file */
+	GaDeviceType_WAV,             /**< Writes audio to a WAV file */
 	GaDeviceType_OSS,             /**< OSS playback device (mainly FreeBSD) */
 	GaDeviceType_XAudio2,         /**< XAudio2 playback device (Windows-only) */
 	GaDeviceType_Arcan,           /**< Arcan playback device (cross-platform, not on windows) */
@@ -217,6 +224,8 @@ typedef enum {
 	GaDeviceType_ALSA,            /**< ALSA playback device (mainly for linux) */
 	GaDeviceType_OpenAL,          /**< OpenAL playback device (cross-platform) */
 } GaDeviceType;
+
+typedef ga_result(*GaCbDeviceQueuer)(void *ctx, void *buffer);
 
 /** Hardware device abstract data structure [\ref SINGLE_CLIENT].
  *
@@ -247,13 +256,15 @@ typedef struct GaDevice GaDevice;
  *  \param num_frames Requested and received buffer size.
  *  \param format Requested device output format (usually 16-bit/48000/stereo).
  *  \return Concrete instance of the requested device type.  NULL if a suitable device could not be opened.
- *  \warning num_buffers, num_frames, and format are /requests/ to the audio
- *           device and may not necessarily be fulfilled.  The actually
+ *  \warning class, num_buffers, num_frames, and format are /requests/ to the
+ *           audio device and will not necessarily be fulfilled.  The actually
  *           received values (as well as type, when it is GaDeviceType_Default)
  *           will be written back out to the same locations.  If you pass in
- *           NULL for any of these arguments, a reasonable default will be chosen.
+ *           NULL for any of these arguments, a reasonable default will be
+ *           chosen.
  */
 GaDevice *ga_device_open(GaDeviceType *type,
+                         GaDeviceClass *class,
                          ga_uint32 *num_buffers,
                          ga_uint32 *num_frames,
                          GaFormat *format);
@@ -262,11 +273,10 @@ GaDevice *ga_device_open(GaDeviceType *type,
  *
  *  \ingroup GaDevice
  *  \param device Device to check.
- *  \return Number of free (unqueued) buffers.  0 can indicate either that
- *          there are no free buffers or that an error has occurred.  TODO
- *          error-checking interface
+ *  \param num_buffers Pointer to an integer to be filled in with the number
+ *                     of free (unqueued) buffers.
  */
-ga_uint32 ga_device_check(GaDevice *device);
+ga_result ga_device_check(GaDevice *device, ga_uint32 *num_buffers);
 
 /** Get a pointer to a new buffer.
  *
@@ -274,6 +284,8 @@ ga_uint32 ga_device_check(GaDevice *device);
  *  \return The new buffer, or NULL if none is available.
  *  \warning Always call ga_device_queue on the resultant buffer (if it is
  *           valid) before calling ga_device_get_buffer again.  
+ *  \warning If ga_device_check() doesn't indicate a buffer is available, the
+ *           operation may fail.
  */
 void *ga_device_get_buffer(GaDevice *device);
 
@@ -283,16 +295,24 @@ void *ga_device_get_buffer(GaDevice *device);
  *  \param device Device in which to queue the buffer.
  *  \param buffer Buffer to add to the presentation queue.  Note: this buffer
  *                _must_ come from ga_device_get_buffer.  For devices which
- *                don't
+ *                don't support zero-copy mixing, using other buffers may work,
+ *                but this should not be relied on.
  *  \return GA_OK iff the buffer was queued successfully.
- *          GA_ERR_MIS_PARAM if buffer is NULL or (potentially) if it does not originate from ga_device_get_buffer
+ *          GA_ERR_MIS_PARAM if buffer is NULL or (potentially) if it does not
+ *                           originate from ga_device_get_buffer
+ *          GA_ERR_MIS_UNSUP if the device is not a 'push'-style device.
  *          GA_ERR_SYS_LIB or GA_ERR_SYS_IO if the system refused to serve our request
- *  \warning You should always call ga_device_check() prior to queueing a buffer! If
- *           there isn't a free (unqueued) buffer, the operation may fail.
+ *  \warning For async push-style streams, always call ga_device_check() prior
+ *           to queueing a buffer.  Even if ga_device_get_buffer() returned
+ *           successfully, the operation may still fail.
  *  \warning Takes ownership of buffer; always call ga_device_get_buffer
  *           to get a new one.
  */
 ga_result ga_device_queue(GaDevice *device, void *buffer);
+
+ga_result ga_device_register_queuer(GaDevice *device, GaCbDeviceQueuer queuer, void *ctx);
+
+GaDeviceClass ga_device_class(GaDevice *device);
 
 /** Closes an open audio device.
  *
@@ -1510,6 +1530,7 @@ typedef enum {
 	GaLogTrace,
 	GaLogInfo,
 	GaLogWarn,
+	GaLogErr,
 } GaLogCategory;
 
 typedef void (*GaCbLogger)(void *ctx, GaLogCategory category, const char *file, const char *function, int line, const char *message);
@@ -1522,6 +1543,7 @@ void ga_do_log(GaLogCategory category, const char *file, const char *function, i
 #define ga_trace(...) ga_do_log(GaLogTrace, __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define ga_info(...) ga_do_log(GaLogInfo, __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define ga_warn(...) ga_do_log(GaLogWarn, __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define ga_err(...) ga_do_log(GaLogErr, __FILE__, __func__, __LINE__, __VA_ARGS__)
 
 #ifdef __cplusplus
 } // extern "C"

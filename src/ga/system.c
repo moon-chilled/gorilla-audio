@@ -7,65 +7,7 @@
 
 /* Thread Functions */
 
-#if (__STDC_VERSION__ >= 201112L) && !defined(__STDC_NO_THREADS__)
-
-_Static_assert(sizeof(ga_result) == sizeof(int), "aliasing is illegal!");
-
-#include <threads.h>
-
-struct GaThreadObj {
-	thrd_t t;
-};
-
-GaThread *ga_thread_create(GaCbThreadFunc thread_func, void *context,
-                           GaThreadPriority priority, u32 stack_size) {
-	GaThread *ret = ga_alloc(sizeof(GaThread));
-	if (!ret) goto fail;
-	ret->thread_obj = ga_alloc(sizeof(GaThread));
-	if (!ret) goto fail;
-	if (thrd_create(&ret->thread_obj->t, (int(*)(void*))thread_func, context) != thrd_success) goto fail;
-
-	return ret;
-
-fail:
-	if (ret) ga_free(ret->thread_obj);
-	ga_free(ret);
-	return NULL;
-}
-void ga_thread_join(GaThread *thread) {
-	thrd_join(thread->thread_obj->t, NULL);
-}
-void ga_thread_sleep(u32 ms) {
-	thrd_sleep(&(struct timespec){.tv_sec = ms / 1000, .tv_nsec = (ms % 1000) * 1000000}, NULL); //todo resume/int
-}
-void ga_thread_destroy(GaThread *thread) {
-	thrd_detach(thread->thread_obj->t); //pretty much the best we can do
-	ga_free(thread->thread_obj);
-	ga_free(thread);
-}
-
-ga_result ga_mutex_create(GaMutex *res) {
-	res->mutex = ga_alloc(sizeof(mtx_t));
-	if (!res->mutex) return GA_ERR_SYS_LIB;
-	if (mtx_init(res->mutex, mtx_plain) != thrd_success) {
-		ga_free(res->mutex);
-		return GA_ERR_SYS_LIB;
-	}
-	return GA_OK;
-}
-void ga_mutex_lock(GaMutex mutex) {
-	mtx_lock(mutex.mutex);
-}
-void ga_mutex_unlock(GaMutex mutex) {
-	mtx_unlock(mutex.mutex);
-}
-void ga_mutex_destroy(GaMutex mutex) {
-	if (!mutex.mutex) return;
-	mtx_destroy(mutex.mutex);
-	ga_free(mutex.mutex);
-}
-
-#elif defined(_WIN32) || defined (__CYGWIN__)
+#if defined(_WIN32) || defined (__CYGWIN__)
 
 #define WIN32_LEAN_AND_MEAN
 
@@ -100,6 +42,9 @@ void ga_thread_join(GaThread *thread) {
 }
 void ga_thread_sleep(u32 ms) {
 	Sleep(ms);
+}
+void ga_thread_yield(void) {
+	SwitchToThread();
 }
 void ga_thread_destroy(GaThread *thread) {
 	CloseHandle(thread->thread_obj->h);
@@ -148,7 +93,6 @@ void *ga_thread_wrapper(void *context) { ThreadWrapperContext *ctx = context; ct
 
 GaThread *ga_thread_create(GaCbThreadFunc thread_func, void *context,
                            GaThreadPriority priority, u32 stack_size) {
-	struct sched_param param;
 	GaThread *ret = ga_alloc(sizeof(GaThread));
 	if (!ret) goto fail;
 	GaThreadObj *thread_obj = ga_alloc(sizeof(GaThreadObj));
@@ -165,15 +109,22 @@ GaThread *ga_thread_create(GaCbThreadFunc thread_func, void *context,
 	thread_obj->ctx->func = thread_func;
 	thread_obj->ctx->context = context;
 
-	if (pthread_attr_init(&thread_obj->attr) != 0){} // report error
-#if defined(__APPLE__) || defined(__ANDROID__) || defined(__FreeBSD__) || defined(__OpenBSD__)
-	param.sched_priority = priority_lut[priority];
-#elif defined(__linux__)
-	param.__sched_priority = priority_lut[priority];
+	if (pthread_attr_init(&thread_obj->attr) != 0) {
+		ga_err("unable to create pthread attribute object");
+		goto fail;
+	}
+
+#if defined(__APPLE__) || defined(__ANDROID__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__linux__)
+	if (pthread_attr_setschedparam(&thread_obj->attr, &(struct sched_param){.sched_priority=priority_lut[priority]}) != 0) {
+		ga_warn("unable to set scheduling priority %d", priority_lut[priority]);
+	}
 #endif
-	if (pthread_attr_setschedparam(&thread_obj->attr, &param) != 0){} //report error
-	if (pthread_attr_setstacksize(&thread_obj->attr, stack_size) != 0){} //report error
-	if (pthread_create(&thread_obj->thread, &thread_obj->attr, ga_thread_wrapper, thread_obj->ctx) != 0) goto fail;
+
+	if (pthread_attr_setstacksize(&thread_obj->attr, stack_size) != 0) ga_warn("unable to set stack size %u", stack_size);
+	if (pthread_create(&thread_obj->thread, &thread_obj->attr, ga_thread_wrapper, thread_obj->ctx) != 0) {
+		ga_err("unable to create pthread");
+		goto fail;
+	}
 
 	return ret;
 fail:
@@ -186,6 +137,9 @@ void ga_thread_join(GaThread *thread) {
 }
 void ga_thread_sleep(u32 ms) {
 	nanosleep(&(struct timespec){.tv_sec = ms / 1000, .tv_nsec = (ms % 1000) * 1000000}, NULL);
+}
+void ga_thread_yield(void) {
+	sched_yield();
 }
 void ga_thread_destroy(GaThread *thread) {
 	pthread_cancel(thread->thread_obj->thread);
@@ -215,6 +169,67 @@ void ga_mutex_lock(GaMutex mutex) {
 }
 void ga_mutex_unlock(GaMutex mutex) {
 	pthread_mutex_unlock((pthread_mutex_t*)mutex.mutex);
+}
+
+#elif (__STDC_VERSION__ >= 201112L) && !defined(__STDC_NO_THREADS__)
+
+_Static_assert(sizeof(ga_result) == sizeof(int), "aliasing is illegal!");
+
+#include <threads.h>
+
+struct GaThreadObj {
+	thrd_t t;
+};
+
+GaThread *ga_thread_create(GaCbThreadFunc thread_func, void *context,
+                           GaThreadPriority priority, u32 stack_size) {
+	GaThread *ret = ga_alloc(sizeof(GaThread));
+	if (!ret) goto fail;
+	ret->thread_obj = ga_alloc(sizeof(GaThread));
+	if (!ret) goto fail;
+	if (thrd_create(&ret->thread_obj->t, (int(*)(void*))thread_func, context) != thrd_success) goto fail;
+
+	return ret;
+
+fail:
+	if (ret) ga_free(ret->thread_obj);
+	ga_free(ret);
+	return NULL;
+}
+void ga_thread_join(GaThread *thread) {
+	thrd_join(thread->thread_obj->t, NULL);
+}
+void ga_thread_sleep(u32 ms) {
+	thrd_sleep(&(struct timespec){.tv_sec = ms / 1000, .tv_nsec = (ms % 1000) * 1000000}, NULL); //todo resume/int
+}
+void ga_thread_yield(void) {
+	thrd_sleep(&(struct timespec){.tv_sec = 0, .tv_nsec = 0}, NULL);
+}
+void ga_thread_destroy(GaThread *thread) {
+	thrd_detach(thread->thread_obj->t); //pretty much the best we can do
+	ga_free(thread->thread_obj);
+	ga_free(thread);
+}
+
+ga_result ga_mutex_create(GaMutex *res) {
+	res->mutex = ga_alloc(sizeof(mtx_t));
+	if (!res->mutex) return GA_ERR_SYS_LIB;
+	if (mtx_init(res->mutex, mtx_plain) != thrd_success) {
+		ga_free(res->mutex);
+		return GA_ERR_SYS_LIB;
+	}
+	return GA_OK;
+}
+void ga_mutex_lock(GaMutex mutex) {
+	mtx_lock(mutex.mutex);
+}
+void ga_mutex_unlock(GaMutex mutex) {
+	mtx_unlock(mutex.mutex);
+}
+void ga_mutex_destroy(GaMutex mutex) {
+	if (!mutex.mutex) return;
+	mtx_destroy(mutex.mutex);
+	ga_free(mutex.mutex);
 }
 
 #else

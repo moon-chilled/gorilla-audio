@@ -16,10 +16,6 @@
 #include "gorilla/ga_system.h"
 #include "gorilla/ga_u_internal.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 /************/
 /*  Device  */
 /************/
@@ -35,9 +31,10 @@ extern "C" {
  */
 typedef struct {
 	ga_result (*open)(GaDevice *dev);
-	u32 (*check)(GaDevice *dev);
+	ga_result (*check)(GaDevice *dev, u32 *num_buffers); //if 'push'
 	void *(*get_buffer)(GaDevice *dev); //optional
-	ga_result (*queue)(GaDevice *dev, void *buffer);
+	ga_result (*queue)(GaDevice *dev, void *buffer); //iff 'push'
+	ga_result (*register_queuer)(GaDevice *dev, GaCbDeviceQueuer queuer, void *ctx); //iff 'pull'
 	ga_result (*close)(GaDevice *device);
 } GaXDeviceProcs;
 
@@ -83,21 +80,24 @@ typedef struct GaXDeviceImpl GaXDeviceImpl;
  *  Abstracts the platform-specific details of presenting audio buffers to sound playback hardware.
  *
  *  \ingroup intDevice
- *  \warning You can only have one device open at a time.
  *  \warning Never instantiate a GaDevice directly, unless you are implementing a new concrete
  *           device implementation. Instead, you should use ga_device_open().
  */
 struct GaDevice {
-	GaDeviceType dev_type;
-	u32 num_buffers;
-	u32 num_frames;
-	GaFormat format;
+	GaXDeviceImpl *impl;
 
 	// use iff get_buffer is missing to avoid spurious allocations
 	void *buffer;
 
 	GaXDeviceProcs procs;
-	GaXDeviceImpl *impl;
+
+	GaDeviceType type;
+	u32 num_buffers;
+	u32 num_frames;
+	GaFormat format;
+	GaDeviceClass class;
+
+	//GaXDeviceImpl impl[]; //stupid wg14
 };
 
 /*****************/
@@ -309,9 +309,5 @@ static inline u32 ga_endian_fromle4(u32 x) {
 static inline s32 ga_add32_saturate(s32 x, s32 y) {
 	return clamp((s64)x + (s64)y, GA_S32_MIN, GA_S32_MAX);
 }
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 #endif /* _GORILLA_GA_INTERNAL_H */

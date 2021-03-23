@@ -11,6 +11,7 @@
 #define ciwrite2(fp, number) cbwrite(fp, &(s16){ga_endian_tole2(number)}, 2)
 #define ciwrite4(fp, number) cbwrite(fp, &(s32){ga_endian_tole4(number)}, 4)
 static ga_result gaX_open(GaDevice *dev) {
+	dev->class = GaDeviceClass_PushAsync;
 	if (dev->format.sample_fmt < 0) return GA_ERR_MIS_UNSUP;
 
 	FILE *fp = fopen("gorilla-out.wav", "w");;
@@ -57,8 +58,9 @@ static ga_result gaX_close(GaDevice *dev) {
 	return failure ? GA_ERR_SYS_IO : GA_OK;
 }
 
-static u32 gaX_check(GaDevice *dev) {
-	return 1; //TODO
+static ga_result gaX_check(GaDevice *dev, u32 *num_buffers) {
+	*num_buffers = 1; //TODO
+	return GA_OK;
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {

@@ -17,9 +17,16 @@ static ga_result gaX_open(GaDevice *dev) {
 	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_SYS_MEM;
 
-	if (snd_pcm_open(&dev->impl->interface, "default", SND_PCM_STREAM_PLAYBACK, 0/*SND_PCM_NONBLOCK*/) < 0) {
+	if (snd_pcm_open(&dev->impl->interface, "default", SND_PCM_STREAM_PLAYBACK, (dev->class == GaDeviceClass_PushAsync) * SND_PCM_NONBLOCK) < 0) {
 		ga_free(dev->impl);
 		return GA_ERR_SYS_LIB;
+	}
+
+	switch (dev->class) {
+		case GaDeviceClass_PushAsync:
+		case GaDeviceClass_PushSync: break;
+		case GaDeviceClass_Callback:
+			dev->class = GaDeviceClass_PushSync;
 	}
 
 	snd_pcm_hw_params_t *params = NULL;
@@ -74,10 +81,11 @@ static ga_result gaX_close(GaDevice *dev) {
 	return GA_OK;
 }
 
-static u32 gaX_check(GaDevice *dev) {
+static ga_result gaX_check(GaDevice *dev, u32 *num_frames) {
 	snd_pcm_sframes_t avail = snd_pcm_avail(dev->impl->interface);
-	if (avail < 0) return 0;
-	return avail / dev->num_frames;
+	if (avail < 0) return GA_ERR_GENERIC; //negative is a 'code', but it's not specified what values it can take
+	*num_frames = avail / dev->num_frames;
+	return GA_OK;
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {

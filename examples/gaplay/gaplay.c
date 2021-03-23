@@ -82,9 +82,19 @@ char getch() {
 	return ret;
 }
 
+const char *lc2s(GaLogCategory c) {
+	switch (c) {
+		case GaLogTrace: return "trace";
+		case GaLogInfo: return "info";
+		case GaLogWarn: return "warn";
+		case GaLogErr: return "err";
+		default: return "???";
+	}
+}
+
 static void log_to_file(void *ctx, GaLogCategory category, const char *file, const char *function, int line, const char *msg) {
 	if (category <= GaLogTrace) return;
-	fprintf(ctx, "\n%s: %s:%s:%d: %s\n", category == GaLogTrace ? "trace" : category == GaLogInfo ? "info" : category == GaLogWarn ? "warn" : "<?>", file, function, line, msg);
+	fprintf(ctx, "\n%s: %s:%s:%d: %s\n", lc2s(category), file, function, line, msg);
 }
 
 int main(int argc, char **argv) {

@@ -11,20 +11,20 @@ int main(int argc, char** argv) {
 		.num_channels = 2,
 		.frame_rate = 48000,
 	};
-	GaDevice *dev;
 	ga_uint32 num_frames = 2048;
 	ga_float32 pan = 1.0f;
 	ga_float32 t = 0.0f;
+	GaDeviceClass class = GaDeviceClass_PushSync;
 
 	/* Initialize library + device */
-	dev = ga_device_open(&(GaDeviceType){GaDeviceType_Default}, NULL, &num_frames, &fmt);
+	GaDevice *dev = ga_device_open(NULL, &class, NULL, &num_frames, &fmt);
+	if (class != GaDeviceClass_PushSync) goto fail;
 	if (!dev) goto fail;
 	if (fmt.sample_fmt != GaSampleFormat_S16) goto fail;
 	if (fmt.num_channels != 2) goto fail;
 
 	/* Infinite mix loop */
-	while (1) {
-		ga_uint32 num_to_queue = ga_device_check(dev);
+	for (ga_uint32 num_to_queue; ga_isok(ga_device_check(dev, &num_to_queue));) {
 		while (num_to_queue--) {
 			ga_sint16 *buf = ga_device_get_buffer(dev);
 			if (!buf) continue;
@@ -44,7 +44,6 @@ int main(int argc, char** argv) {
 
 	/* Clean up device + library */
 	ga_device_close(dev);
-
 	return 0;
 
 fail:

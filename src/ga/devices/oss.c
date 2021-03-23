@@ -7,8 +7,15 @@
 #include <sys/soundcard.h>
 
 static ga_result gaX_open(GaDevice *dev) {
-	int fd = open("/dev/dsp", O_WRONLY/*|O_NONBLOCK*/); //todo configurable
+	int fd = open("/dev/dsp", O_WRONLY | ((dev->class == GaDeviceClass_PushAsync) * O_NONBLOCK)); //todo configurable
 	if (fd < 0) return GA_ERR_SYS_IO;
+
+	switch (dev->class) {
+		case GaDeviceClass_PushAsync:
+		case GaDeviceClass_PushSync: break;
+		case GaDeviceClass_Callback:
+			dev->class = GaDeviceClass_PushSync;
+	}
 
 	// If we request a mode and it's not supported by the hardware, this tells
 	// the mixer to fake it in software.
@@ -63,12 +70,14 @@ static ga_result gaX_close(GaDevice *dev) {
 	return close((int)(usz)dev->impl) ? GA_ERR_SYS_IO : GA_OK;
 }
 
-static u32 gaX_check(GaDevice *dev) {
+static ga_result gaX_check(GaDevice *dev, u32 *num_buffers) {
 	int fd = (int)(usz)dev->impl;
 	audio_buf_info i;
-	if (ioctl(fd, SNDCTL_DSP_GETOSPACE, &i) == -1) return 0;
+	if (ioctl(fd, SNDCTL_DSP_GETOSPACE, &i) == -1) return GA_ERR_SYS_IO;
 
-	return i.fragments < 0 ? 0 : i.fragments;
+	if (i.fragment < 0) return GA_ERR_SYS_LIB;
+	*num_buffers = i.fragments;
+	return GA_OK;
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
