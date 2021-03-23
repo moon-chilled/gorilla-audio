@@ -91,7 +91,7 @@ GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
 	ret->format.sample_fmt = GaSampleFormat_S16;
 	ret->format.num_channels = 2;
 	ret->format.frame_rate = 48000;
-	GaDeviceClass dev_class;
+	GaDeviceClass dev_class = GaDeviceClass_PushSync;
 	ret->device = ga_device_open(dev_type, &dev_class, num_buffers, num_frames, &ret->format);
 	if (!ret->device) goto fail;
 

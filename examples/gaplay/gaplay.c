@@ -51,6 +51,14 @@ const char *devicetypename(GaDeviceType type) {
 	}
 	return "???";
 }
+const char *deviceclassname(GaDeviceClass class) {
+	switch (class) {
+		case GaDeviceClass_PushAsync: return "async";
+		case GaDeviceClass_PushSync: return "sync";
+		case GaDeviceClass_Callback: return "call me sometime";
+	}
+	return "???";
+}
 
 void done(int status) {
 	struct termios term;
@@ -69,7 +77,7 @@ void printtime(int cur, int dur) {
 	printmins(cur);
 	printf(" / ");
 	printmins(dur);
-	printf(" (%.0f%%)\r", 100*cur/(float)dur);
+	printf(" (%.0f%%)\e[K\r", 100*cur/(float)dur);
 	fflush(stdout);
 }
 bool kbhit() {
@@ -88,13 +96,13 @@ const char *lc2s(GaLogCategory c) {
 		case GaLogInfo: return "info";
 		case GaLogWarn: return "warn";
 		case GaLogErr: return "err";
-		default: return "???";
 	}
+	return "???";
 }
 
 static void log_to_file(void *ctx, GaLogCategory category, const char *file, const char *function, int line, const char *msg) {
 	if (category <= GaLogTrace) return;
-	fprintf(ctx, "\n%s: %s:%s:%d: %s\n", lc2s(category), file, function, line, msg);
+	fprintf(ctx, "%s: %s:%s:%d: %s\n", lc2s(category), file, function, line, msg);
 }
 
 int main(int argc, char **argv) {
@@ -103,11 +111,11 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
+	ga_register_logger(log_to_file, stderr);
 	ga_initialize_systemops(NULL);
 	GaDeviceType dev_type = GaDeviceType_Default;
 	GauManager *mgr = check(gau_manager_create_custom(&dev_type, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
 
-	ga_register_logger(log_to_file, stderr);
 
 	GaHandle *handle;
 	{
@@ -134,7 +142,7 @@ int main(int argc, char **argv) {
 	GaFormat hfmt, dfmt;
 	ga_handle_format(handle, &hfmt);
 	ga_device_format(dev, &dfmt);
-	printf("gaplay [%s %iHz %ich -> %s (%s %iHz %ich)] %s\n", sampleformatname(hfmt.sample_fmt), hfmt.frame_rate, hfmt.num_channels, devicetypename(dev_type), sampleformatname(dfmt.sample_fmt), dfmt.frame_rate, dfmt.num_channels, argv[1]);
+	printf("gaplay [%s %iHz %ich -> %s (%s %iHz %ich), %s] %s\n", sampleformatname(hfmt.sample_fmt), hfmt.frame_rate, hfmt.num_channels, devicetypename(dev_type), sampleformatname(dfmt.sample_fmt), dfmt.frame_rate, dfmt.num_channels, deviceclassname(ga_device_class(dev)), argv[1]);
 
 	ga_usize cur, dur, sdur;
 	assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
