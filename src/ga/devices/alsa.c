@@ -139,7 +139,7 @@ static void *gaX_get_buffer_async(GaDevice *dev) {
 	}
 
 	if (!areas->addr) {
-		ga_err("????");
+		ga_err("null mmap address; probably a buggy driver");
 		goto fail;
 	}
 
