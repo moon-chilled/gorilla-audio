@@ -18,7 +18,7 @@ struct GaXDeviceImpl {
 #define pacheck(e) do { if ((e) < 0) goto fail; } while (0)
 
 static ga_result gaX_open(GaDevice *dev) {
-	dev->class = GaDeviceClass_PushAsync; //I think?
+	dev->class = GaDeviceClass_PushAsync;
 
 	pa_sample_spec spec;
 

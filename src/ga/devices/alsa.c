@@ -40,7 +40,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	}
 
 	snd_pcm_hw_params_t *params = NULL;
-#define alloca malloc
+#define alloca ga_alloc
         snd_pcm_hw_params_alloca(&params);
 #undef alloca
 	if (!params) goto cleanup;
@@ -66,7 +66,7 @@ static ga_result gaX_open(GaDevice *dev) {
 		acheck(snd_pcm_start(dev->impl->interface));
 	}
 
-	free(params);
+	ga_free(params);
 	//todo latency
 
 	if (dev->class == GaDeviceClass_PushAsync) {
@@ -79,7 +79,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	return GA_OK;
 
 cleanup:
-	free(params);
+	ga_free(params);
 	snd_pcm_drain(dev->impl->interface);
 	snd_pcm_close(dev->impl->interface);
 	ga_free(dev->impl);
