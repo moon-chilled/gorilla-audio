@@ -5,14 +5,14 @@
  *  \file gau.h
  */
 
-#ifndef _GORILLA_GAU_H
-#define _GORILLA_GAU_H
+#ifndef GORILLA_GAU_H
+#define GORILLA_GAU_H
 
 #include "gorilla/ga.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 /** Data structures and functions.
  *
@@ -322,7 +322,7 @@ GaHandle *gau_create_handle_buffered_file(GauManager *manager,
                                           GauSampleSourceLoop **loop_src);
 
 #ifdef __cplusplus
-}
-#endif /* __cplusplus */
+} //extern "C"
+#endif
 
-#endif /* _GORILLA_GAU_H */
+#endif //GORILLA_GAU_H

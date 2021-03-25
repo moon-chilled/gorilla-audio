@@ -9,8 +9,8 @@
  * Internal data structures and functions used by Gorilla Audio.
  */
 
-#ifndef _GORILLA_GA_INTERNAL_H
-#define _GORILLA_GA_INTERNAL_H
+#ifndef GORILLA_GA_INTERNAL_H
+#define GORILLA_GA_INTERNAL_H
 
 #include "gorilla/ga.h"
 #include "gorilla/ga_system.h"
@@ -310,4 +310,4 @@ static inline s32 ga_add32_saturate(s32 x, s32 y) {
 	return clamp((s64)x + (s64)y, GA_S32_MIN, GA_S32_MAX);
 }
 
-#endif /* _GORILLA_GA_INTERNAL_H */
+#endif //GORILLA_GA_INTERNAL_H

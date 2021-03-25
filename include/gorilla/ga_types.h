@@ -269,7 +269,7 @@ void ga_list_unlink(GaLink *link);
 void ga_list_merge(GaLink *head_dst, GaLink *head_src);
 
 #ifdef __cplusplus
-} // extern "C"
+} //extern "C"
 #endif
 
-#endif /* GORILLA_GA_TYPES_H */
+#endif //GORILLA_GA_TYPES_H

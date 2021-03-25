@@ -1546,9 +1546,9 @@ void ga_do_log(GaLogCategory category, const char *file, const char *function, i
 #define ga_err(...) ga_do_log(GaLogErr, __FILE__, __func__, __LINE__, __VA_ARGS__)
 
 #ifdef __cplusplus
-} // extern "C"
+} //extern "C"
 #endif
 
 #undef GCC
 
-#endif // GORILLA_GA_H
+#endif //GORILLA_GA_H

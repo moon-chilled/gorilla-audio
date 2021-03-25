@@ -1,6 +1,6 @@
 // definitions that are shared between ga and gau, but still not meant to be externally visible
-#ifndef _GORILLA_GA_U_INTERNAL_H
-#define _GORILLA_GA_U_INTERNAL_H
+#ifndef GORILLA_GA_U_INTERNAL_H
+#define GORILLA_GA_U_INTERNAL_H
 
 #include <assert.h>
 
@@ -56,4 +56,4 @@ typedef struct { volatile u32 rc; } RC;
 #define max(x, y) ((x) > (y) ? (x) : (y))
 #define clamp(x, lo, hi) min(max((x), (lo)), (hi))
 
-#endif //_GORILLA_GA_U_INTERNAL_H
+#endif //GORILLA_GA_U_INTERNAL_H

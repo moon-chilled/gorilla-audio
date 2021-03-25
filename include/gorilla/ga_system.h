@@ -213,4 +213,4 @@ void ga_mutex_destroy(GaMutex mutex);
 } //extern "C"
 #endif
 
-#endif /* GORILLA_GA_SYSTEM_H */
+#endif //GORILLA_GA_SYSTEM_H
