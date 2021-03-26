@@ -6,16 +6,18 @@
 #include <sys/ioctl.h>
 #include <sys/soundcard.h>
 
-static ga_result gaX_open(GaDevice *dev) {
-	int fd = open("/dev/dsp", O_WRONLY | ((dev->class == GaDeviceClass_PushAsync) * O_NONBLOCK)); //todo configurable
-	if (fd < 0) return GA_ERR_SYS_IO;
+//todo /dev/dsp_mmap
 
+static ga_result gaX_open(GaDevice *dev) {
 	switch (dev->class) {
 		case GaDeviceClass_PushAsync:
 		case GaDeviceClass_PushSync: break;
 		case GaDeviceClass_Callback:
 			dev->class = GaDeviceClass_PushSync;
 	}
+
+	int fd = open("/dev/dsp", O_WRONLY | ((dev->class == GaDeviceClass_PushAsync) * O_NONBLOCK)); //todo configurable
+	if (fd < 0) return GA_ERR_SYS_IO;
 
 	// If we request a mode and it's not supported by the hardware, this tells
 	// the mixer to fake it in software.
