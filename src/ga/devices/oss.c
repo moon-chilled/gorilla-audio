@@ -29,7 +29,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	// latency requests
 	// range is [0, 10]; lower is less latent
 	// 5 is the default
-	// I chose 3 arbitrarily, and it should probably be changed.  It happens to be the default used by byuu's ruby
+	// I chose 3 arbitrarily, and it should probably be changed.  It happens to be the default used by near's ruby
 #ifdef SNDCTL_DSP_POLICY
 	if (ioctl(fd, SNDCTL_DSP_POLICY, &(int){3}) == -1) goto cleanup;
 #endif
