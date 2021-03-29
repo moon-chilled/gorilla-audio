@@ -1054,9 +1054,10 @@ typedef void (*GaCbHandleFinish)(GaHandle *finished_handle, void *context);
  *  \ingroup GaHandle
  *  \param mixer The mixer that should mix the handle's sample data.
  *  \param sample_src The sample source from which to stream samples.
+ *  \param handle_group The handle group to place the newly created handle in, or null for the mixer's default.
  *  \todo Provide a way to query handles for flags.
  */
-GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *sample_src);
+GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *sample_src, GaHandleGroup *handle_group);
 
 
 /******************/

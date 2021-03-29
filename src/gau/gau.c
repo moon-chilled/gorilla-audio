@@ -272,9 +272,10 @@ GaSound *gau_load_sound_file(const char *fname, GauAudioType format) {
 	return ret;
 }
 
-GaHandle *gau_create_handle_sound(GauManager *mgr, GaSound *sound,
-                                  GaCbHandleFinish callback, void *context,
-                                  GauSampleSourceLoop **loop_src) {
+GaHandle *gau_create_handle_sound_ext(GauManager *mgr, GaSound *sound,
+                                      GaHandleGroup *group,
+                                      GaCbHandleFinish callback, void *context,
+                                      GauSampleSourceLoop **loop_src) {
 	GaHandle *ret = NULL;
 	GaSampleSource *src = gau_sample_source_create_sound(sound);
 	if (!src) return NULL;
@@ -286,17 +287,21 @@ GaHandle *gau_create_handle_sound(GauManager *mgr, GaSound *sound,
 		src2 = gau_sample_source_loop_sample_source(*loop_src);
 	}
 	if (src2) {
-		ret = ga_handle_create(mgr->mixer, src2);
+		ret = ga_handle_create(mgr->mixer, src2, group);
 		if(src == src2)
 			ga_sample_source_release(src2);
 		ga_handle_set_callback(ret, callback, context);
 	}
 	return ret;
 }
+GaHandle *gau_create_handle_sound(GauManager *mgr, GaSound *sound) {
+	return gau_create_handle_sound_ext(mgr, sound, NULL, NULL, NULL, NULL);
+}
 
-GaHandle *gau_create_handle_memory(GauManager *mgr, GaMemory *memory, GauAudioType format,
-                                    GaCbHandleFinish callback, void *context,
-                                    GauSampleSourceLoop **loop_src) {
+GaHandle *gau_create_handle_memory_ext(GauManager *mgr, GaMemory *memory, GauAudioType format,
+                                       GaHandleGroup *group,
+                                       GaCbHandleFinish callback, void *context,
+                                       GauSampleSourceLoop **loop_src) {
 	GaHandle *ret = NULL;
 	GaDataSource *data = gau_data_source_create_memory(memory);
 	if (!data) return NULL;
@@ -311,17 +316,21 @@ GaHandle *gau_create_handle_memory(GauManager *mgr, GaMemory *memory, GauAudioTy
 		src2 = gau_sample_source_loop_sample_source(*loop_src);
 	}
 	if (src2) {
-		ret = ga_handle_create(mgr->mixer, src2);
-		if(src == src2)
+		ret = ga_handle_create(mgr->mixer, src2, group);
+		if (src == src2)
 			ga_sample_source_release(src2);
 		ga_handle_set_callback(ret, callback, context);
 	}
 	return ret;
 }
+GaHandle *gau_create_handle_memory(GauManager *mgr, GaMemory *memory, GauAudioType format) {
+	return gau_create_handle_memory_ext(mgr, memory, format, NULL, NULL, NULL, NULL);
+}
 
-GaHandle *gau_create_handle_buffered_samples(GauManager *mgr, GaSampleSource *src,
-                                             GaCbHandleFinish callback, void *context,
-                                             GauSampleSourceLoop **loop_src) {
+GaHandle *gau_create_handle_buffered_samples_ext(GauManager *mgr, GaSampleSource *src,
+                                                 GaHandleGroup *group,
+                                                 GaCbHandleFinish callback, void *context,
+                                                 GauSampleSourceLoop **loop_src) {
 	if (!src) return NULL;
 
 	ga_sample_source_acquire(src);
@@ -339,32 +348,41 @@ GaHandle *gau_create_handle_buffered_samples(GauManager *mgr, GaSampleSource *sr
 		GaSampleSource *streamSampleSrc = gau_sample_source_create_stream(mgr->stream_mgr, src2, 131072);
 		if(src == src2) ga_sample_source_release(src2);
 		if (streamSampleSrc) {
-			ret = ga_handle_create(mgr->mixer, streamSampleSrc);
+			ret = ga_handle_create(mgr->mixer, streamSampleSrc, group);
 			ga_sample_source_release(streamSampleSrc);
 			ga_handle_set_callback(ret, callback, context);
 		}
 	}
 	return ret;
 }
+GaHandle *gau_create_handle_buffered_samples(GauManager *mgr, GaSampleSource *src) {
+	return gau_create_handle_buffered_samples_ext(mgr, src, NULL, NULL, NULL, NULL);
+}
 
-GaHandle *gau_create_handle_buffered_data(GauManager *mgr,
-                                           GaDataSource *data, GauAudioType format,
-                                           GaCbHandleFinish callback, void *context,
-                                           GauSampleSourceLoop **loop_src) {
+GaHandle *gau_create_handle_buffered_data_ext(GauManager *mgr, GaDataSource *data, GauAudioType format,
+                                              GaHandleGroup *group,
+                                              GaCbHandleFinish callback, void *context,
+                                              GauSampleSourceLoop **loop_src) {
 	if (!data) return NULL;
 	GaSampleSource *src = gau_sample_source_create(data, format);
-	GaHandle *ret = gau_create_handle_buffered_samples(mgr, src, callback, context, loop_src);
+	GaHandle *ret = gau_create_handle_buffered_samples_ext(mgr, src, group, callback, context, loop_src);
 	ga_sample_source_release(src);
 	return ret;
 }
+GaHandle *gau_create_handle_buffered_data(GauManager *mgr, GaDataSource *data, GauAudioType format) {
+	return gau_create_handle_buffered_data_ext(mgr, data, format, NULL, NULL, NULL, NULL);
+}
 
-GaHandle *gau_create_handle_buffered_file(GauManager *mgr,
-                                          const char *filename, GauAudioType format,
-                                          GaCbHandleFinish callback, void *context,
-                                          GauSampleSourceLoop** loop_src) {
+GaHandle *gau_create_handle_buffered_file_ext(GauManager *mgr, const char *filename, GauAudioType format,
+                                              GaHandleGroup *group,
+                                              GaCbHandleFinish callback, void *context,
+                                              GauSampleSourceLoop** loop_src) {
 	GaDataSource *data = gau_data_source_create_file(filename);
 	if (!data) return NULL;
-	GaHandle *ret = gau_create_handle_buffered_data(mgr, data, format, callback, context, loop_src);
+	GaHandle *ret = gau_create_handle_buffered_data_ext(mgr, data, format, group, callback, context, loop_src);
 	ga_data_source_release(data);
 	return ret;
+}
+GaHandle *gau_create_handle_buffered_file(GauManager *mgr, const char *filename) {
+	return gau_create_handle_buffered_file_ext(mgr, filename, GauAudioType_Autodetect, NULL, NULL, NULL, NULL);
 }

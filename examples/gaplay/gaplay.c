@@ -126,11 +126,11 @@ int main(int argc, char **argv) {
 			GaSampleSource *ss = ga_contrib_sample_source_create_mp3(ds);
 			check(ss, "Could not load file '%s'.", argv[1]);
 			ga_data_source_release(ds);
-			handle = gau_create_handle_buffered_samples(mgr, ss, NULL, NULL, NULL);
+			handle = gau_create_handle_buffered_samples(mgr, ss);
 			check(handle, "oops...");
 			ga_sample_source_release(ss);
 		} else {
-			handle = gau_create_handle_buffered_file(mgr, argv[1], GauAudioType_Autodetect, NULL, NULL, NULL);
+			handle = gau_create_handle_buffered_file(mgr, argv[1]);
 		}
 	}
 	check(handle, ":(");

@@ -461,7 +461,7 @@ static void init_jukeboxstate(JukeboxState *state) {
 }
 
 /* Handle Functions */
-GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *src) {
+GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *src, GaHandleGroup *hg) {
 	GaHandle *h = ga_alloc(sizeof(GaHandle));
 	if (!h) return NULL;
 	ga_sample_source_acquire(src);
@@ -480,8 +480,9 @@ GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *src) {
 		return NULL;
 	}
 
-	h->group = &mixer->handle_group;
-	ga_list_link(&mixer->handle_group.handles, &h->group_link, h);
+	if (!hg) hg = &mixer->handle_group;
+	h->group = hg;
+	ga_list_link(&h->group->handles, &h->group_link, h);
 
 	GaFormat fmt;
 	ga_handle_format(h, &fmt);

@@ -283,43 +283,51 @@ GaSound *gau_load_sound_file(const char *in_filename, GauAudioType in_format);
  *
  *  \ingroup createHelper
  */
-GaHandle *gau_create_handle_memory(GauManager *mgr, GaMemory *memory, GauAudioType format,
-                                    GaCbHandleFinish callback, void *context,
-                                    GauSampleSourceLoop **loop_src);
+GaHandle *gau_create_handle_memory_ext(GauManager *mgr, GaMemory *memory, GauAudioType format,
+                                       GaHandleGroup *group,
+                                       GaCbHandleFinish callback, void *context,
+                                       GauSampleSourceLoop **loop_src);
+GaHandle *gau_create_handle_memory(GauManager *mgr, GaMemory *memory, GauAudioType format);
 
 /** Create a handle to play a sound object.
  *
  *  \ingroup createHelper
  */
-GaHandle *gau_create_handle_sound(GauManager *mgr, GaSound *sound,
-                                   GaCbHandleFinish callback, void *context,
-                                   GauSampleSourceLoop **loop_src);
+GaHandle *gau_create_handle_sound_ext(GauManager *mgr, GaSound *sound,
+                                      GaHandleGroup *group,
+                                      GaCbHandleFinish callback, void *context,
+                                      GauSampleSourceLoop **loop_src);
+GaHandle *gau_create_handle_sound(GauManager *mgr, GaSound *sound);
 
 /** Create a handle to play a background-buffered stream from a sample source.
  *
  *  \ingroup createHelper
  */
-GaHandle *gau_create_handle_buffered_samples(GauManager *mgr, GaSampleSource *src,
-                                           GaCbHandleFinish callback, void *context,
-                                           GauSampleSourceLoop **loop_src);
+GaHandle *gau_create_handle_buffered_samples_ext(GauManager *mgr, GaSampleSource *src,
+                                                 GaHandleGroup *group,
+                                                 GaCbHandleFinish callback, void *context,
+                                                 GauSampleSourceLoop **loop_src);
+GaHandle *gau_create_handle_buffered_samples(GauManager *mgr, GaSampleSource *src);
 
 /** Create a handle to play a background-buffered stream from a data source.
  *
  *  \ingroup createHelper
  */
-GaHandle *gau_create_handle_buffered_data(GauManager *manager,
-                                          GaDataSource *data_src, GauAudioType format,
-                                          GaCbHandleFinish callback, void *context,
-                                          GauSampleSourceLoop **loop_src);
+GaHandle *gau_create_handle_buffered_data_ext(GauManager *manager, GaDataSource *data_src, GauAudioType format,
+                                              GaHandleGroup *group,
+                                              GaCbHandleFinish callback, void *context,
+                                              GauSampleSourceLoop **loop_src);
+GaHandle *gau_create_handle_buffered_data(GauManager *manager, GaDataSource *data_src, GauAudioType format);
 
 /** Create a handle to play a background-buffered stream from a file.
  *
  *  \ingroup createHelper
  */
-GaHandle *gau_create_handle_buffered_file(GauManager *manager,
-                                          const char *filename, GauAudioType format,
-                                          GaCbHandleFinish callback, void *context,
-                                          GauSampleSourceLoop **loop_src);
+GaHandle *gau_create_handle_buffered_file_ext(GauManager *manager, const char *filename, GauAudioType format,
+                                              GaHandleGroup *group,
+                                              GaCbHandleFinish callback, void *context,
+                                              GauSampleSourceLoop **loop_src);
+GaHandle *gau_create_handle_buffered_file(GauManager *manager, const char *filename);
 
 #ifdef __cplusplus
 } //extern "C"
