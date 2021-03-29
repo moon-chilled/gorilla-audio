@@ -56,9 +56,9 @@ GauManager *gau_manager_create(void);
 *  \ingroup GauManager
 */
 GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
-                                       GauThreadPolicy thread_policy,
-                                       ga_uint32 *num_buffers,
-                                       ga_uint32 *num_frames);
+                                      GauThreadPolicy thread_policy,
+                                      ga_uint32 *num_buffers,
+                                      ga_uint32 *num_frames);
 
 /** Updates an audio manager.
  *
@@ -89,6 +89,8 @@ GaDevice *gau_manager_device(GauManager *in_mgr);
  *  \ingroup GauManager
  */
 void gau_manager_destroy(GauManager *in_mgr);
+
+GaHandleGroup *gau_handle_group_create(GauManager *mgr);
 
 /*****************************/
 /**  Concrete Data Sources  **/

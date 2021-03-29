@@ -193,6 +193,10 @@ void gau_manager_destroy(GauManager *mgr) {
 	ga_free(mgr);
 }
 
+GaHandleGroup *gau_handle_group_create(GauManager *m) {
+	return ga_handle_group_create(gau_manager_mixer(m));
+}
+
 /* On-Finish Callbacks */
 void gau_on_finish_destroy(GaHandle *handle, void *ctx) {
 	ga_handle_destroy(handle);
