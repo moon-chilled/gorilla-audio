@@ -762,6 +762,17 @@ void ga_handle_group_destroy(GaHandleGroup *group) {
 	ga_free(group);
 }
 
+void ga_handle_group_play(GaHandleGroup *group) {
+	with_mutex(group->mutex) ga_list_iterate(GaHandle, h, &group->handles) {
+		ga_handle_play(h);
+	}
+}
+void ga_handle_group_stop(GaHandleGroup *group) {
+	with_mutex(group->mutex) ga_list_iterate(GaHandle, h, &group->handles) {
+		ga_handle_stop(h);
+	}
+}
+
 #if 0
 static void gaX_mixer_reset(GaMixer *m, const GaFormat *format, u32 num_frames) {
 	GaFormat fmt = *format;
@@ -829,9 +840,9 @@ u32 ga_mixer_num_frames(GaMixer *mixer) {
 }
 
 static void gaX_mixer_mix_buffer(GaMixer *mixer,
-                          void *src_buffer, s32 src_frames, GaFormat *src_fmt,
-                          s32 *dst, s32 dst_frames, GaFormat *dst_fmt,
-			  f32 gain, f32 last_gain, f32 pan, f32 last_pan, f32 pitch) {
+                                 void *src_buffer, s32 src_frames, GaFormat *src_fmt,
+                                 s32 *dst, s32 dst_frames, GaFormat *dst_fmt,
+                                 f32 gain, f32 last_gain, f32 pan, f32 last_pan, f32 pitch) {
 	u32 mixer_channels = dst_fmt->num_channels;
 	s32 src_channels = src_fmt->num_channels;
 	f32 sample_scale = 1 / pitch; //todo interpolate?

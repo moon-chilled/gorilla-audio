@@ -1113,6 +1113,12 @@ void ga_handle_group_destroy(GaHandleGroup *group);
  */
 void ga_handle_group_add(GaHandleGroup *group, GaHandle *handle);
 
+ga_result ga_handle_group_set_paramf(GaHandleGroup *group, GaHandleParam param, ga_float32 value);
+ga_result ga_handle_group_get_paramf(GaHandleGroup *group, GaHandleParam param, ga_float32 *value);
+
+void ga_handle_group_play(GaHandleGroup *group);
+void ga_handle_group_stop(GaHandleGroup *group);
+
 /** Destroys an audio playback handle.
  *
  *  \ingroup GaHandle
@@ -1209,8 +1215,8 @@ ga_result ga_handle_set_callback(GaHandle *handle,
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
 ga_result ga_handle_set_paramf(GaHandle *handle,
-                              GaHandleParam param,
-                              ga_float32 value);
+                               GaHandleParam param,
+                               ga_float32 value);
 
 /** Retrieves a floating-point parameter value from a handle.
  *
@@ -1225,8 +1231,8 @@ ga_result ga_handle_set_paramf(GaHandle *handle,
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
 ga_result ga_handle_get_paramf(GaHandle *handle,
-                              GaHandleParam param,
-                              ga_float32 *value);
+                               GaHandleParam param,
+                               ga_float32 *value);
 
 /** Sets an integer parameter value on a handle.
  *
@@ -1240,8 +1246,8 @@ ga_result ga_handle_get_paramf(GaHandle *handle,
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
 ga_result ga_handle_set_parami(GaHandle *handle,
-                              GaHandleParam param,
-                              ga_sint32 value);
+                               GaHandleParam param,
+                               ga_sint32 value);
 
 /** Retrieves an integer parameter value from a handle.
  *
