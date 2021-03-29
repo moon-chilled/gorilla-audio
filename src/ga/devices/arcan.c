@@ -62,7 +62,7 @@ static ga_result gaX_close(GaDevice *dev) {
 
 static ga_result gaX_check(GaDevice *dev, u32 *num_buffers) {
 	struct arcan_shmif_cont *c = dev->impl->acon;
-	*num_buffers (c->abufsize - c->abufused) / (dev->num_frames * ga_format_frame_size(&dev->format));
+	*num_buffers = (c->abufsize - c->abufused) / (dev->num_frames * ga_format_frame_size(&dev->format));
 	return GA_OK;
 }
 
@@ -75,7 +75,7 @@ static ga_result gaX_queue(GaDevice *dev, void *buf) {
 			atomic_u8 resize_pending;
 		} *debedebe = c->user;
 		if (debedebe && debedebe->magic == 0xfeedface) {
-			while (debedebe->resize_pending) ga_thread_yield(1); /* :| */
+			while (debedebe->resize_pending) ga_thread_yield(); /* :| */
 		}
 	}
 
