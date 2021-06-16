@@ -1,6 +1,6 @@
 CC ?= cc
 CFLAGS = -I../../include -Os -g
-LFLAGS = -Wl,-rpath=../../o/debug -L../../o/debug -lgorilla
+LFLAGS = -Wl,-rpath=$(shell pwd)/../../o/debug -L../../o/debug -lgorilla
 O := gaplay.o ../../contrib/mp3/mp3dec.o
 
 ifeq ($(ASAN),1)

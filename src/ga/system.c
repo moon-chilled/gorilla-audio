@@ -14,8 +14,8 @@
 #include <windows.h>
 
 static s32 priority_lut[] = {
-	[GaThreadPriority_Normal] = 0,
 	[GaThreadPriority_Low] = -1,
+	[GaThreadPriority_Normal] = 0,
 	[GaThreadPriority_High] = 1,
 	[GaThreadPriority_Highest] = 2,
 };
@@ -73,12 +73,13 @@ void ga_mutex_unlock(GaMutex mutex) {
 #include <pthread.h>
 #include <sched.h>
 #include <time.h>
+#include <errno.h>
 
 static s32 priority_lut[] = {
-	[GaThreadPriority_Normal] = 0,
 	[GaThreadPriority_Low] = 19,
+	[GaThreadPriority_Normal] = 0,
 	[GaThreadPriority_High] = -11,
-	[GaThreadPriority_Highest] = -20
+	[GaThreadPriority_Highest] = -20,
 };
 
 typedef struct { GaCbThreadFunc func; void *context; ga_result res; } ThreadWrapperContext;
@@ -114,17 +115,21 @@ GaThread *ga_thread_create(GaCbThreadFunc thread_func, void *context,
 		goto fail;
 	}
 
-#if defined(__APPLE__) || defined(__ANDROID__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__linux__)
-	if (pthread_attr_setschedparam(&thread_obj->attr, &(struct sched_param){.sched_priority=priority_lut[priority]}) != 0) {
-		ga_warn("unable to set scheduling priority %d", priority_lut[priority]);
-	}
-#endif
-
-	if (pthread_attr_setstacksize(&thread_obj->attr, stack_size) != 0) ga_warn("unable to set stack size %u", stack_size);
-	if (pthread_create(&thread_obj->thread, &thread_obj->attr, ga_thread_wrapper, thread_obj->ctx) != 0) {
-		ga_err("unable to create pthread");
+	int err;
+	if ((err=pthread_attr_setstacksize(&thread_obj->attr, stack_size))) ga_warn("unable to set stack size %u (%s)", stack_size, strerror(err));
+	if ((err=pthread_create(&thread_obj->thread, &thread_obj->attr, ga_thread_wrapper, thread_obj->ctx))) {
+		ga_err("unable to create pthread (%s)", strerror(err));
 		goto fail;
 	}
+
+#if defined(__APPLE__) || defined(__ANDROID__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__linux__)
+	struct sched_param scparam;
+	pthread_attr_getschedparam(&thread_obj->attr, &scparam);
+	scparam.sched_priority = priority_lut[priority];
+	if ((err=pthread_setschedparam(thread_obj->thread, SCHED_RR, &scparam))) {
+		ga_warn("unable to set scheduling priority %d (%s)", priority_lut[priority], strerror(err));
+	}
+#endif
 
 	return ret;
 fail:
@@ -176,10 +181,6 @@ void ga_mutex_unlock(GaMutex mutex) {
 _Static_assert(sizeof(ga_result) == sizeof(int), "aliasing is illegal!");
 
 #include <threads.h>
-
-struct GaThreadObj {
-	thrd_t t;
-};
 
 GaThread *ga_thread_create(GaCbThreadFunc thread_func, void *context,
                            GaThreadPriority priority, u32 stack_size) {

@@ -120,7 +120,12 @@ GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
 	ret->kill_threads = false;
 	if (ret->thread_policy == GauThreadPolicy_Multi) {
 		ret->mix_thread = ga_thread_create(mix_thread, ret, GaThreadPriority_Highest, 64 * 1024);
+		if (!ret->mix_thread) goto fail;
 		ret->stream_thread = ga_thread_create(stream_thread, ret, GaThreadPriority_Highest, 64 * 1024);
+		if (!ret->stream_thread) {
+			ga_thread_destroy(ret->mix_thread);
+			goto fail;
+		}
 	} else {
 		ret->mix_thread = NULL;
 		ret->stream_thread = NULL;
