@@ -125,13 +125,13 @@ void ga_trans_resample_point(GaResamplingState *rs, void *dst, usz dlen, void *s
 }
 linear_resampler(u8,  s16)
 linear_resampler(s16, s32)
-linear_resampler(s32, s32)
+linear_resampler(s32, s64)
 linear_resampler(f32, f32)
 #undef linear_resampler
 
 void ga_trans_resample_linear(GaResamplingState *rs, void *dst, usz dlen, void *src, usz slen) {
 	switch (rs->sample_fmt) {
-		case GaSampleFormat_U8: return ga_trans_resample_linear_u8(rs, dst, dlen, src, slen);
+		case GaSampleFormat_U8:  return ga_trans_resample_linear_u8(rs, dst, dlen, src, slen);
 		case GaSampleFormat_S16: return ga_trans_resample_linear_s16(rs, dst, dlen, src, slen);
 		case GaSampleFormat_S32: return ga_trans_resample_linear_s32(rs, dst, dlen, src, slen);
 		case GaSampleFormat_F32: return ga_trans_resample_linear_f32(rs, dst, dlen, src, slen);

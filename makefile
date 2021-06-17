@@ -91,7 +91,7 @@ CFLAGS += -Wall -Wextra -Wno-unused-parameter
 CFLAGS += -fwrapv -fno-delete-null-pointer-checks
 CFLAGS += -fPIC
 CFLAGS += -std=c99
-CFLAGS_debug += -Werror
+#CFLAGS_debug += -Werror
 CFLAGS_debug += -g
 CFLAGS_release += -O2
 LFLAGS += -lm

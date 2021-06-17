@@ -18,6 +18,27 @@
 # define GCC(...)
 #endif
 
+// 'pure': uneffectful functions which it wouldn't be meaningful to call and
+//         not use the return value of
+//         E.G. convert frames to seconds
+// 'semipure': nondestructively effectful functions
+//             E.G. check the size of this buffer (which is being actively
+//             emptied|filled by another thread)
+// 'canuse': effectful functions which will return an error if you misuse them,
+//           but not otherwise
+//           E.G. 'set volume'
+// 'mustuse': effectful functions which it is definitely wrong to ignore the
+//            return value of
+//            E.G. create a device
+// 'shoulduse': effectful functions which will _generally_ work if you do not
+//              check their return values, but ignoring them may mask issues or
+//              bugs
+//              E.G. 'write'
+#define ga_pure GCC(warn_unused_result)
+#define ga_semipure GCC(warn_unused_result)
+#define ga_canuse
+#define ga_mustuse GCC(warn_unused_result)
+#define ga_shoulduse GCC(warn_unused_result)
 
 #include "gorilla/ga_types.h"
 #include "gorilla/ga_system.h"
@@ -77,7 +98,7 @@ extern "C" {
  *
  *  For example: `assert(ga_version_compatible(GA_VERSION_MAJOR, GA_VERSION_MINOR, GA_VERSION_REV)`
  */
-ga_bool ga_version_check(ga_sint32 major, ga_sint32 minor, ga_sint32 rev);
+ga_pure ga_bool ga_version_check(ga_sint32 major, ga_sint32 minor, ga_sint32 rev);
 
 
 /************************/
@@ -165,7 +186,7 @@ typedef struct {
  *  \param format Format of the PCM data
  *  \return Sample size (in bytes) of the specified format
  */
-ga_uint32 ga_format_sample_size(GaSampleFormat format);
+ga_pure ga_uint32 ga_format_sample_size(GaSampleFormat format);
 
 /** Retrieves the frame size (in bytes) of a specified format.
  *
@@ -173,7 +194,7 @@ ga_uint32 ga_format_sample_size(GaSampleFormat format);
  *  \param format Format of the PCM data
  *  \return Frame size (in bytes) of the specified format
  */
-ga_uint32 ga_format_frame_size(const GaFormat *format);
+ga_pure ga_uint32 ga_format_frame_size(const GaFormat *format);
 
 /** Converts a discrete number of PCM frames into the duration (in seconds) it
  *  will take to play back.
@@ -183,7 +204,7 @@ ga_uint32 ga_format_frame_size(const GaFormat *format);
  *  \param frames Number of PCM frames
  *  \return Duration (in seconds) it will take to play back
  */
-ga_float32 ga_format_to_seconds(const GaFormat *format, ga_usize frames);
+ga_pure ga_float32 ga_format_to_seconds(const GaFormat *format, ga_usize frames);
 
 /** Converts a duration (in seconds) into the discrete number of PCM frames it
  *  will take to play for that long.
@@ -193,7 +214,7 @@ ga_float32 ga_format_to_seconds(const GaFormat *format, ga_usize frames);
  *  \param seconds Duration (in seconds)
  *  \return Number of PCM frames it will take to play back for the given time
  */
-ga_sint32 ga_format_to_frames(const GaFormat *format, ga_float32 seconds);
+ga_pure ga_sint32 ga_format_to_frames(const GaFormat *format, ga_float32 seconds);
 
 
 /************/
@@ -263,11 +284,11 @@ typedef struct GaDevice GaDevice;
  *           NULL for any of these arguments, a reasonable default will be
  *           chosen.
  */
-GaDevice *ga_device_open(GaDeviceType *type,
-                         GaDeviceClass *class,
-                         ga_uint32 *num_buffers,
-                         ga_uint32 *num_frames,
-                         GaFormat *format);
+ga_mustuse GaDevice *ga_device_open(GaDeviceType *type,
+                                 GaDeviceClass *class,
+                                 ga_uint32 *num_buffers,
+                                 ga_uint32 *num_frames,
+                                 GaFormat *format);
 
 /** Checks the number of free (unqueued) buffers.
  *
@@ -276,7 +297,7 @@ GaDevice *ga_device_open(GaDeviceType *type,
  *  \param num_buffers Pointer to an integer to be filled in with the number
  *                     of free (unqueued) buffers.
  */
-ga_result ga_device_check(GaDevice *device, ga_uint32 *num_buffers);
+ga_shoulduse ga_result ga_device_check(GaDevice *device, ga_uint32 *num_buffers);
 
 /** Get a pointer to a new buffer.
  *
@@ -287,7 +308,7 @@ ga_result ga_device_check(GaDevice *device, ga_uint32 *num_buffers);
  *  \warning If ga_device_check() doesn't indicate a buffer is available, the
  *           operation may fail.
  */
-void *ga_device_get_buffer(GaDevice *device);
+ga_mustuse void *ga_device_get_buffer(GaDevice *device);
 
 /** Adds a buffer to a device's presentation queue.
  *
@@ -308,11 +329,11 @@ void *ga_device_get_buffer(GaDevice *device);
  *  \warning Takes ownership of buffer; always call ga_device_get_buffer
  *           to get a new one.
  */
-ga_result ga_device_queue(GaDevice *device, void *buffer);
+ga_shoulduse ga_result ga_device_queue(GaDevice *device, void *buffer);
 
-ga_result ga_device_register_queuer(GaDevice *device, GaCbDeviceQueuer queuer, void *ctx);
+ga_shoulduse ga_result ga_device_register_queuer(GaDevice *device, GaCbDeviceQueuer queuer, void *ctx);
 
-GaDeviceClass ga_device_class(GaDevice *device);
+ga_pure GaDeviceClass ga_device_class(GaDevice *device);
 
 /** Closes an open audio device.
  *
@@ -321,7 +342,7 @@ GaDeviceClass ga_device_class(GaDevice *device);
  *  \return GA_OK iff the device was closed successfully.
  *  \warning The client must never use a device after calling ga_device_close().
  */
-ga_result ga_device_close(GaDevice *device);
+ga_shoulduse ga_result ga_device_close(GaDevice *device);
 
 /** Gets the native audio format of a device
  *
@@ -430,7 +451,7 @@ typedef struct {
  *
  * \return The created data source, or NULL if creation was unsuccessful
  */
-GaDataSource *ga_data_source_create(const GaDataSourceCreationMinutiae *minutiae);
+ga_mustuse GaDataSource *ga_data_source_create(const GaDataSourceCreationMinutiae *minutiae);
 
 /** Reads binary data from the data source.
  *
@@ -442,7 +463,7 @@ GaDataSource *ga_data_source_create(const GaDataSourceCreationMinutiae *minutiae
  *  \param count Number of elements to read.
  *  \return Total number of bytes read into the destination buffer.
  */
-ga_usize ga_data_source_read(GaDataSource *dataSrc, void *dst, ga_usize size, ga_usize count);
+ga_shoulduse ga_usize ga_data_source_read(GaDataSource *dataSrc, void *dst, ga_usize size, ga_usize count);
 
 /** Seek to an offset within a data source.
  *
@@ -456,7 +477,7 @@ ga_usize ga_data_source_read(GaDataSource *dataSrc, void *dst, ga_usize size, ga
  *          GA_ERR_SYS_IO if the system refuses to serve our seek for some reason.
  *  \warning Only data sources with GaDataAccessFlag_Seekable can have ga_data_source_seek() called on them.
 */
-ga_result ga_data_source_seek(GaDataSource *dataSrc, ga_ssize offset, GaSeekOrigin whence);
+ga_shoulduse ga_result ga_data_source_seek(GaDataSource *dataSrc, ga_ssize offset, GaSeekOrigin whence);
 
 /** Tells the current read position of a data source.
  *
@@ -464,14 +485,14 @@ ga_result ga_data_source_seek(GaDataSource *dataSrc, ga_ssize offset, GaSeekOrig
  *  \param dataSrc Data source to tell the read position of.
  *  \return The current data source read position.
  */
-ga_usize ga_data_source_tell(GaDataSource *dataSrc);
+ga_pure ga_usize ga_data_source_tell(GaDataSource *dataSrc);
 
 /** Tells whether the end of the data source has been reached.
  *
  *  \ingroup GaDataSource
  *  \param dataSrc Data source to tell the read position of.
  */
-ga_bool ga_data_source_eof(GaDataSource *dataSrc);
+ga_pure ga_bool ga_data_source_eof(GaDataSource *dataSrc);
 
 /** Returns the bitfield of flags set for a data source (see \ref globDefs).
  *
@@ -479,7 +500,7 @@ ga_bool ga_data_source_eof(GaDataSource *dataSrc);
  *  \param dataSrc Data source whose flags should be retrieved.
  *  \return The bitfield of flags set for the data source.
  */
-GaDataAccessFlags ga_data_source_flags(GaDataSource *dataSrc);
+ga_pure GaDataAccessFlags ga_data_source_flags(GaDataSource *dataSrc);
 
 /** Acquires a reference for a data source.
  *
@@ -570,7 +591,7 @@ typedef struct {
  *
  * \return The created sample source, or NULL if creation was unsuccessful
  */
-GaSampleSource *ga_sample_source_create(const GaSampleSourceCreationMinutiae *minutiae);
+ga_mustuse GaSampleSource *ga_sample_source_create(const GaSampleSourceCreationMinutiae *minutiae);
 
 /** Reads samples from a samples source.
  *
@@ -583,8 +604,8 @@ GaSampleSource *ga_sample_source_create(const GaSampleSourceCreationMinutiae *mi
  *  \param seek_ctx User-specified context for the on-seek function.
  *  \return Total number of bytes read into the destination buffer.
  */
-ga_usize ga_sample_source_read(GaSampleSource *sample_src, void *dst, ga_usize num_frames,
-                               GaCbOnSeek onseek, void *seek_ctx);
+ga_shoulduse ga_usize ga_sample_source_read(GaSampleSource *sample_src, void *dst, ga_usize num_frames,
+                                            GaCbOnSeek onseek, void *seek_ctx);
 
 /** Checks whether a sample source has reached the end of the stream.
  *
@@ -592,13 +613,13 @@ ga_usize ga_sample_source_read(GaSampleSource *sample_src, void *dst, ga_usize n
  *  \param sample_src Sample source to check.
  *  \return Whether the sample source has reached the end of the stream.
  */
-ga_bool ga_sample_source_end(GaSampleSource *sample_src);
+ga_pure ga_bool ga_sample_source_end(GaSampleSource *sample_src);
 
 /** Checks whether a sample source has at least a given number of available
  *  frames.
  *
  *  If the sample source has fewer than num_frames frames left before it
- *  finishes, this function will returns GA_TRUE regardless of the number of
+ *  finishes, this function will returns true regardless of the number of
  *  frames.
  *
  *  \ingroup GaSampleSource
@@ -608,7 +629,7 @@ ga_bool ga_sample_source_end(GaSampleSource *sample_src);
  *  \return Whether the sample source has at least a given number of available
  *          frames.
  */
-ga_bool ga_sample_source_ready(GaSampleSource *sample_src, ga_usize num_frames);
+ga_semipure ga_bool ga_sample_source_ready(GaSampleSource *sample_src, ga_usize num_frames);
 
 /** Seek to an offset (in frames) within a sample source.
  *
@@ -619,7 +640,7 @@ ga_bool ga_sample_source_ready(GaSampleSource *sample_src, ga_usize num_frames);
  *  \warning Only sample sources with GaDataAccessFlag_Seekable can have ga_sample_source_seek()
  *           called on them.
  */
-ga_result ga_sample_source_seek(GaSampleSource *sample_src, ga_usize framme_offset);
+ga_shoulduse ga_result ga_sample_source_seek(GaSampleSource *sample_src, ga_usize framme_offset);
 
 /** Tells the current frame number of a sample source.
  *
@@ -630,7 +651,7 @@ ga_result ga_sample_source_seek(GaSampleSource *sample_src, ga_usize framme_offs
  *         source will be stored here.
  *  \return GA_OK iff the telling was successful.
  */
-ga_result ga_sample_source_tell(GaSampleSource *sample_src, ga_usize *frames, ga_usize *total_frames);
+ga_pure ga_result ga_sample_source_tell(GaSampleSource *sample_src, ga_usize *frames, ga_usize *total_frames);
 
 /** Returns the bitfield of flags set for a sample source (see \ref globDefs).
  *
@@ -638,7 +659,7 @@ ga_result ga_sample_source_tell(GaSampleSource *sample_src, ga_usize *frames, ga
  *  \param sample_src Sample source whose flags should be retrieved.
  *  \return The bitfield of flags set for the sample source.
  */
-GaDataAccessFlags ga_sample_source_flags(GaSampleSource *sample_src);
+ga_pure GaDataAccessFlags ga_sample_source_flags(GaSampleSource *sample_src);
 
 /** Retrieves the PCM sample format for a sample source.
  *
@@ -710,7 +731,7 @@ typedef struct GaMemory GaMemory;
  *          provided data buffer.  If the buffer is null, then the contents
  *          will be uninitialized instead.
  */
-GaMemory *ga_memory_create(void *data, ga_usize size);
+ga_mustuse GaMemory *ga_memory_create(void *data, ga_usize size);
 
 /** Create a shared memory object from the full contents of a data source.
  *
@@ -723,7 +744,7 @@ GaMemory *ga_memory_create(void *data, ga_usize size);
  *  \return Newly-allocated memory object, containing an internal copy of the
  *          full contents of the provided data source.
  */
-GaMemory *ga_memory_create_data_source(GaDataSource *dataSource);
+ga_mustuse GaMemory *ga_memory_create_data_source(GaDataSource *dataSource);
 
 /** Retrieve the size (in bytes) of a memory object's stored data.
  *
@@ -731,7 +752,7 @@ GaMemory *ga_memory_create_data_source(GaDataSource *dataSource);
  *  \param mem Memory object whose stored data size should be retrieved.
  *  \return Size (in bytes) of the memory object's stored data.
  */
-ga_usize ga_memory_size(GaMemory *mem);
+ga_pure ga_usize ga_memory_size(GaMemory *mem);
 
 /** Retrieve a pointer to a memory object's stored data.
  *
@@ -740,7 +761,7 @@ ga_usize ga_memory_size(GaMemory *mem);
  *  \return Pointer to the memory object's stored data.
  *  \warning Never manually free the pointer returned by this function.
  */
-void *ga_memory_data(GaMemory *mem);
+ga_pure void *ga_memory_data(GaMemory *mem);
 
 /** Acquires a reference for a memory object.
  *
@@ -798,7 +819,7 @@ typedef struct GaSound GaSound;
  *  \param format Format of the raw PCM data contained by memory.
  *  \return Newly-allocated sound object.
  */
-GaSound *ga_sound_create(GaMemory *memory, GaFormat *format);
+ga_mustuse GaSound *ga_sound_create(GaMemory *memory, GaFormat *format);
 
 /** Create a shared memory object from the full contents of a sample source.
  *
@@ -811,7 +832,7 @@ GaSound *ga_sound_create(GaMemory *memory, GaFormat *format);
  *  \return Newly-allocated memory object, containing an internal copy of the
  *          full contents of the provided data source.
  */
-GaSound *ga_sound_create_sample_source(GaSampleSource *sample_src);
+ga_mustuse GaSound *ga_sound_create_sample_source(GaSampleSource *sample_src);
 
 /** Retrieve a pointer to a sound object's stored data.
  *
@@ -820,7 +841,7 @@ GaSound *ga_sound_create_sample_source(GaSampleSource *sample_src);
  *  \return Pointer to the sound object's stored data.
  *  \warning Never manually free the pointer returned by this function.
  */
-const void *ga_sound_data(GaSound *sound);
+ga_pure const void *ga_sound_data(GaSound *sound);
 
 /** Retrieve the size (in bytes) of a sound object's stored data.
  *
@@ -828,7 +849,7 @@ const void *ga_sound_data(GaSound *sound);
  *  \param sound Sound object whose stored data size should be retrieved.
  *  \return Size (in bytes) of the sound object's stored data.
  */
-ga_usize ga_sound_size(GaSound *sound);
+ga_pure ga_usize ga_sound_size(GaSound *sound);
 
 /** Retrieve the number of frames in a sound object's stored PCM data.
  *
@@ -836,7 +857,7 @@ ga_usize ga_sound_size(GaSound *sound);
  *  \param sound Sound object whose number of frames should be retrieved.
  *  \return Number of frames in the sound object's stored PCM data.
  */
-ga_usize ga_sound_num_frames(GaSound *sound);
+ga_pure ga_usize ga_sound_num_frames(GaSound *sound);
 
 /** Retrieves the PCM sample format for a sound.
  *
@@ -902,7 +923,7 @@ typedef struct GaMixer GaMixer;
  *  \warning The number of frames must be a power-of-two.
  *  \todo Remove the requirement that the buffer be a power-of-two in size.
  */
-GaMixer *ga_mixer_create(const GaFormat *format, ga_uint32 num_frames);
+ga_mustuse GaMixer *ga_mixer_create(const GaFormat *format, ga_uint32 num_frames);
 
 /** Suspends the mixer, preventing it from consuming any of its inputs.  If you
  ** attempt to mix from it in this state, it will produce all zeroes
@@ -910,16 +931,18 @@ GaMixer *ga_mixer_create(const GaFormat *format, ga_uint32 num_frames);
  *  \ingroup GaMixer
  *  \param mixer The mixer to be suspended
  *  \return GA_OK iff the mixer was not already suspended
+ *          GA_ERR_MIS_UNSUP else
  */
-ga_result ga_mixer_suspend(GaMixer *mixer);
+ga_canuse ga_result ga_mixer_suspend(GaMixer *mixer);
 
 /** Unsuspends the mixer, allowing it to consume all of its inputs again
  *
  *  \ingroup GaMixer
  *  \param mixer The mixer to be unsuspended
  *  \return GA_OK iff the mixer was already suspended
+ *          GA_ERR_MIS_UNSUP else
  */
-ga_result ga_mixer_unsuspend(GaMixer *mixer);
+ga_canuse ga_result ga_mixer_unsuspend(GaMixer *mixer);
 
 /** Retrieves the PCM format for a mixer object.
  *
@@ -935,7 +958,7 @@ void ga_mixer_format(GaMixer *mixer, GaFormat *fmt);
  *  \param mixer Mixer object whose number of frames should be retrieved.
  *  \return Number of frames in a mixer object's mix buffer.
  */
-ga_uint32 ga_mixer_num_frames(GaMixer *mixer);
+ga_pure ga_uint32 ga_mixer_num_frames(GaMixer *mixer);
 
 /** Mixes samples from all ready handles into a single output buffer.
  *
@@ -947,9 +970,8 @@ ga_uint32 ga_mixer_num_frames(GaMixer *mixer);
  *  \param buffer An empty buffer into which the mixed samples should be
  *                copied. The buffer must be large enough to hold the
  *                mixer's number of samples in the mixer's sample format.
- *  \return Whether the mixer successfully mixed the data.
  */
-ga_result ga_mixer_mix(GaMixer *mixer, void *buffer);
+void ga_mixer_mix(GaMixer *mixer, void *buffer);
 
 /** Dispatches all pending finish callbacks.
  *
@@ -962,17 +984,15 @@ ga_result ga_mixer_mix(GaMixer *mixer, void *buffer);
  *  \return Whether the mixer successfully dispatched the callbacks. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-ga_result ga_mixer_dispatch(GaMixer *mixer);
+void ga_mixer_dispatch(GaMixer *mixer);
 
 /** Destroys a mixer object.
  *
  *  \ingroup GaMixer
  *  \param mixer Mixer object to destroy.
- *  \return Whether the mixer was successfully destroyed. GA_SUCCESS if the
- *          operation was successful, GA_ERROR_GENERIC if not.
  *  \warning The client must never use a mixer after calling ga_mixer_destroy().
  */
-ga_result ga_mixer_destroy(GaMixer *mixer);
+void ga_mixer_destroy(GaMixer *mixer);
 
 
 /************/
@@ -1057,7 +1077,7 @@ typedef void (*GaCbHandleFinish)(GaHandle *finished_handle, void *context);
  *  \param handle_group The handle group to place the newly created handle in, or null for the mixer's default.
  *  \todo Provide a way to query handles for flags.
  */
-GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *sample_src, GaHandleGroup *handle_group);
+ga_mustuse GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *sample_src, GaHandleGroup *handle_group);
 
 
 /******************/
@@ -1081,7 +1101,7 @@ GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *sample_src, GaHandleG
  *  \ingroup external
  *  \defgroup GaHandleGroup HandleGroup
  */
-GaHandleGroup *ga_handle_group_create(GaMixer *mixer);
+ga_mustuse GaHandleGroup *ga_handle_group_create(GaMixer *mixer);
 
 /** Disowns all handles associated with a handle group.
  *
@@ -1113,8 +1133,8 @@ void ga_handle_group_destroy(GaHandleGroup *group);
  */
 void ga_handle_group_add(GaHandleGroup *group, GaHandle *handle);
 
-ga_result ga_handle_group_set_paramf(GaHandleGroup *group, GaHandleParam param, ga_float32 value);
-ga_result ga_handle_group_get_paramf(GaHandleGroup *group, GaHandleParam param, ga_float32 *value);
+ga_canuse ga_result ga_handle_group_set_paramf(GaHandleGroup *group, GaHandleParam param, ga_float32 value);
+ga_canuse ga_result ga_handle_group_get_paramf(GaHandleGroup *group, GaHandleParam param, ga_float32 *value);
 
 void ga_handle_group_play(GaHandleGroup *group);
 void ga_handle_group_stop(GaHandleGroup *group);
@@ -1123,11 +1143,9 @@ void ga_handle_group_stop(GaHandleGroup *group);
  *
  *  \ingroup GaHandle
  *  \param handle Handle object to destroy.
- *  \return Whether the mixer was successfully destroyed. GA_SUCCESS if the
- *          operation was successful, GA_ERROR_GENERIC if not.
  *  \warning The client must never use a handle after calling ga_handle_destroy().
  */
-ga_result ga_handle_destroy(GaHandle *handle);
+void ga_handle_destroy(GaHandle *handle);
 
 /** Starts playback on an audio playback handle.
  *
@@ -1135,12 +1153,11 @@ ga_result ga_handle_destroy(GaHandle *handle);
  *
  *  \ingroup GaHandle
  *  \param handle Handle object to play.
- *  \return Whether the handle played successfully. GA_SUCCESS if the
- *          operation was successful, GA_ERROR_GENERIC if not.
+ *  \return GA_OK if the handle could be played; GA_ERR_MIS_UNSUP else
  *  \warning You cannot play a handle that has finished playing. When in doubt, check
  *           ga_handle_finished() to verify this state prior to calling play.
  */
-ga_result ga_handle_play(GaHandle *handle);
+ga_canuse ga_result ga_handle_play(GaHandle *handle);
 
 /** Stops playback of a playing audio playback handle.
  *
@@ -1148,12 +1165,11 @@ ga_result ga_handle_play(GaHandle *handle);
  *
  *  \ingroup GaHandle
  *  \param handle Handle object to stop.
- *  \return Whether the handle was stopped successfully. GA_SUCCESS if the
- *          operation was successful, GA_ERROR_GENERIC if not.
+ *  \return GA_OK if the handle could be played; GA_ERR_MIS_UNSUP else
  *  \warning You cannot stop a handle that has finished playing. When in doubt, check
  *           ga_handle_finished() to verify this state prior to calling play.
  */
-ga_result ga_handle_stop(GaHandle *handle);
+ga_canuse ga_result ga_handle_stop(GaHandle *handle);
 
 /** Checks whether a handle is currently playing.
  *
@@ -1161,7 +1177,7 @@ ga_result ga_handle_stop(GaHandle *handle);
  *  \param handle Handle object to check.
  *  \return Whether the handle is currently playing.
  */
-ga_bool ga_handle_playing(GaHandle *handle);
+ga_canuse ga_bool ga_handle_playing(GaHandle *handle);
 
 /** Checks whether a handle is currently stopped.
  *
@@ -1169,7 +1185,7 @@ ga_bool ga_handle_playing(GaHandle *handle);
  *  \param handle Handle object to check.
  *  \return Whether the handle is currently stopped.
  */
-ga_bool ga_handle_stopped(GaHandle *handle);
+ga_semipure ga_bool ga_handle_stopped(GaHandle *handle);
 
 /** Checks whether a handle is currently finished.
  *
@@ -1177,7 +1193,7 @@ ga_bool ga_handle_stopped(GaHandle *handle);
  *  \param handle Handle object to check.
  *  \return Whether the handle is currently finished.
  */
-ga_bool ga_handle_finished(GaHandle *handle);
+ga_semipure ga_bool ga_handle_finished(GaHandle *handle);
 
 /** Checks whether a handle is currently destroyed.
  *
@@ -1185,7 +1201,7 @@ ga_bool ga_handle_finished(GaHandle *handle);
  *  \param handle Handle object to check.
  *  \return Whether the handle is currently destroyed.
  */
-ga_bool ga_handle_destroyed(GaHandle *handle);
+ga_semipure ga_bool ga_handle_destroyed(GaHandle *handle);
 
 /** Sets the handle-finished-playback callback for a handle.
  *
@@ -1199,9 +1215,9 @@ ga_bool ga_handle_destroyed(GaHandle *handle);
  *  \return Whether the handle's callback was set successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-ga_result ga_handle_set_callback(GaHandle *handle,
-                                GaCbHandleFinish callback,
-                                void *context);
+void ga_handle_set_callback(GaHandle *handle,
+                            GaCbHandleFinish callback,
+                            void *context);
 
 /** Sets a floating-point parameter value on a handle.
  *
@@ -1211,12 +1227,13 @@ ga_result ga_handle_set_callback(GaHandle *handle,
  *  \param param Parameter to set (must be a floating-point value, see
  *                  \ref handleParams).
  *  \param value Value to set.
- *  \return Whether the parameter was set successfully. GA_SUCCESS if the
- *          operation was successful, GA_ERROR_GENERIC if not.
+ *  \return GA_ERR_MIS_PARAM if 'param' was invalid
+ *          GA_ERR_MIS_RANGE if the given value was not in range
+ *          GA_OK else
  */
-ga_result ga_handle_set_paramf(GaHandle *handle,
-                               GaHandleParam param,
-                               ga_float32 value);
+ga_canuse ga_result ga_handle_set_paramf(GaHandle *handle,
+                                      GaHandleParam param,
+                                      ga_float32 value);
 
 /** Retrieves a floating-point parameter value from a handle.
  *
@@ -1230,9 +1247,9 @@ ga_result ga_handle_set_paramf(GaHandle *handle,
  *  \return Whether the parameter was retrieved successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-ga_result ga_handle_get_paramf(GaHandle *handle,
-                               GaHandleParam param,
-                               ga_float32 *value);
+ga_canuse ga_result ga_handle_get_paramf(GaHandle *handle,
+                                      GaHandleParam param,
+                                      ga_float32 *value);
 
 /** Sets an integer parameter value on a handle.
  *
@@ -1245,9 +1262,9 @@ ga_result ga_handle_get_paramf(GaHandle *handle,
  *  \return Whether the parameter was set successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-ga_result ga_handle_set_parami(GaHandle *handle,
-                               GaHandleParam param,
-                               ga_sint32 value);
+ga_canuse ga_result ga_handle_set_parami(GaHandle *handle,
+                                      GaHandleParam param,
+                                      ga_sint32 value);
 
 /** Retrieves an integer parameter value from a handle.
  *
@@ -1261,20 +1278,20 @@ ga_result ga_handle_set_parami(GaHandle *handle,
  *  \return Whether the parameter was retrieved successfully. GA_SUCCESS if the
  *          operation was successful, GA_ERROR_GENERIC if not.
  */
-ga_result ga_handle_get_parami(GaHandle *handle,
-                               GaHandleParam param,
-                               ga_sint32 *value);
+ga_canuse ga_result ga_handle_get_parami(GaHandle *handle,
+                                      GaHandleParam param,
+                                      ga_sint32 *value);
 
 /** Seek to an offset (in frames) within a handle.
  *
  *  \ingroup GaHandle
  *  \param handle Handle to seek within.
  *  \param frame_offset Offset (in frames) from the start of the handle.
- *  \return If seek succeeds, returns 0, otherwise returns -1 (invalid seek request).
+ *  \return See \ref ga_sample_source_seek.
  *  \warning Only handles containing sample sources with GaDataAccessFlag_Seekable can
  *           have ga_handle_seek() called on them.
  */
-ga_result ga_handle_seek(GaHandle *handle, ga_usize frame_offset);
+ga_shoulduse ga_result ga_handle_seek(GaHandle *handle, ga_usize frame_offset);
 
 /** Tells the current playback frame number or total frames of a handle.
  *
@@ -1284,7 +1301,7 @@ ga_result ga_handle_seek(GaHandle *handle, ga_usize frame_offset);
  *  \param out The result is stored here if the parameters were valid.
  *  \return GA_OK iff the parameters were valid.
  */
-ga_result ga_handle_tell(GaHandle *handle, GaTellParam param, ga_usize *out);
+ga_semipure ga_result ga_handle_tell(GaHandle *handle, GaTellParam param, ga_usize *out);
 
 /** Checks whether a handle has at least a given number of available frames.
  *
@@ -1297,7 +1314,7 @@ ga_result ga_handle_tell(GaHandle *handle, GaTellParam param, ga_usize *out);
  *                       to be considered ready.
  *  \return Whether the handle has at least a given number of available frames.
  */
-ga_bool ga_handle_ready(GaHandle *handle, ga_usize num_frames);
+ga_semipure ga_bool ga_handle_ready(GaHandle *handle, ga_usize num_frames);
 
 /** Retrieves the PCM sample format for a handle.
  *
@@ -1334,7 +1351,7 @@ typedef struct GaStreamManager GaStreamManager;
  *  \ingroup GaStreamManager
  *  \return Newly-created stream manager.
  */
-GaStreamManager *ga_stream_manager_create(void);
+ga_mustuse GaStreamManager *ga_stream_manager_create(void);
 
 /** Fills all buffers managed by a buffered-stream manager.
  *
@@ -1384,7 +1401,7 @@ typedef struct GaBufferedStream GaBufferedStream;
  *  \todo Change buffer_size to buffer_samples for a more fault-resistant
  *        interface.
  */
-GaBufferedStream *ga_stream_create(GaStreamManager *mgr, GaSampleSource *src, ga_usize buffer_size);
+ga_mustuse GaBufferedStream *ga_stream_create(GaStreamManager *mgr, GaSampleSource *src, ga_usize buffer_size);
 
 /** Buffers samples from the sample source into the internal buffer (producer).
  *
@@ -1406,7 +1423,7 @@ void ga_stream_produce(GaBufferedStream *stream); /* Can be called from a second
  *  \param num_frames Number of frames to read.
  *  \return Total number of bytes read into the destination buffer.
  */
-ga_usize ga_stream_read(GaBufferedStream *stream, void *dst, ga_usize num_frames);
+ga_shoulduse ga_usize ga_stream_read(GaBufferedStream *stream, void *dst, ga_usize num_frames);
 
 /** Checks whether a buffered stream has reached the end of the stream.
  *
@@ -1414,7 +1431,7 @@ ga_usize ga_stream_read(GaBufferedStream *stream, void *dst, ga_usize num_frames
  *  \param stream Buffered stream to check.
  *  \return Whether the buffered stream has reached the end of the stream.
  */
-ga_bool ga_stream_end(GaBufferedStream *stream);
+ga_semipure ga_bool ga_stream_end(GaBufferedStream *stream);
 
 /** Checks whether a buffered stream has at least a given number of available
  *  frames.
@@ -1430,7 +1447,7 @@ ga_bool ga_stream_end(GaBufferedStream *stream);
  *  \return Whether the buffered stream has at least a given number of available
  *          frames.
  */
-ga_bool ga_stream_ready(GaBufferedStream *stream, ga_usize num_frames);
+ga_semipure ga_bool ga_stream_ready(GaBufferedStream *stream, ga_usize num_frames);
 
 /** Seek to an offset (in frames) within a buffered stream.
  *
@@ -1442,7 +1459,7 @@ ga_bool ga_stream_ready(GaBufferedStream *stream, ga_usize num_frames);
  *  \warning Only buffered streams with GaDataAccessFlag_Seekable can have ga_stream_seek()
  *           called on them.
  */
-ga_result ga_stream_seek(GaBufferedStream *stream, ga_usize frame_offset);
+ga_shoulduse ga_result ga_stream_seek(GaBufferedStream *stream, ga_usize frame_offset);
 
 /** Tells the current frame number of a buffered stream.
  *
@@ -1454,7 +1471,7 @@ ga_result ga_stream_seek(GaBufferedStream *stream, ga_usize frame_offset);
  *         source will be stored here.
  *  \return GA_OK iff the telling was successful
  */
-ga_result ga_stream_tell(GaBufferedStream *stream, ga_usize *frames, ga_usize *total_frames);
+ga_shoulduse ga_result ga_stream_tell(GaBufferedStream *stream, ga_usize *frames, ga_usize *total_frames);
 
 /** Returns the bitfield of flags set for a buffered stream (see \ref globDefs).
  *
@@ -1462,7 +1479,7 @@ ga_result ga_stream_tell(GaBufferedStream *stream, ga_usize *frames, ga_usize *t
  *  \param stream Buffered stream whose flags should be retrieved.
  *  \return The bitfield of flags set for the buffered stream.
  */
-GaDataAccessFlags ga_stream_flags(GaBufferedStream *stream);
+ga_pure GaDataAccessFlags ga_stream_flags(GaBufferedStream *stream);
 
 /** Acquire a reference for a buffered stream.
  *
@@ -1487,49 +1504,49 @@ void ga_stream_release(GaBufferedStream *stream);
 
 typedef struct GaResamplingState GaResamplingState;
 
-GaResamplingState *ga_trans_resample_setup(ga_uint32 drate, GaFormat fmt);
+ga_mustuse GaResamplingState *ga_trans_resample_setup(ga_uint32 drate, GaFormat fmt);
 void ga_trans_resample_teardown(GaResamplingState *rs);
 // lengths are in frames, not bytes or samples
 void ga_trans_resample_point(GaResamplingState *rs, void *dst, ga_usize dlen, void *src, ga_usize slen);
 void ga_trans_resample_linear(GaResamplingState *rs, void *dst, ga_usize dlen, void *src, ga_usize slen);
-ga_usize ga_trans_resample_howmany(GaResamplingState *rs, ga_usize out);
-static inline ga_uint8 ga_trans_u8_of_s16(ga_sint16 s) {
+ga_pure ga_usize ga_trans_resample_howmany(GaResamplingState *rs, ga_usize out);
+static inline ga_pure ga_uint8 ga_trans_u8_of_s16(ga_sint16 s) {
 	return ((ga_sint32)s + 32768) >> 8;
 }
-static inline ga_uint8 ga_trans_u8_of_s32(ga_sint32 s) {
+static inline ga_pure ga_uint8 ga_trans_u8_of_s32(ga_sint32 s) {
 	return ((ga_sint32)s + 2147483648) >> 8;
 }
-static inline ga_uint8 ga_trans_u8_of_f32(ga_float32 f) {
+static inline ga_pure ga_uint8 ga_trans_u8_of_f32(ga_float32 f) {
 	return 128 + f * (127.f + (f < 0));
 }
 
-static inline ga_sint16 ga_trans_s16_of_u8(ga_uint8 u) {
+static inline ga_pure ga_sint16 ga_trans_s16_of_u8(ga_uint8 u) {
 	return ((ga_sint32)u - 128) << 8;
 }
-static inline ga_sint16 ga_trans_s16_of_s32(ga_sint32 s) {
+static inline ga_pure ga_sint16 ga_trans_s16_of_s32(ga_sint32 s) {
 	return s >> 16;
 }
-static inline ga_sint16 ga_trans_s16_of_f32(ga_float32 f) {
+static inline ga_pure ga_sint16 ga_trans_s16_of_f32(ga_float32 f) {
 	return f * (32767.f + (f < 0));
 }
 
-static inline ga_sint32 ga_trans_s32_of_u8(ga_uint8 u) {
+static inline ga_pure ga_sint32 ga_trans_s32_of_u8(ga_uint8 u) {
 	return ((ga_sint32)u - 128) << 24;
 }
-static inline ga_sint32 ga_trans_s32_of_s16(ga_sint16 s) {
+static inline ga_pure ga_sint32 ga_trans_s32_of_s16(ga_sint16 s) {
 	return s << 16;
 }
-static inline ga_sint32 ga_trans_s32_of_f32(ga_float32 f) {
+static inline ga_pure ga_sint32 ga_trans_s32_of_f32(ga_float32 f) {
 	return f * (2147483647.f + (f < 0));
 }
 
-static inline ga_float32 ga_trans_f32_of_u8(ga_uint8 u) {
+static inline ga_pure ga_float32 ga_trans_f32_of_u8(ga_uint8 u) {
 	return (u - 128) / (127.f + (u <= 128));
 }
-static inline ga_float32 ga_trans_f32_of_s16(ga_sint16 s) {
+static inline ga_pure ga_float32 ga_trans_f32_of_s16(ga_sint16 s) {
 	return s / (32767.f + (s < 0));
 }
-static inline ga_float32 ga_trans_f32_of_s32(ga_sint32 s) {
+static inline ga_pure ga_float32 ga_trans_f32_of_s32(ga_sint32 s) {
 	return s / (2147483647.f + (s < 0));
 }
 
@@ -1543,7 +1560,7 @@ typedef enum {
 typedef void (*GaCbLogger)(void *ctx, GaLogCategory category, const char *file, const char *function, int line, const char *message);
 
 void ga_register_logger(GaCbLogger logger, void *ctx);
-ga_result ga_open_logfile(const char *fname);
+ga_shoulduse ga_result ga_open_logfile(const char *fname);
 
 void ga_do_log(GaLogCategory category, const char *file, const char *function, int line, const char *fmt, ...) GCC(format(printf, 5, 6));
 #define ga_log(category, ...) ga_do_log(category, __FILE__, __func__, __LINE__, __VA_ARGS__)
@@ -1556,6 +1573,11 @@ void ga_do_log(GaLogCategory category, const char *file, const char *function, i
 } //extern "C"
 #endif
 
+#undef ga_pure
+#undef ga_semipure
+#undef ga_canuse
+#undef ga_mustuse
+#undef ga_shoulduse
 #undef GCC
 
 #endif //GORILLA_GA_H

@@ -64,7 +64,7 @@ GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
  *
  *  \ingroup GauManager
  */
-void gau_manager_update(GauManager *in_mgr);
+ga_result gau_manager_update(GauManager *in_mgr);
 
 /** Retrieves the internal mixer object from an audio manager.
  *

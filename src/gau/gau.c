@@ -39,7 +39,7 @@ static ga_result mix_thread(void *context) {
 					continue; //avoid churning cpu, even at the cost of underruns
 				}
 				ga_mixer_mix(ctx->mixer, buf);
-				ga_device_queue(ctx->device, buf);
+				if(ga_device_queue(ctx->device, buf)){}
 			}
 			ga_thread_sleep(5);
 		}
@@ -53,7 +53,7 @@ static ga_result mix_thread(void *context) {
 			}
 
 			ga_mixer_mix(ctx->mixer, buf);
-			ga_device_queue(ctx->device, buf);
+			if(ga_device_queue(ctx->device, buf)){}
 		}
 	} else {
 		return GA_ERR_INTERNAL;
@@ -96,15 +96,15 @@ GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
 	if (!ret->device) goto fail;
 
 	if (dev_class == GaDeviceClass_Callback && thread_policy != GauThreadPolicy_Multi) {
-		ga_err("refusing to associate a callback-based device with a multithreaded manager");
-		ga_device_close(ret->device);
+		ga_err("refusing to associate a callback-based device with a single-threaded manager");
+		if(ga_device_close(ret->device)){}
 		ga_free(ret);
 		return NULL;
 	}
 
 	if (dev_class == GaDeviceClass_Callback) {
 		ga_err("callback nyi");
-		ga_device_close(ret->device);
+		if(ga_device_close(ret->device)){}
 		ga_free(ret);
 		return NULL;
 	}
@@ -134,7 +134,7 @@ GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
 	return ret;
 fail:
 	if (ret) {
-		if (ret->device) ga_device_close(ret->device);
+		if (ret->device) if(ga_device_close(ret->device)){}
 		if (ret->mixer) ga_mixer_destroy(ret->mixer);
 		if (ret->stream_mgr) ga_stream_manager_destroy(ret->stream_mgr);
 		ga_free(ret);
@@ -142,34 +142,33 @@ fail:
 	return NULL;
 }
 
-void gau_manager_update(GauManager *mgr) {
+ga_result gau_manager_update(GauManager *mgr) {
 	ga_mixer_dispatch(mgr->mixer);
-	if (mgr->thread_policy == GauThreadPolicy_Multi) return;
+	if (mgr->thread_policy == GauThreadPolicy_Multi) return GA_OK;
 
 	GaMixer *mixer = mgr->mixer;
 	GaDevice *dev = mgr->device;
 
 	switch (ga_device_class(dev)) {
-		case GaDeviceClass_Callback: return;
+		case GaDeviceClass_Callback: return GA_OK;
 		case GaDeviceClass_PushAsync:
 		case GaDeviceClass_PushSync: break;
 	}
 
 	// don't try multiple times to avoid blocking caller
 	// (what are the failure conditions for this, anyway?  Docs are incredibly sparse.)
+	ga_result res;
 	u32 num_to_queue;
-	if (!ga_isok(ga_device_check(dev, &num_to_queue))) {
-		ga_warn("Unable to get writable buffer count");
-		return;
-	}
+	if (!ga_isok(res=ga_device_check(dev, &num_to_queue))) return res;
 
 	while (num_to_queue--) {
 		s16 *buf = ga_device_get_buffer(dev);
 		if (!buf) continue;
 		ga_mixer_mix(mixer, buf);
-		ga_device_queue(dev, buf);
+		if (!ga_isok(res=ga_device_queue(dev, buf))) return res;
 	}
 	ga_stream_manager_buffer(mgr->stream_mgr);
+	return GA_OK;
 }
 
 GaMixer *gau_manager_mixer(GauManager *mgr) {
@@ -194,7 +193,7 @@ void gau_manager_destroy(GauManager *mgr) {
 	/* Clean up mixer and stream manager */
 	ga_stream_manager_destroy(mgr->stream_mgr);
 	ga_mixer_destroy(mgr->mixer);
-	ga_device_close(mgr->device);
+	if(ga_device_close(mgr->device)){}
 	ga_free(mgr);
 }
 
@@ -297,7 +296,7 @@ GaHandle *gau_create_handle_sound_ext(GauManager *mgr, GaSound *sound,
 	}
 	if (src2) {
 		ret = ga_handle_create(mgr->mixer, src2, group);
-		if(src == src2)
+		if (src == src2)
 			ga_sample_source_release(src2);
 		ga_handle_set_callback(ret, callback, context);
 	}
@@ -355,7 +354,7 @@ GaHandle *gau_create_handle_buffered_samples_ext(GauManager *mgr, GaSampleSource
 	}
 	if (src2) {
 		GaSampleSource *streamSampleSrc = gau_sample_source_create_stream(mgr->stream_mgr, src2, 131072);
-		if(src == src2) ga_sample_source_release(src2);
+		if (src == src2) ga_sample_source_release(src2);
 		if (streamSampleSrc) {
 			ret = ga_handle_create(mgr->mixer, streamSampleSrc, group);
 			ga_sample_source_release(streamSampleSrc);

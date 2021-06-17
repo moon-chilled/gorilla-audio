@@ -24,11 +24,11 @@ static usz read(GaSampleSourceContext *ctx, void *dst, usz num_frames, GaCbOnSee
 
 	if (!ctx->loop_enable) return ga_sample_source_read(ss, dst, num_frames, 0, 0);
 
-	if (!ga_sample_source_tell(ss, &pos, NULL)) return 0;
+	if (!ga_isok(ga_sample_source_tell(ss, &pos, NULL))) return 0;
 
 	usz trigger_frame;
 	if (ctx->trigger_frame < 0) {
-		if (!ga_sample_source_tell(ss, NULL, &trigger_frame)) return 0;
+		if (!ga_isok(ga_sample_source_tell(ss, NULL, &trigger_frame))) return 0;
 	} else {
 		trigger_frame = (usz)ctx->trigger_frame;
 	}
@@ -45,12 +45,12 @@ static usz read(GaSampleSourceContext *ctx, void *dst, usz num_frames, GaCbOnSee
 		num_frames -= num_read;
 		dst = (char*)dst + num_read * frame_size;
 		if (do_seek && to_read == num_read) {
-			ga_sample_source_seek(ss, target_frame);
+			if (!ga_isok(ga_sample_source_seek(ss, target_frame))) break;
 			ctx->loop_count++;
 			if (onseek)
 				onseek(total_read, target_frame - trigger_frame, seek_ctx);
 		}
-		ga_sample_source_tell(ss, &pos, &total); //todo check
+		if (!ga_isok(ga_sample_source_tell(ss, &pos, &total))) break;
 	}
 	return total_read;
 }

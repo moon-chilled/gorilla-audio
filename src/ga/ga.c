@@ -388,8 +388,11 @@ GaSound *ga_sound_create_sample_source(GaSampleSource *src) {
 		GaMemory *memory;
 		usz data_size = frame_size * total_frames;
 		data = ga_alloc(data_size);
-		ga_sample_source_read(src, data, total_frames, 0, 0);
-		memory = gaX_memory_create(data, data_size, 0);
+		if (ga_sample_source_read(src, data, total_frames, NULL, NULL) != total_frames) {
+			ga_free(data);
+			return NULL;
+		}
+		memory = gaX_memory_create(data, data_size, false);
 		if (memory) {
 			GaSound *ret = ga_sound_create(memory, &format);
 			if (!ret) ga_memory_release(memory);
@@ -501,12 +504,11 @@ GaHandle *ga_handle_create(GaMixer *mixer, GaSampleSource *src, GaHandleGroup *h
 	return h;
 }
 
-ga_result ga_handle_destroy(GaHandle *handle) {
+void ga_handle_destroy(GaHandle *handle) {
 	/* Sets the destroyed state. Will be cleaned up once all threads ACK. */
 	ga_mutex_lock(handle->mutex);
 	handle->state = GaHandleState_Destroyed;
 	ga_mutex_unlock(handle->mutex);
-	return GA_OK;
 }
 
 static ga_result gaX_handle_cleanup(GaHandle *handle) {
@@ -554,11 +556,10 @@ bool ga_handle_destroyed(GaHandle *handle) {
 	return handle->state >= GaHandleState_Destroyed;
 }
 
-ga_result ga_handle_set_callback(GaHandle *handle, GaCbHandleFinish callback, void *context) {
+void ga_handle_set_callback(GaHandle *handle, GaCbHandleFinish callback, void *context) {
 	/* Does not need mutex because it can only be called from the dispatch thread */
 	handle->callback = callback;
 	handle->context = context;
-	return GA_OK;
 }
 
 ga_result ga_handle_set_paramf(GaHandle *handle, GaHandleParam param, f32 value) {
@@ -1015,10 +1016,10 @@ static void gaX_mixer_mix_handle(GaMixer *mixer, GaHandle *handle, usz num_frame
 	ga_free(dst);
 }
 
-ga_result ga_mixer_mix(GaMixer *m, void *buffer) {
+void ga_mixer_mix(GaMixer *m, void *buffer) {
 	if (m->suspended) {
 		memset(buffer, 0, m->num_frames * ga_format_frame_size(&m->format));
-		return GA_OK;
+		return;
 	}
 
 	memset(m->mix_buffer, 0, m->num_frames * ga_format_frame_size(&m->mix_format));
@@ -1057,13 +1058,11 @@ ga_result ga_mixer_mix(GaMixer *m, void *buffer) {
 				((f32*)buffer)[i] = ga_trans_f32_of_s16(sample);
 			}
 			break;
-		default: return GA_ERR_MIS_UNSUP;
+		default: ga_err("bad sample format %d??", m->format.sample_fmt);
 	}
-
-	return GA_OK;
 }
 
-ga_result ga_mixer_dispatch(GaMixer *m) {
+void ga_mixer_dispatch(GaMixer *m) {
 	ga_list_iterate (GaHandle, handle, &m->dispatch_list) {
 		/* Remove finished handles and call callbacks */
 		if (ga_handle_destroyed(handle)) {
@@ -1083,11 +1082,9 @@ ga_result ga_mixer_dispatch(GaMixer *m) {
 			handle->context = NULL;
 		}
 	}
-
-	return GA_OK;
 }
 
-ga_result ga_mixer_destroy(GaMixer *m) {
+void ga_mixer_destroy(GaMixer *m) {
 	gaX_handle_group_destroy(&m->handle_group);
 
 	/* NOTE: Mixer/handles must no longer be in use on any thread when destroy is called */
@@ -1101,5 +1098,4 @@ ga_result ga_mixer_destroy(GaMixer *m) {
 
 	ga_free(m->mix_buffer);
 	ga_free(m);
-	return GA_OK;
 }
