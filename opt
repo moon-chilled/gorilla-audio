@@ -1,0 +1,12 @@
+Code is currently completely unoptimized (though algorithmically solid and
+probably fast enough).  Avenues for improvement when/if necessary:
+
+- Elide locks (weaker synchronization guarantees)
+- Patch vorbis/etc. do one indirect call instead of two for datasrc read
+  - ~Inline cache -> direct call for datasrc read
+- No copy when decoding from memory
+- Custom allocator.  Make everything contiguous.  Guard for
+  data/sample/...context immediately following container to avoid the
+  indirection; otherwise prefetch while we wait for the indirect call
+- Multiple mix/stream/... threads (but this could be worse for latency?  Maybe
+  do work-stealing + min chunk size >> sync overhead?)
