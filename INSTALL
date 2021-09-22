@@ -18,12 +18,12 @@ Flag                    Description                     Default value
 BUILD_STATIC            build a static library          1
 BUILD_DYNAMIC           build a dynamic library         1
 
-ENABLE_XAUDIO2          xaudio2 audio backend           1 only on windows
+ENABLE_XAUDIO2          xaudio2 audio backend           1 iff windows
 ENABLE_ARCAN            arcan audio backend             0
-ENABLE_SNDIO            sndio audio backend             1 only on openbsd
-ENABLE_PULSEAUDIO       pulseaudio audio backend        1 only on linux
-ENABLE_ALSA             alsa audio backend              1 only on linux
-ENABLE_OSS              oss audio backend               1 only on freebsd
+ENABLE_SNDIO            sndio audio backend             1 iff openbsd
+ENABLE_PULSEAUDIO       pulseaudio audio backend        1 iff linux
+ENABLE_ALSA             alsa audio backend              1 iff linux
+ENABLE_OSS              oss audio backend               1 iff freebsd
 ENABLE_OPENAL           openal audio backend            0
 
 ENABLE_FLAC             support flac encoding           1
@@ -31,5 +31,12 @@ ENABLE_OPUS             support ogg opus                1
 ENABLE_VORBIS           support ogg vorbis              1
 
 MODE                    debug|release                   debug
-ASAN                    detect memory errors            0
-TSAN                    detect threading errors         0
+ASAN                    instrument memory errors        0
+TSAN                    instrument threading errors     0
+
+You can also specify ENABLE_FLAC=2 or ENABLE_VORBIS=2 to use alternate decoders
+(stb vorbis and dr flac).  (There is no alternate opus decoder yet.)  These
+decoders are more permissively licensed (public domain) and smaller code-wise,
+but less robust and less performant, so you probably do not want to use them.
+(A decoder-free build is ~80k; a build using only alternate decoders is ~200k;
+an opus-free build is ~500k; a full build is 1m.)

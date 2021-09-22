@@ -1,14 +1,15 @@
-#include <limits.h>
-
-#define OV_EXCLUDE_STATIC_CALLBACKS
-#include "vorbis/vorbisfile.h"
-
 #include "gorilla/gau.h"
 #include "gorilla/ga_u_internal.h"
 
-#if !GAU_SUPPORT_VORBIS
+#if GAU_SUPPORT_VORBIS == 0
 GaSampleSource *gau_sample_source_create_vorbis(GaDataSource *data) { return NULL; }
-#else
+#elif GAU_SUPPORT_VORBIS == 1
+
+#define OV_EXCLUDE_STATIC_CALLBACKS
+
+#include <limits.h>
+
+#include "vorbis/vorbisfile.h"
 
 static size_t ogg_read(void *ptr, size_t size, size_t nmemb, void *datasource) {
 	GaDataSource **ds = datasource;
@@ -164,6 +165,88 @@ GaSampleSource *gau_sample_source_create_vorbis(GaDataSource *data) {
 
 fail:
 	ga_free(ctx);
+	return NULL;
+}
+
+#elif GAU_SUPPORT_VORBIS == 2
+
+//#define STB_VORBIS_NO_INTEGER_CONVERSION
+#include "stb_vorbis.c"
+
+struct GaSampleSourceContext {
+	GaDataSource *data_src;
+	bool end_of_samples;
+	stb_vorbis *vorb;
+	GaMutex mutex;
+};
+
+static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_frames, GaCbOnSeek onseek, void *seek_ctx) {
+	int ret = stb_vorbis_get_samples_float_interleaved(ctx->vorb, ctx->vorb->channels, dst, num_frames * ctx->vorb->channels);
+	if (ret < 0) return 0;
+	return ret;
+}
+
+static bool ss_end(GaSampleSourceContext *ctx) {
+	return ctx->vorb->eof;
+}
+
+static ga_result ss_seek(GaSampleSourceContext *ctx, usz frame_offset) {
+	return stb_vorbis_seek(ctx->vorb, frame_offset/**ctx->vorb->channels*/) ? GA_OK : GA_ERR_GENERIC;
+}
+
+static ga_result ss_tell(GaSampleSourceContext *ctx, usz *frames, usz *total_frames) {
+	ga_result ret = GA_OK;
+	if (total_frames) {
+		with_mutex(ctx->mutex) {
+			if (!(*total_frames = stb_vorbis_stream_length_in_samples(ctx->vorb)))
+				ret = GA_ERR_MIS_UNSUP;
+		}
+	}
+	if (!ga_isok(ret)) return ret;
+	if (frames) {
+		with_mutex(ctx->mutex) {
+			if (!ctx->vorb->current_loc_valid) ret = GA_ERR_INTERNAL;
+			*frames = ctx->vorb->current_loc;
+		}
+	}
+	return ret;
+}
+
+static void ss_close(GaSampleSourceContext *ctx) {
+	stb_vorbis_close(ctx->vorb);
+	ga_data_source_release(ctx->data_src);
+	ga_mutex_destroy(ctx->mutex);
+	ga_free(ctx);
+}
+
+GaSampleSource *gau_sample_source_create_vorbis(GaDataSource *data) {
+	GaSampleSourceContext *ctx = ga_alloc(sizeof(GaSampleSourceContext));
+	if (!ctx) return NULL;
+
+	ctx->data_src = data;
+	ctx->end_of_samples = false;
+	if (!ga_isok(ga_mutex_create(&ctx->mutex))) goto fail;
+	if (!(ctx->vorb = stb_vorbis_open_data_source(data, NULL/*err*/, NULL/*alloc*/))) goto fail;
+
+	GaSampleSourceCreationMinutiae m = {
+		.read = ss_read,
+		.end = ss_end,
+		.ready = NULL,
+		.tell = ss_tell,
+		.close = ss_close,
+		.context = ctx,
+		.format = {.num_channels = ctx->vorb->channels, .frame_rate = ctx->vorb->sample_rate, .sample_fmt = GaSampleFormat_F32},
+		.threadsafe = true,
+	};
+	bool seekable = ga_data_source_flags(data) & GaDataAccessFlag_Seekable;
+	if (seekable) m.seek = ss_seek;
+
+	GaSampleSource *ret = ga_sample_source_create(&m);
+	if (!ret) goto fail;
+
+	ga_data_source_acquire(data);
+	return ret;
+fail:
 	return NULL;
 }
 

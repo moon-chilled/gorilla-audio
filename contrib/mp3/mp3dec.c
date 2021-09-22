@@ -5,7 +5,6 @@
 #define DRMP3_API static
 #include "dr_mp3.h"
 
-
 struct GaSampleSourceContext {
 	drmp3 mp3;
 	GaMutex mutex;

@@ -1,17 +1,17 @@
 #include <string.h>
 
-#include "FLAC/stream_decoder.h"
-#include "FLAC/metadata.h"
+#include "gorilla/gau.h"
+#include "gorilla/ga_u_internal.h"
+
+#if GAU_SUPPORT_FLAC == 0
+GaSampleSource *gau_sample_source_create_flac(GaDataSource *data) { return NULL; }
+#elif GAU_SUPPORT_FLAC == 1
 
 #undef true
 #undef false //grumble, grumble
 
-#include "gorilla/gau.h"
-#include "gorilla/ga_u_internal.h"
-
-#if !GAU_SUPPORT_FLAC
-GaSampleSource *gau_sample_source_create_flac(GaDataSource *data) { return NULL; }
-#else
+#include "FLAC/stream_decoder.h"
+#include "FLAC/metadata.h"
 
 struct GaSampleSourceContext {
 	GaDataSource *data_src;
@@ -250,6 +250,114 @@ fail:
 		ga_mutex_destroy(ctx->mutex);
 		if (ctx->flac) FLAC__stream_decoder_delete(ctx->flac);
 	}
+	ga_free(ctx);
+	return NULL;
+}
+
+#elif GAU_SUPPORT_FLAC == 2
+
+#define DR_FLAC_IMPLEMENTATION
+#define DR_FLAC_NO_STDIO
+#define DRFLAC_API static
+#ifdef __GNUC__
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+#include "dr_flac.h"
+#ifdef __GNUC__
+# pragma GCC diagnostic pop
+#endif
+
+struct GaSampleSourceContext {
+	drflac *flac;
+	GaMutex mutex;
+	GaDataSource *data_src;
+	bool end;
+};
+
+static void *flac_alloc(usz sz, void *data) { return ga_alloc(sz); }
+static void *flac_realloc(void *p, usz sz, void *data) { return ga_realloc(p, sz); }
+static void flac_free(void *p, void *data) { return ga_free(p); }
+
+static drflac_allocation_callbacks flac_allocator = {.onMalloc = flac_alloc, .onRealloc = flac_realloc, .onFree = flac_free};
+
+static usz flac_read(void *context, void *buf, usz l) {
+	GaSampleSourceContext *ctx = context;
+	return ga_data_source_read(ctx->data_src, buf, 1, l);
+}
+static drflac_bool32 flac_seek(void *context, int offset, drflac_seek_origin origin) {
+	GaSampleSourceContext *ctx = context;
+	drflac_bool32 ret;
+	switch (origin) {
+		case drflac_seek_origin_start: ret = ga_isok(ga_data_source_seek(ctx->data_src, offset, GaSeekOrigin_Set)); break;
+		case drflac_seek_origin_current: ret = ga_isok(ga_data_source_seek(ctx->data_src, offset, GaSeekOrigin_Cur)); break;
+		default: ret = 0;
+	}
+	if (ret && ctx->end) ctx->end = false;
+	return ret;
+}
+
+static usz ss_read(GaSampleSourceContext *ctx, void *dst, usz num_frames, GaCbOnSeek onseek, void *seek_ctx) {
+	drflac_uint64 res;
+	with_mutex(ctx->mutex) {
+		res = drflac_read_pcm_frames_s16(ctx->flac, num_frames, dst);
+		if (res < num_frames) ctx->end = true;
+	}
+	return res;
+}
+static bool ss_end(GaSampleSourceContext *ctx) {
+	bool ret;
+	with_mutex(ctx->mutex) ret = ctx->end;
+	return ret;
+}
+static ga_result ss_seek(GaSampleSourceContext *ctx, usz frame_offset) {
+	drflac_bool32 res;
+	with_mutex(ctx->mutex) res = drflac_seek_to_pcm_frame(ctx->flac, frame_offset);
+	return res ? GA_OK : GA_ERR_GENERIC;
+}
+static ga_result ss_tell(GaSampleSourceContext *ctx, usz *cur, usz *total) {
+	if (total && !ctx->flac->totalPCMFrameCount) return GA_ERR_MIS_UNSUP;
+	with_mutex(ctx->mutex) {
+		// this is the 'index of the PCM frame the decoder is currently sitting on'.  So possibly wrong because of buffering?
+		if (cur) *cur = ctx->flac->currentPCMFrame;
+		if (total) *total = ctx->flac->totalPCMFrameCount;
+	}
+	return GA_OK;
+}
+
+static void ss_close(GaSampleSourceContext *ctx) {
+	ga_data_source_release(ctx->data_src);
+	ga_mutex_destroy(ctx->mutex);
+	drflac_close(ctx->flac);
+	ga_free(ctx);
+}
+
+
+GaSampleSource *gau_sample_source_create_flac(GaDataSource *data_src) {
+	GaSampleSourceContext *ctx = ga_alloc(sizeof(GaSampleSourceContext));
+	if (!ctx) return NULL;
+	if (!ga_isok(ga_mutex_create(&ctx->mutex))) goto fail;
+	ctx->data_src = data_src;
+
+	if (!(ctx->flac = drflac_open(flac_read, (ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable) ? flac_seek : NULL, ctx, &flac_allocator))) goto fail;
+	GaSampleSourceCreationMinutiae m = {
+		.read = ss_read,
+		.end = ss_end,
+		.tell = ss_tell,
+		.close = ss_close,
+		.context = ctx,
+		.format = {.num_channels = ctx->flac->channels, .sample_fmt = GaSampleFormat_S16, .frame_rate = ctx->flac->sampleRate},
+		.threadsafe = true,
+	};
+	if (ga_data_source_flags(data_src) & GaDataAccessFlag_Seekable) m.seek = ss_seek;
+
+	GaSampleSource *ret = ga_sample_source_create(&m);
+	if (!ret) goto fail;
+	ga_data_source_acquire(data_src);
+	return ret;
+
+fail:
+	ga_mutex_destroy(ctx->mutex);
 	ga_free(ctx);
 	return NULL;
 }

@@ -3,9 +3,9 @@
 #include "gorilla/gau.h"
 #include "gorilla/ga_u_internal.h"
 
-#if !GAU_SUPPORT_OPUS
+#if GAU_SUPPORT_OPUS == 0
 GaSampleSource *gau_sample_source_create_opus(GaDataSource *data) { return NULL; }
-#else
+#elif GAU_SUPPORT_OPUS == 1
 
 static int ogg_read(void *datasource, u8 *ptr, int size) {
 	GaDataSource **ds = datasource;
@@ -153,5 +153,14 @@ fail:
 	ga_free(ctx);
 	return NULL;
 }
+
+#elif GAU_SUPPORT_OPUS == 2
+
+#define DR_OPUS_IMPLEMENTATION
+#define DR_OPUS_NO_STDIO
+#define DROPUS_API static
+//#include "wip/dr_opus.h"
+#error
+
 
 #endif //GAU_SUPPORT_OPUS

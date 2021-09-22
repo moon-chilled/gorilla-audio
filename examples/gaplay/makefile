@@ -1,7 +1,8 @@
 CC ?= cc
 CFLAGS = -I../../include -Os -g
-LFLAGS = -Wl,-rpath=$(shell pwd)/../../o/debug -L../../o/debug -lgorilla
+LFLAGS = -Wl,-rpath=$(shell pwd)/../../o/$(MODE) -L../../o/$(MODE) -lgorilla
 O := gaplay.o ../../contrib/mp3/mp3dec.o
+MODE ?= debug
 
 ifeq ($(ASAN),1)
 	CFLAGS += -fsanitize=address -fsanitize=undefined
@@ -14,11 +15,11 @@ else ifeq ($(TSAN),1)
 	LFLAGS += -fsanitize=thread -fsanitize=undefined
 endif
 
-gaplay: $(O) ../../o/debug/libgorilla.a
+gaplay: $(O) ../../o/$(MODE)/libgorilla.a
 	$(CC) $(LFLAGS) -o gaplay $(O)
 
-../../o/debug/libgorilla.a:
-	make -C ../..
+../../o/$(MODE)/libgorilla.a:
+	$(MAKE) -C ../..
 
 clean:
 	rm -f $(O) gaplay

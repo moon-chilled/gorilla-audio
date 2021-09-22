@@ -18,7 +18,7 @@ endif
 
 MODE ?= debug
 
-CFLAGS := -Iext/libflac/include -Iext/libogg/include -Iext/libopus/include -Iext/opusfile/include -Iext/libvorbis/include
+CFLAGS := -Iext/libflac/include -Iext/libogg/include -Iext/libopus/include -Iext/opusfile/include -Iext/libvorbis/include -Iext/dr_libs -Iext/stb
 CFLAGS_release :=
 CFLAGS_debug :=
 CXXFLAGS := $(CFLAGS)

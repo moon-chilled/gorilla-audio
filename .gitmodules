@@ -13,3 +13,9 @@
 [submodule "ext/libflac"]
 	path = ext/libflac
 	url = https://gitlab.xiph.org/xiph/flac.git
+[submodule "ext/dr_libs"]
+	path = ext/dr_libs
+	url = https://github.com/mackron/dr_libs
+[submodule "ext/stb"]
+	path = ext/stb
+	url = https://github.com/nothings/stb
