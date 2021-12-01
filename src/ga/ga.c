@@ -228,7 +228,7 @@ void ga_data_source_release(GaDataSource *dataSrc) {
 
 /* Sample Source Structure */
 GaSampleSource *ga_sample_source_create(const GaSampleSourceCreationMinutiae *m) {
-	if (!m->read || !m->tell || !m->end) return NULL;
+	if (!m->read || !m->end) return NULL;
 	GaSampleSource *ret = ga_alloc(sizeof(GaSampleSource));
 	if (!ret) return NULL;
 	ret->refCount = rc_new();
