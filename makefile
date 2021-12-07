@@ -2,10 +2,13 @@
 #SETUP#
 #######
 TARGET :=
+LIBEXT := so
 ifeq ($(OS),Windows_NT)
 	TARGET := mingw
+	LIBEXT := dll
 else ifeq ($(shell uname),Darwin)
 	TARGET := macos
+	LIBEXT := dylib
 else ifeq ($(shell uname),Linux)
 	TARGET := linux
 else ifeq ($(shell uname),FreeBSD)
@@ -191,7 +194,7 @@ default: o/$(MODE)/libgorilla.a
 endif
 
 ifeq ($(BUILD_DYNAMIC),1)
-default: o/$(MODE)/libgorilla.so
+default: o/$(MODE)/libgorilla.$(LIBEXT)
 endif
 
 include $(wildcard o/$(MODE)/src/ga/src/*.d o/$(MODE)/src/ga/*/*.d o/$(MODE)/src/gau/*.d o/$(MODE)/src/gau/*/*.d)
@@ -219,9 +222,9 @@ o/$(MODE)/ext/libflac/%.o: ext/libflac/%.c
 
 OBJ := $(patsubst %.c,o/$(MODE)/%.o,$(ALL_SRC))
 OBJ := $(patsubst %.cc,o/$(MODE)/%.o,$(OBJ))
-o/$(MODE)/libgorilla.so: $(OBJ)
+o/$(MODE)/libgorilla.$(LIBEXT): $(OBJ)
 	@mkdir -p o/$(MODE)
-	$(CCLD) -shared -o o/$(MODE)/libgorilla.so $(OBJ) $(LFLAGS)
+	$(CCLD) -shared -o o/$(MODE)/libgorilla.$(LIBEXT) $(OBJ) $(LFLAGS)
 o/$(MODE)/libgorilla.a: $(OBJ)
 	@mkdir -p o/$(MODE)
 	ar rcs o/$(MODE)/libgorilla.a $(OBJ)

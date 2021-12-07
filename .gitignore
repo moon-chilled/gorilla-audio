@@ -5,6 +5,8 @@
 .*.swm
 .*.swl
 
+*.dSYM
+
 *.exe
 *.wav
 *.ogg

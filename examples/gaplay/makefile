@@ -1,6 +1,6 @@
 CC ?= cc
 CFLAGS = -I../../include -Os -g
-LFLAGS = -Wl,-rpath=$(shell pwd)/../../o/$(MODE) -L../../o/$(MODE) -lgorilla
+LFLAGS = -Wl,-rpath,$(shell pwd)/../../o/$(MODE) -L../../o/$(MODE) -lgorilla
 O := gaplay.o ../../contrib/mp3/mp3dec.o
 MODE ?= debug
 
