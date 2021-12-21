@@ -67,6 +67,8 @@ static ga_result gaX_check(GaDevice *dev, u32 *num_buffers) {
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
+	ga_result ret = GA_OK;
+
 	struct arcan_shmif_cont *c = dev->impl->acon;
 
 	if (!dev->impl->homemade) {
@@ -82,13 +84,14 @@ static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	if (!arcan_shmif_lock(c)) return GA_ERR_SYS_LIB;
 	usz desired = dev->num_frames * ga_format_frame_size(&dev->format);
 	usz avail = c->abufsize - c->abufused;
-	if (avail < desired) return GA_ERR_INTERNAL;
+	if (avail < desired) goto out;
 	memcpy(c->audb + c->abufused, buf, desired);
 	c->abufused += desired;
 	arcan_shmif_signal(c, SHMIF_SIGAUD);
+out:
 	arcan_shmif_unlock(c);
 
-	return GA_OK;
+	return ret;
 }
 
 GaXDeviceProcs gaX_deviceprocs_Arcan = { .open=gaX_open, .check=gaX_check, .queue=gaX_queue, .close=gaX_close };
