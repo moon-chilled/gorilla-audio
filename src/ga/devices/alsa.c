@@ -33,14 +33,14 @@ static GaDeviceDescription *gaX_enumerate(u32 *num, u32 *len_bytes) {
 	u32 l = 0;
 	u32 meta_len = 0;
 	for (u32 i = 0; i < n; i++) {
-		char *n = snd_device_name_get_hint(hints[i], "NAME");
-		char *d = snd_device_name_get_hint(hints[i], "DESC");
 		char *ioid = snd_device_name_get_hint(hints[i], "IOID");
 		if (!ioid || strcmp(ioid, "Output")) {
 			free(ioid);
 			continue;
 		}
 		free(ioid);
+		char *n = snd_device_name_get_hint(hints[i], "NAME");
+		char *d = snd_device_name_get_hint(hints[i], "DESC");
 		if (n && strcmp(n, "null") && d && strcmp(d, "null")) {
 			l++;
 			meta_len += 1 + strlen(tnames[i][0] = n);
@@ -68,6 +68,7 @@ static GaDeviceDescription *gaX_enumerate(u32 *num, u32 *len_bytes) {
 			if (strstr(ret[j].private, "default")) default_i = j;
 			j++;
 		}
+		ga_free(tnames);
 		tnames = NULL;
 	}
 
