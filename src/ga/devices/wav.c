@@ -3,6 +3,17 @@
 
 #include <stdio.h>
 
+static GaDeviceDescription *gaX_enumerate(u32 *num, u32 *len_bytes) {
+	*num = 1;
+	*len_bytes = sizeof(GaDeviceDescription);
+	GaDeviceDescription *ret = ga_alloc(sizeof(GaDeviceDescription));
+	*ret = (GaDeviceDescription){
+		.name = "WAV outputter",
+		.format = {.num_channels=2, .frame_rate=48000, .sample_fmt=GaSampleFormat_S16},
+	};
+	return ret;
+}
+
 // (c)hecked (b)uffer write
 #define cbwrite(fp, data, size) do { \
 	if (fwrite(data, size, 1, fp) != 1) goto cleanup; \
@@ -10,8 +21,8 @@
 // (c)hecked (i)nteger write
 #define ciwrite2(fp, number) cbwrite(fp, &(s16){ga_endian_tole2(number)}, 2)
 #define ciwrite4(fp, number) cbwrite(fp, &(s32){ga_endian_tole4(number)}, 4)
-static ga_result gaX_open(GaDevice *dev) {
-	dev->class = GaDeviceClass_PushAsync;
+static ga_result gaX_open(GaDevice *dev, const GaDeviceDescription *descr) {
+	dev->class = GaDeviceClass_AsyncPush;
 	if (dev->format.sample_fmt < 0) return GA_ERR_MIS_UNSUP;
 
 	FILE *fp = fopen("gorilla-out.wav", "w");;
@@ -69,4 +80,4 @@ static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	return GA_OK;
 }
 
-GaXDeviceProcs gaX_deviceprocs_WAV = { .open=gaX_open, .check=gaX_check, .queue=gaX_queue, .close=gaX_close };
+GaXDeviceProcs gaX_deviceprocs_WAV = { .enumerate=gaX_enumerate, .open=gaX_open, .check=gaX_check, .queue=gaX_queue, .close=gaX_close };

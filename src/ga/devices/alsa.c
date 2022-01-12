@@ -12,7 +12,88 @@ struct GaXDeviceImpl {
 	snd_pcm_uframes_t last_offset;
 };
 
-static ga_result gaX_open(GaDevice *dev) {
+#define acheck(expr) do { if ((expr) < 0) { res = GA_ERR_SYS_LIB; ga_warn("alsa: '" #expr "' failed"); goto cleanup; } } while (0)
+// you know what's cool?  GC
+// I go to all this effort to make an API that's impossible to misuse, but the implementation probably has bugs...
+// plus, lifo lifetimes probably fragment crappy 'malloc' heap
+// :/
+static GaDeviceDescription *gaX_enumerate(u32 *num, u32 *len_bytes) {
+	void **hints = NULL;
+	GaDeviceDescription *ret = NULL;
+	char *(*tnames)[2] = NULL;
+
+	snd_device_name_hint(-1, "pcm", &hints);
+	if (!hints) goto cleanup;
+
+	u32 n = 0;
+	while (hints[n]) n++;
+
+	tnames = ga_zalloc(n * sizeof(*tnames)); //over-allocation
+
+	u32 l = 0;
+	u32 meta_len = 0;
+	for (u32 i = 0; i < n; i++) {
+		char *n = snd_device_name_get_hint(hints[i], "NAME");
+		char *d = snd_device_name_get_hint(hints[i], "DESC");
+		char *ioid = snd_device_name_get_hint(hints[i], "IOID");
+		if (!ioid || strcmp(ioid, "Output")) {
+			free(ioid);
+			continue;
+		}
+		free(ioid);
+		if (n && strcmp(n, "null") && d && strcmp(d, "null")) {
+			l++;
+			meta_len += 1 + strlen(tnames[i][0] = n);
+			tnames[i][1] = d;
+		}
+	}
+
+	if (!l) goto cleanup;
+	*num = l;
+	ret = ga_zalloc(*len_bytes = meta_len + l * sizeof(GaDeviceDescription));
+	if (!ret) goto cleanup;
+
+	u32 default_i = 0;
+
+	{
+		char *cret = (char*)ret + l * sizeof(GaDeviceDescription);
+		for (u32 i = 0, j = 0; i < n; i++) {
+			if (!tnames[i][0]) continue;
+			u32 l = strlen(tnames[i][0]);
+			if (!(ret[j].name = gaX_strdup(tnames[i][1]))) goto cleanup;
+			ret[j].private = memcpy(cret, tnames[i][0], 1+l);
+			cret += 1+l;
+			free(tnames[i][0]);
+			free(tnames[i][1]);
+			if (strstr(ret[j].private, "default")) default_i = j;
+			j++;
+		}
+		tnames = NULL;
+	}
+
+	GaDeviceDescription tmp = ret[0];
+	ret[0] = ret[default_i];
+	ret[default_i] = tmp;
+
+	snd_device_name_free_hint(hints);
+	return ret;
+
+cleanup:
+	if (hints) snd_device_name_free_hint(hints);
+	if (ret) {
+		for (u32 i = 0; i < l; i++) ga_free(ret[i].name);
+		ga_free(ret);
+	}
+	if (tnames) {
+		for (u32 i = 0; i < l; i++) free(tnames[i][0]),
+		                            free(tnames[i][1]);
+		ga_free(tnames);
+	}
+	*num = *len_bytes = 0;
+	return NULL;
+}
+
+static ga_result gaX_open(GaDevice *dev, const GaDeviceDescription *descr) {
 	snd_pcm_format_t fmt;
 	switch (dev->format.sample_fmt) {
 		case GaSampleFormat_U8:  fmt = SND_PCM_FORMAT_U8;    break;
@@ -23,18 +104,18 @@ static ga_result gaX_open(GaDevice *dev) {
 	}
 
 	switch (dev->class) {
-		case GaDeviceClass_PushAsync:
-		case GaDeviceClass_PushSync: break;
+		case GaDeviceClass_AsyncPush:
+		case GaDeviceClass_SyncShared: break;
 		case GaDeviceClass_Callback:
-			dev->class = GaDeviceClass_PushSync;
+		case GaDeviceClass_SyncPipe:
+			dev->class = GaDeviceClass_SyncShared;
 	}
 
-#define acheck(expr) do { if ((expr) < 0) { res = GA_ERR_SYS_LIB; ga_warn("alsa: '" #expr "' failed"); goto cleanup; } } while (0)
 	ga_result res = GA_ERR_GENERIC;
 	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_SYS_MEM;
 
-	if (snd_pcm_open(&dev->impl->interface, "default", SND_PCM_STREAM_PLAYBACK, (dev->class == GaDeviceClass_PushAsync) * SND_PCM_NONBLOCK) < 0) {
+	if (snd_pcm_open(&dev->impl->interface, descr->private, SND_PCM_STREAM_PLAYBACK, (dev->class == GaDeviceClass_AsyncPush) * SND_PCM_NONBLOCK) < 0) {
 		ga_free(dev->impl);
 		return GA_ERR_SYS_LIB;
 	}
@@ -46,17 +127,15 @@ static ga_result gaX_open(GaDevice *dev) {
 	if (!params) goto cleanup;
         acheck(snd_pcm_hw_params_any(dev->impl->interface, params));
 
-        acheck(snd_pcm_hw_params_set_access(dev->impl->interface, params, (dev->class == GaDeviceClass_PushAsync) ? SND_PCM_ACCESS_MMAP_INTERLEAVED : SND_PCM_ACCESS_RW_INTERLEAVED));
+        acheck(snd_pcm_hw_params_set_access(dev->impl->interface, params, (dev->class == GaDeviceClass_AsyncPush) ? SND_PCM_ACCESS_MMAP_INTERLEAVED : SND_PCM_ACCESS_RW_INTERLEAVED));
         acheck(snd_pcm_hw_params_set_format(dev->impl->interface, params, fmt));
 
         acheck(snd_pcm_hw_params_set_channels(dev->impl->interface, params, dev->format.num_channels));
         acheck(snd_pcm_hw_params_set_buffer_size(dev->impl->interface, params, dev->num_frames * ga_format_frame_size(&dev->format)));
-	// this can transparently change the frame rate from under the user
-	// TODO: should we let them pass an option to error if they can't get exactly the desired frame rate?
 	acheck(snd_pcm_hw_params_set_rate_near(dev->impl->interface, params, &dev->format.frame_rate, NULL));
 	acheck(snd_pcm_hw_params(dev->impl->interface, params));
 
-	if (dev->class == GaDeviceClass_PushAsync) {
+	if (dev->class == GaDeviceClass_AsyncPush) {
 		snd_pcm_avail(dev->impl->interface);
 		const snd_pcm_channel_area_t *areas;
 		snd_pcm_uframes_t frames = dev->num_frames;
@@ -69,7 +148,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	ga_free(params);
 	//todo latency
 
-	if (dev->class == GaDeviceClass_PushAsync) {
+	if (dev->class == GaDeviceClass_AsyncPush) {
 		dev->procs.get_buffer = gaX_get_buffer_async;
 		dev->procs.queue = gaX_queue_async;
 	} else {
@@ -175,4 +254,4 @@ static ga_result gaX_queue_pipe(GaDevice *dev, void *buf) {
 	return GA_OK;
 }
 
-GaXDeviceProcs gaX_deviceprocs_ALSA = { .open=gaX_open, .check=gaX_check, .close=gaX_close };
+GaXDeviceProcs gaX_deviceprocs_ALSA = { .enumerate=gaX_enumerate, .open=gaX_open, .check=gaX_check, .close=gaX_close };

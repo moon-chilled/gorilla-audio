@@ -40,57 +40,104 @@ static void *gaX_get_buffer_nozerocopy(GaDevice *dev) { return dev->buffer; }
 static ga_result dummy_queue(GaDevice *dev, void *buffer) { return GA_ERR_MIS_UNSUP; }
 static ga_result dummy_register_queuer(GaDevice *dev, GaCbDeviceQueuer queuer, void *ctx) { return GA_ERR_MIS_UNSUP; }
 
+GaDeviceDescription *ga_device_enumerate(u32 *length) {
+	struct d {
+		GaDeviceType t;
+		GaDeviceDescription *d;
+		u32 n, l, o;
+	} adesc[16];
+	struct d *desc = adesc;
+#define TRY(type, p) do { \
+	desc->d = p.enumerate(&desc->n, &desc->l); \
+	if (desc->d) desc++->t = type; \
+} while (0)
+#ifdef ENABLE_OSS
+	TRY(GaDeviceType_OSS, gaX_deviceprocs_OSS);
+#endif
+#ifdef ENABLE_XAUDIO2
+	TRY(GaDeviceType_XAudio2, gaX_deviceprocs_XAudio2);
+#endif
+#ifdef ENABLE_ARCAN
+	TRY(GaDeviceType_Arcan, gaX_deviceprocs_Arcan);
+#endif
+#ifdef ENABLE_SNDIO
+	TRY(GaDeviceType_Sndio, gaX_deviceprocs_Sndio);
+#endif
+#ifdef ENABLE_PULSEAUDIO
+	TRY(GaDeviceType_PulseAudio, gaX_deviceprocs_PulseAudio);
+#endif
+#ifdef ENABLE_ALSA
+	TRY(GaDeviceType_ALSA, gaX_deviceprocs_ALSA);
+#endif
+#ifdef ENABLE_OPENAL
+	TRY(GaDeviceType_OpenAL, gaX_deviceprocs_OpenAL);
+#endif
+#undef TRY
+
+	u32 on = 0, ol = 0, sl = 0;
+	for (struct d *d = adesc; d < desc; d++) {
+		on += d->n;
+		ol += d->l;
+		for (u32 i = 0; i < d->n; i++) sl += 1 + strlen(d->d[i].name);
+	}
+
+	*length = on;
+
+	GaDeviceDescription *ret = ga_alloc(ol + sl);
+	if (!ret) { *length = 0; goto cleanup; }
+
+	{
+		char *cmret = (char*)ret + on * sizeof(GaDeviceDescription);
+		char *cnret = (char*)ret + ol;
+		u32 j = 0;
+		for (struct d *d = adesc; d < desc; d++) {
+			char *mb = (char*)d->d + d->n*sizeof(GaDeviceDescription);
+			u32 ml = d->l - d->n*sizeof(GaDeviceDescription);
+			memcpy(cmret, mb, ml);
+			for (u32 i = 0; i < d->n; i++,j++) {
+				u32 nl = strlen(d->d[i].name);
+				ret[j].type = d->t;
+				ret[j].name = memcpy(cnret, d->d[i].name, 1+nl);
+				cnret += 1+nl;
+				ret[j].format = d->d[i].format;
+				ret[j].private = (mb <= (char*)d->d[i].private && (char*)d->d[i].private < mb+ml)
+				                 ? cmret + ((char*)d->d[i].private - mb)
+				                 : d->d[i].private;
+			}
+
+			cmret += ml;
+		}
+	}
+
+cleanup:
+	for (struct d *d = adesc; d < desc; d++) {
+		for (u32 i = 0; i < d->n; i++) {
+			ga_free((void*)d->d[i].name);
+		}
+		ga_free(d->d);
+	}
+	return ret;
+}
+
 /* Device Functions */
-GaDevice *ga_device_open(GaDeviceType *type,
+GaDevice *ga_device_open(const GaDeviceDescription *descr,
                          GaDeviceClass *class,
                          u32 *num_buffers,
                          u32 *num_frames,
                          GaFormat *format) {
-	class = class ? class : &(GaDeviceClass){GaDeviceClass_PushSync};
-	type = type ? type : &(GaDeviceType){GaDeviceType_Default};
+	class = class ? class : &(GaDeviceClass){GaDeviceClass_SyncShared};
 	num_buffers = num_buffers ? num_buffers : &(u32){4};
 	num_frames = num_frames ? num_frames : &(u32){512};
 	format = format ? format : &(GaFormat){.sample_fmt=GaSampleFormat_S16, .num_channels=2, .frame_rate=48000};
 
-
-	// todo allow overriding with an environment variable
-	if (*type == GaDeviceType_Default) {
-#define try(t) *type = t; if ((ret = ga_device_open(type, class, num_buffers, num_frames, format))) return ret
-		GaDevice *ret;
-#if defined(ENABLE_OSS)
-		try(GaDeviceType_OSS);
-#endif
-#if defined(ENABLE_XAUDIO2)
-		try(GaDeviceType_XAudio2);
-#endif
-#if defined(ENABLE_ARCAN)
-		try(GaDeviceType_Arcan);
-#endif
-#if defined(ENABLE_SNDIO)
-		try(GaDeviceType_Sndio);
-#endif
-#if defined(ENABLE_PULSEAUDIO)
-		try(GaDeviceType_PulseAudio);
-#endif
-#if defined(ENABLE_ALSA)
-		try(GaDeviceType_ALSA);      // put pulse before alsa, as pulseaudio has an alsa implementation
-#endif
-#if defined(ENABLE_OPENAL)
-		try(GaDeviceType_OpenAL);    // generic (multiplatform) drivers go last
-#endif
-#undef try
-		*type = GaDeviceType_Unknown;
-		return NULL;
-	}
-
 	GaDevice *ret = ga_zalloc(sizeof(GaDevice));
-	ret->type = *type;
+	ret->type = descr->type;
 	ret->class = *class;
 	ret->num_buffers = *num_buffers;
 	ret->num_frames = *num_frames;
 	ret->format = *format;
 
-	switch (*type) {
+	switch (descr->type) {
 		case GaDeviceType_Dummy: ret->procs = gaX_deviceprocs_dummy; break;
 		case GaDeviceType_WAV: ret->procs = gaX_deviceprocs_WAV; break;
 #ifdef ENABLE_OSS
@@ -117,12 +164,11 @@ GaDevice *ga_device_open(GaDeviceType *type,
 		default: goto fail;
 	}
 
-	if (ret->procs.open(ret) != GA_OK) goto fail;
+	if (ret->procs.open(ret, descr) != GA_OK) goto fail;
 	if (!ret->procs.register_queuer && !ret->procs.queue) {
 		ret->procs.close(ret);
 		goto fail;
 	}
-	*type = ret->type;
 	if (!ret->procs.get_buffer) {
 		ret->procs.get_buffer = gaX_get_buffer_nozerocopy;
 		ret->buffer = ga_alloc(ret->num_frames * ga_format_frame_size(&ret->format));
@@ -140,7 +186,6 @@ GaDevice *ga_device_open(GaDeviceType *type,
 	return ret;
 
 fail:
-	*type = GaDeviceType_Unknown;
 	ga_free(ret);
 	return NULL;
 }

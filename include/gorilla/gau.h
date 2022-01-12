@@ -51,14 +51,23 @@ typedef enum {
  */
 GauManager *gau_manager_create(void);
 
-/** Creates an audio manager (customizable).
+/** Creates an audio manager (extended).
 *
 *  \ingroup GauManager
 */
-GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
-                                      GauThreadPolicy thread_policy,
-                                      ga_uint32 *num_buffers,
-                                      ga_uint32 *num_frames);
+GauManager *gau_manager_create_ext(GaDeviceType *dev_type,
+                                   GauThreadPolicy thread_policy,
+                                   ga_uint32 *num_buffers,
+                                   ga_uint32 *num_frames);
+
+/** Creates an audio manager (extended).
+*
+*  \ingroup GauManager
+*/
+GauManager *gau_manager_create_from_device(GaDevice *dev,
+                                           GauThreadPolicy thread_policy,
+                                           ga_uint32 num_buffers,
+                                           ga_uint32 num_frames);
 
 /** Updates an audio manager.
  *

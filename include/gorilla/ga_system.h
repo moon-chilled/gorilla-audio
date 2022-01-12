@@ -42,7 +42,7 @@ typedef struct {
 	void (*free)(void *ptr);
 } GaSystemOps;
 
-void ga_free(void *ptr);
+void ga_free(const void *ptr);
 void *ga_realloc(void *ptr, ga_usize size);
 void *ga_alloc (ga_usize size) GCC(alloc_size(1), malloc/*, malloc (ga_free)*/);
 void *ga_zalloc(ga_usize size) GCC(alloc_size(1), malloc/*, malloc (ga_free)*/);

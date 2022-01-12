@@ -272,8 +272,8 @@ void *ga_zalloc(usz size) {
 void *ga_realloc(void *ptr, usz size) {
 	return alloc_callbacks.realloc(ptr, size);
 }
-void ga_free(void *ptr) {
-	alloc_callbacks.free(ptr);
+void ga_free(const void *ptr) {
+	alloc_callbacks.free((void*)ptr);
 }
 
 ga_result ga_initialize_systemops(GaSystemOps *callbacks) {
@@ -287,4 +287,11 @@ ga_result ga_initialize_systemops(GaSystemOps *callbacks) {
 ga_result ga_shutdown_systemops(void) {
 	alloc_callbacks = default_alloc_callbacks;
 	return GA_OK;
+}
+
+char *gaX_strdup(const char *s) {
+	usz l = strlen(s);
+	char *ret = ga_alloc(1+l);
+	if (!ret) return NULL;
+	return memcpy(ret, s, 1+l);
 }

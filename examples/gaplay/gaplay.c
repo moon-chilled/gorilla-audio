@@ -53,8 +53,9 @@ const char *devicetypename(GaDeviceType type) {
 }
 const char *deviceclassname(GaDeviceClass class) {
 	switch (class) {
-		case GaDeviceClass_PushAsync: return "async";
-		case GaDeviceClass_PushSync: return "sync";
+		case GaDeviceClass_AsyncPush: return "async";
+		case GaDeviceClass_SyncPipe: return "sync";
+		case GaDeviceClass_SyncShared: return "absinthe";
 		case GaDeviceClass_Callback: return "call me sometime";
 	}
 	return "???";
@@ -114,7 +115,7 @@ int main(int argc, char **argv) {
 	ga_register_logger(log_to_file, stderr);
 	ga_initialize_systemops(NULL);
 	GaDeviceType dev_type = GaDeviceType_Default;
-	GauManager *mgr = check(gau_manager_create_custom(&dev_type, GauThreadPolicy_Multi, NULL, NULL), "Unable to create audio device");
+	GauManager *mgr = check(gau_manager_create(), "Unable to create audio device");
 
 
 	GaHandle *handle;

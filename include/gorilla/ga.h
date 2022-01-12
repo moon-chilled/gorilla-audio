@@ -227,9 +227,11 @@ ga_pure ga_sint32 ga_format_to_frames(const GaFormat *format, ga_float32 seconds
  */
 
 typedef enum {
-	GaDeviceClass_PushAsync, /**< we push buffers to the device, asynchronously; ga_device_check _must_ used for synchronization */
-	GaDeviceClass_PushSync,  /**< we push buffers to the device, but it handles synchronization.  ga_device_check can safely be ignored */
-	GaDeviceClass_Callback,  /**< we present the device with a callback, which it calls */
+	GaDeviceClass_AsyncPush,  /**< we push buffers to the device, asynchronously; ga_device_check _must_ used for synchronization */
+	GaDeviceClass_SyncPipe,   /**< we push buffers to the device, but it handles synchronization.  ga_device_check can safely be ignored
+	                               ga_device_queue() will block; ga_device_get_buffer() will not */
+	GaDeviceClass_SyncShared, /**< same, except that ga_device_get_buffer() blocks and ga_device_queue() does not */
+	GaDeviceClass_Callback,   /**< we present the device with a callback, which it calls */
 } GaDeviceClass;
 
 typedef enum {
@@ -260,7 +262,7 @@ typedef ga_result(*GaCbDeviceQueuer)(void *ctx, void *buffer);
  *  you can query it using ga_device_check() immediately after creating the
  *  device.
  *
- *  This object may only be used on the main thread.
+ *  This object may only be used on one thread.
  *
  *  \ingroup GaDevice
  *  \warning You can only have one device open at-a-time.
@@ -269,26 +271,70 @@ typedef ga_result(*GaCbDeviceQueuer)(void *ctx, void *buffer);
  */
 typedef struct GaDevice GaDevice;
 
+/** Description of a device
+ *
+ *  Available devices can be queried with ga_device_enumerate().
+ *
+ *  'private' is implementation-specific data used to identify the device, and
+ *  is not to be touched.  If you touch it, you will get what you deserve.
+ */
+typedef struct {
+	GaDeviceType type;
+	const char *name;
+	GaFormat format;
+	void *private;
+} GaDeviceDescription;
+
+/** Returned memory is allocated dynamically, and should be freed with ga_free()
+ *  'length' may be null.
+ *  If no devices could be found, the return value will be null; hence, if you
+ *  just want to make sure there is at least one device, and if so always pick
+ *  it, you may ignore length.
+ *
+ *  Warning: do not persist an element of the returned array after freeing it.
+ *  The following code is WRONG and will BREAK do to the helpfully-indicated
+ *  USE AFTER FREE:
+ *
+ * GaDeviceDescription *d = ga_device_enumerate(&len);
+ * GaDeviceDescription the_one_i_want = d[...];
+ * ga_free(d);                            //free
+ * ga_device_open(&the_one_i_want, ...);  //use
+ *
+ *  (This is why the interfaces take a pointer, to make such erroneous code at
+ *   least _slightly_ more cumbersome than it would otherwise be.)
+ */
+GaDeviceDescription *ga_device_enumerate(ga_uint32 *length);
+
 /** Opens a concrete audio device.
  *
  *  \ingroup GaDevice
- *  \param type Requested and received device type (former is usually GaDeviceType_Default).
+ *  \param descr Device description, nominally received from ga_device_enumerate.
+ *               You may also forge a description, using a type of Dummy or WAV.
+ *               In the latter case, 'private' (if non-null) is interpreted as a
+ *               pointer to a nul-terminated array of characters, which is used
+ *               as a filename.
  *  \param num_buffers Requested and received number of buffers.
  *  \param num_frames Requested and received buffer size.
- *  \param format Requested device output format (usually 16-bit/48000/stereo).
+ *  \param format Requested and received device output format (usually 16-bit/48000/stereo).
  *  \return Concrete instance of the requested device type.  NULL if a suitable device could not be opened.
- *  \warning class, num_buffers, num_frames, and format are /requests/ to the
+ *  \warning class, num_buffers, num_frames, and format are /hints/ to the
  *           audio device and will not necessarily be fulfilled.  The actually
- *           received values (as well as type, when it is GaDeviceType_Default)
- *           will be written back out to the same locations.  If you pass in
- *           NULL for any of these arguments, a reasonable default will be
- *           chosen.
+ *           received values will be written back out to the same locations.
+ *
+ *           'type' is a hard requirement; if it cannot be fulfilled, the
+ *           function will always fail.  If you pass GaDeviceType_Default,
+ *           multiple backends will be tried until one succeeds, and the type
+ *           of the successful backend (if applicable) will be written back
+ *           out.
+ *
+ *           If you pass in NULL for any of these arguments, a reasonable
+ *           default will be chosen.
  */
-ga_mustuse GaDevice *ga_device_open(GaDeviceType *type,
-                                 GaDeviceClass *class,
-                                 ga_uint32 *num_buffers,
-                                 ga_uint32 *num_frames,
-                                 GaFormat *format);
+ga_mustuse GaDevice *ga_device_open(const GaDeviceDescription *descr,
+                                    GaDeviceClass *class,
+                                    ga_uint32 *num_buffers,
+                                    ga_uint32 *num_frames,
+                                    GaFormat *format);
 
 /** Checks the number of free (unqueued) buffers.
  *

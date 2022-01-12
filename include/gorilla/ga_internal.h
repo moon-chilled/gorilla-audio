@@ -30,7 +30,9 @@
  *           instead
  */
 typedef struct {
-	ga_result (*open)(GaDevice *dev);
+	GaDeviceDescription *(*enumerate)(u32 *num, u32 *len_bytes);
+	ga_result (*open)(GaDevice *dev, const GaDeviceDescription *descr);
+
 	ga_result (*check)(GaDevice *dev, u32 *num_buffers); //if 'push'
 	void *(*get_buffer)(GaDevice *dev); //optional
 	ga_result (*queue)(GaDevice *dev, void *buffer); //iff 'push'
@@ -309,5 +311,7 @@ static inline u32 ga_endian_fromle4(u32 x) {
 static inline s32 ga_add32_saturate(s32 x, s32 y) {
 	return clamp((s64)x + (s64)y, GA_S32_MIN, GA_S32_MAX);
 }
+
+char *gaX_strdup(const char *s);
 
 #endif //GORILLA_GA_INTERNAL_H

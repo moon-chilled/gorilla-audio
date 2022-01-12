@@ -15,13 +15,13 @@ struct GauManager {
 	GaMixer *mixer;
 	GaStreamManager *stream_mgr;
 	GaFormat format;
-	bool kill_threads;
+	atomic_bool kill_threads;
 };
 
 static ga_result mix_thread(void *context) {
 	GauManager *ctx = context;
 
-	if (ga_device_class(ctx->device) == GaDeviceClass_PushAsync) {
+	if (ga_device_class(ctx->device) == GaDeviceClass_AsyncPush) {
 		while (!ctx->kill_threads) {
 			u32 num_to_queue;
 			ga_result res;
@@ -43,7 +43,8 @@ static ga_result mix_thread(void *context) {
 			}
 			ga_thread_sleep(5);
 		}
-	} else if (ga_device_class(ctx->device) == GaDeviceClass_PushSync) {
+	} else if (ga_device_class(ctx->device) == GaDeviceClass_SyncPipe
+	        || ga_device_class(ctx->device) == GaDeviceClass_SyncShared) {
 		while (!ctx->kill_threads) {
 			s16 *buf = ga_device_get_buffer(ctx->device);
 			if (!buf) {
@@ -64,24 +65,26 @@ static ga_result mix_thread(void *context) {
 
 static ga_result stream_thread(void *context) {
 	GauManager *ctx = context;
-	while (!ctx->kill_threads) {
+	while (!atomic_load(&ctx->kill_threads)) {
 		ga_stream_manager_buffer(ctx->stream_mgr);
 		ga_thread_sleep(50);
 	}
 	return GA_OK;
 }
+
 GauManager *gau_manager_create(void) {
-	return gau_manager_create_custom(NULL, GauThreadPolicy_Multi, NULL, NULL);
+	return gau_manager_create_ext(NULL, GauThreadPolicy_Multi, NULL, NULL);
 }
-GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
-                                      GauThreadPolicy thread_policy,
-                                      u32 *num_buffers,
-				      u32 *num_frames) {
+GauManager *gau_manager_create_ext(GaDeviceType *dev_type,
+                                   GauThreadPolicy thread_policy,
+                                   u32 *num_buffers,
+				   u32 *num_frames) {
 	GauManager *ret = ga_zalloc(sizeof(GauManager));
 	if (!ret) return NULL;
 
 	assert(thread_policy == GauThreadPolicy_Single
 	       || thread_policy == GauThreadPolicy_Multi);
+	dev_type = dev_type ? dev_type : &(GaDeviceType){GaDeviceType_Default};
 	num_buffers = num_buffers ? num_buffers : &(u32){4};
 	num_frames = num_frames ? num_frames : &(u32){512};
 	assert(*num_buffers >= 2);
@@ -91,9 +94,22 @@ GauManager *gau_manager_create_custom(GaDeviceType *dev_type,
 	ret->format.sample_fmt = GaSampleFormat_S16;
 	ret->format.num_channels = 2;
 	ret->format.frame_rate = 48000;
-	GaDeviceClass dev_class = GaDeviceClass_PushSync;
-	ret->device = ga_device_open(dev_type, &dev_class, num_buffers, num_frames, &ret->format);
-	if (!ret->device) goto fail;
+	GaDeviceClass dev_class = GaDeviceClass_SyncShared;
+	{
+		u32 l;
+		GaDeviceDescription *descr = ga_device_enumerate(&l);
+		if (!l) goto fail;
+		GaDeviceDescription *d = descr;
+		for (u32 i = 0; i < l; i++) {
+			if (descr[i].type == *dev_type) {
+				d = descr + i;
+				break;
+			}
+		}
+		ret->device = ga_device_open(d, &dev_class, num_buffers, num_frames, &ret->format);
+		ga_free(descr);
+		if (!ret->device) goto fail;
+	}
 
 	if (dev_class == GaDeviceClass_Callback && thread_policy != GauThreadPolicy_Multi) {
 		ga_err("refusing to associate a callback-based device with a single-threaded manager");
@@ -151,8 +167,9 @@ ga_result gau_manager_update(GauManager *mgr) {
 
 	switch (ga_device_class(dev)) {
 		case GaDeviceClass_Callback: return GA_OK;
-		case GaDeviceClass_PushAsync:
-		case GaDeviceClass_PushSync: break;
+		case GaDeviceClass_AsyncPush:
+		case GaDeviceClass_SyncPipe:
+		case GaDeviceClass_SyncShared: break;
 	}
 
 	// don't try multiple times to avoid blocking caller
