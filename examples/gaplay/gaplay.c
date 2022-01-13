@@ -8,6 +8,7 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "optfetch.h"
 
@@ -123,8 +124,16 @@ int main(int argc, char **argv) {
 	fetchopts(&argc, &argv, opts);
 	if (show_devices) {
 		printf("Devices:\n");
+		int width = 1 + trunc(log10(len-1));
 		for (ga_uint32 i = 0; i < len; i++) {
-			printf("\t%u:\t%s\n", i, desc[i].name);
+			printf("%*u:\t", width, i);
+			const char *n = strchr(desc[i].name, '\n');
+			if (n) {
+				fwrite(desc[i].name, 1, n - desc[i].name, stdout);
+				printf("\n\t%s\n\n", n+1);
+			} else {
+				printf("%s\n", i, desc[i].name);
+			}
 		}
 		return 0;
 	}

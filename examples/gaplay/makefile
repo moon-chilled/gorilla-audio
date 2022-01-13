@@ -1,6 +1,6 @@
 CC ?= cc
 CFLAGS = -I../../include -Ioptfetch -Os -g
-LFLAGS = -Wl,-rpath,$(shell pwd)/../../o/$(MODE) -L../../o/$(MODE) -lgorilla
+LFLAGS = -Wl,-rpath,$(shell pwd)/../../o/$(MODE) -L../../o/$(MODE) -lgorilla -lm
 O := gaplay.o ../../contrib/mp3/mp3dec.o optfetch/optfetch.o
 MODE ?= debug
 
