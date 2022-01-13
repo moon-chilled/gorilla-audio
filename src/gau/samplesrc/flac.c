@@ -197,6 +197,7 @@ static ga_result ss_tell(GaSampleSourceContext *ctx, usz *cur, usz *total) {
 static void ss_close(GaSampleSourceContext *ctx) {
 	FLAC__stream_decoder_finish(ctx->flac);
 	FLAC__stream_decoder_delete(ctx->flac);
+	ga_free(ctx->buffer);
 	ga_data_source_release(ctx->data_src);
 	ga_mutex_destroy(ctx->mutex);
 	ga_free(ctx);
