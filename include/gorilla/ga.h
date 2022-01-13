@@ -379,7 +379,8 @@ ga_shoulduse ga_result ga_device_queue(GaDevice *device, void *buffer);
 
 ga_shoulduse ga_result ga_device_register_queuer(GaDevice *device, GaCbDeviceQueuer queuer, void *ctx);
 
-ga_pure GaDeviceClass ga_device_class(GaDevice *device);
+ga_pure GaDeviceClass ga_device_class(const GaDevice *device);
+ga_pure GaDeviceType ga_device_type(const GaDevice *device);
 
 /** Closes an open audio device.
  *

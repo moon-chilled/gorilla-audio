@@ -60,7 +60,7 @@ GauManager *gau_manager_create_ext(GaDeviceType *dev_type,
                                    ga_uint32 *num_buffers,
                                    ga_uint32 *num_frames);
 
-/** Creates an audio manager (extended).
+/** Creates an audio manager.
 *
 *  \ingroup GauManager
 */

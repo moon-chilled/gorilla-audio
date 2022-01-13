@@ -75,58 +75,78 @@ static ga_result stream_thread(void *context) {
 GauManager *gau_manager_create(void) {
 	return gau_manager_create_ext(NULL, GauThreadPolicy_Multi, NULL, NULL);
 }
+
 GauManager *gau_manager_create_ext(GaDeviceType *dev_type,
                                    GauThreadPolicy thread_policy,
                                    u32 *num_buffers,
 				   u32 *num_frames) {
-	GauManager *ret = ga_zalloc(sizeof(GauManager));
-	if (!ret) return NULL;
-
-	assert(thread_policy == GauThreadPolicy_Single
-	       || thread_policy == GauThreadPolicy_Multi);
+	if (thread_policy != GauThreadPolicy_Single
+	 && thread_policy != GauThreadPolicy_Multi) return NULL;
 	dev_type = dev_type ? dev_type : &(GaDeviceType){GaDeviceType_Default};
 	num_buffers = num_buffers ? num_buffers : &(u32){4};
 	num_frames = num_frames ? num_frames : &(u32){512};
-	assert(*num_buffers >= 2);
-	assert(*num_frames >= 128);
-
-	/* Open device */
-	ret->format.sample_fmt = GaSampleFormat_S16;
-	ret->format.num_channels = 2;
-	ret->format.frame_rate = 48000;
-	GaDeviceClass dev_class = GaDeviceClass_SyncShared;
-	{
-		u32 l;
-		GaDeviceDescription *descr = ga_device_enumerate(&l);
-		if (!l) goto fail;
-		GaDeviceDescription *d = descr;
-		for (u32 i = 0; i < l; i++) {
-			if (descr[i].type == *dev_type) {
-				d = descr + i;
-				break;
-			}
-		}
-		ret->device = ga_device_open(d, &dev_class, num_buffers, num_frames, &ret->format);
-		ga_free(descr);
-		if (!ret->device) goto fail;
+	if (*num_buffers < 2) {
+		ga_err("Require at least 2 buffers, but only got %u", *num_buffers);
+		return NULL;
 	}
+	if (*num_frames < 128) {
+		ga_err("Require at least 128 frames per, but only got %u", *num_frames);
+		return NULL;
+	}
+
+	u32 l;
+	GaDeviceDescription *descr = ga_device_enumerate(&l);
+	if (!l) return NULL;
+	GaDeviceDescription *d = descr;
+	for (u32 i = 0; i < l; i++) {
+		if (descr[i].type == *dev_type) {
+			d = descr + i;
+			break;
+		}
+	}
+	GaDevice *device = ga_device_open(d, NULL, num_buffers, num_frames, NULL);
+	ga_free(descr);
+	if (!device) return NULL;
+
+	GauManager *ret = gau_manager_create_from_device(device, thread_policy, *num_buffers, *num_frames);
+	if (!ret) if(ga_device_close(device)){}
+	return ret;
+}
+
+GauManager *gau_manager_create_from_device(GaDevice *dev,
+                                           GauThreadPolicy thread_policy,
+                                           ga_uint32 num_buffers,
+                                           ga_uint32 num_frames) {
+	if (thread_policy != GauThreadPolicy_Single
+	 && thread_policy != GauThreadPolicy_Multi) return NULL;
+	if (num_buffers < 2) {
+		ga_err("Require at least 2 buffers, but only got %u", num_buffers);
+		return NULL;
+	}
+	if (num_frames < 128) {
+		ga_err("Require at least 128 frames per, but only got %u", num_frames);
+		return NULL;
+	}
+
+	GaDeviceClass dev_class = ga_device_class(dev);
 
 	if (dev_class == GaDeviceClass_Callback && thread_policy != GauThreadPolicy_Multi) {
 		ga_err("refusing to associate a callback-based device with a single-threaded manager");
-		if(ga_device_close(ret->device)){}
-		ga_free(ret);
 		return NULL;
 	}
 
 	if (dev_class == GaDeviceClass_Callback) {
 		ga_err("callback nyi");
-		if(ga_device_close(ret->device)){}
-		ga_free(ret);
 		return NULL;
 	}
 
-	/* Initialize mixer */
-	ret->mixer = ga_mixer_create(&ret->format, *num_frames);
+	GauManager *ret = ga_zalloc(sizeof(GauManager));
+	if (!ret) return NULL;
+
+	ret->device = dev;
+	ga_device_format(ret->device, &ret->format);
+
+	ret->mixer = ga_mixer_create(&ret->format, num_frames);
 	if (!ret->mixer) goto fail;
 	ret->stream_mgr = ga_stream_manager_create();
 	if (!ret->stream_mgr) goto fail;
@@ -148,15 +168,16 @@ GauManager *gau_manager_create_ext(GaDeviceType *dev_type,
 	}
 
 	return ret;
+
 fail:
 	if (ret) {
-		if (ret->device) if(ga_device_close(ret->device)){}
 		if (ret->mixer) ga_mixer_destroy(ret->mixer);
 		if (ret->stream_mgr) ga_stream_manager_destroy(ret->stream_mgr);
 		ga_free(ret);
 	}
 	return NULL;
 }
+
 
 ga_result gau_manager_update(GauManager *mgr) {
 	ga_mixer_dispatch(mgr->mixer);

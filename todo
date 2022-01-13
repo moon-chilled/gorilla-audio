@@ -1,2 +1,6 @@
+expand support for new device api.  microphone
+libsrc (probably fixes popping?)
+channelmap
+
 replace more asserts with explicit failures (returned to caller)
 popping (e.g. in 'recipe')

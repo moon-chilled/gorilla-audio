@@ -13,6 +13,7 @@ struct GaXDeviceImpl {
 };
 
 #define acheck(expr) do { if ((expr) < 0) { res = GA_ERR_SYS_LIB; ga_warn("alsa: '" #expr "' failed"); goto cleanup; } } while (0)
+#define awarn(expr) do { if ((expr) < 0) { res = GA_ERR_SYS_LIB; ga_warn("alsa: '" #expr "' failed"); } } while (0)
 // you know what's cool?  GC
 // I go to all this effort to make an API that's impossible to misuse, but the implementation probably has bugs...
 // plus, lifo lifetimes probably fragment crappy 'malloc' heap
@@ -133,7 +134,7 @@ static ga_result gaX_open(GaDevice *dev, const GaDeviceDescription *descr) {
 
         acheck(snd_pcm_hw_params_set_channels(dev->impl->interface, params, dev->format.num_channels));
         acheck(snd_pcm_hw_params_set_buffer_size(dev->impl->interface, params, dev->num_frames * ga_format_frame_size(&dev->format)));
-	acheck(snd_pcm_hw_params_set_rate_near(dev->impl->interface, params, &dev->format.frame_rate, NULL));
+	awarn(snd_pcm_hw_params_set_rate_near(dev->impl->interface, params, &dev->format.frame_rate, NULL));
 	acheck(snd_pcm_hw_params(dev->impl->interface, params));
 
 	if (dev->class == GaDeviceClass_AsyncPush) {

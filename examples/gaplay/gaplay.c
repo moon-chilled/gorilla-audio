@@ -9,6 +9,8 @@
 #include <termios.h>
 #include <stdlib.h>
 
+#include "optfetch.h"
+
 #include <gorilla/ga.h>
 #include <gorilla/gau.h>
 
@@ -107,16 +109,35 @@ static void log_to_file(void *ctx, GaLogCategory category, const char *file, con
 }
 
 int main(int argc, char **argv) {
+	ga_register_logger(log_to_file, stderr);
+	ga_initialize_systemops(NULL);
+
+	ga_uint32 len;
+	GaDeviceDescription *desc = ga_device_enumerate(&len);
+	bool show_devices = false;
+	unsigned device_index = 0;
+	struct opttype opts[] = {
+		{"show-devices", 0, OPTTYPE_BOOL, &show_devices},
+		{"device-index", 'i', OPTTYPE_UINT, &device_index},
+		{0}};
+	fetchopts(&argc, &argv, opts);
+	if (show_devices) {
+		printf("Devices:\n");
+		for (ga_uint32 i = 0; i < len; i++) {
+			printf("\t%u:\t%s\n", i, desc[i].name);
+		}
+		return 0;
+	}
+
 	if (argc != 2) {
 		printf("Usage: %s <audio-file>\n", argv[0]);
 		return 1;
 	}
 
-	ga_register_logger(log_to_file, stderr);
-	ga_initialize_systemops(NULL);
-	GaDeviceType dev_type = GaDeviceType_Default;
-	GauManager *mgr = check(gau_manager_create(), "Unable to create audio device");
+	ga_uint32 bufs = 4, frames = 512; GaDevice *dev = check(ga_device_open(desc + device_index, NULL, &bufs, &frames, NULL), "could not open device");
+	GauManager *mgr = check(gau_manager_create_from_device(dev, GauThreadPolicy_Multi, bufs, frames), "could not create manager");
 
+	ga_free(desc);
 
 	GaHandle *handle;
 	{
@@ -139,11 +160,10 @@ int main(int argc, char **argv) {
 
 	ga_handle_play(handle);
 
-	GaDevice *dev = gau_manager_device(mgr);
 	GaFormat hfmt, dfmt;
 	ga_handle_format(handle, &hfmt);
 	ga_device_format(dev, &dfmt);
-	printf("gaplay [%s %iHz %ich -> %s (%s %iHz %ich), %s] %s\n", sampleformatname(hfmt.sample_fmt), hfmt.frame_rate, hfmt.num_channels, devicetypename(dev_type), sampleformatname(dfmt.sample_fmt), dfmt.frame_rate, dfmt.num_channels, deviceclassname(ga_device_class(dev)), argv[1]);
+	printf("gaplay [%s %iHz %ich -> %s (%s %iHz %ich), %s] %s\n", sampleformatname(hfmt.sample_fmt), hfmt.frame_rate, hfmt.num_channels, devicetypename(ga_device_type(dev)), sampleformatname(dfmt.sample_fmt), dfmt.frame_rate, dfmt.num_channels, deviceclassname(ga_device_class(dev)), argv[1]);
 
 	ga_usize cur, dur, sdur;
 	assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));

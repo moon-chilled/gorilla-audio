@@ -216,8 +216,11 @@ ga_result ga_device_register_queuer(GaDevice *device, GaCbDeviceQueuer queuer, v
 void ga_device_format(GaDevice *device, GaFormat *fmt) {
 	*fmt = device->format;
 }
-GaDeviceClass ga_device_class(GaDevice *device) {
+GaDeviceClass ga_device_class(const GaDevice *device) {
 	return device->class;
+}
+GaDeviceType ga_device_type(const GaDevice *device) {
+	return device->type;
 }
 
 GaDataSource *ga_data_source_create(const GaDataSourceCreationMinutiae *m) {
