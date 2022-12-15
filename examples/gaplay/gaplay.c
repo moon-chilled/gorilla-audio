@@ -48,7 +48,7 @@ const char *devicetypename(GaDeviceType type) {
 		case GaDeviceType_XAudio2: return "xaudio2";
 		case GaDeviceType_Arcan: return "arcan";
 		case GaDeviceType_PulseAudio: return "pulse";
-		case GaDeviceType_Sndio: return "sndio";;
+		case GaDeviceType_Sndio: return "sndio";
 		case GaDeviceType_ALSA: return "alsa";
 		case GaDeviceType_OpenAL: return "al";
 	}

@@ -201,6 +201,8 @@ static inline ga_pure ga_bool ga_sample_format_floats(GaSampleFormat format) {
 	return format == GaSampleFormat_F32;
 }
 
+ga_pure ga_bool ga_format_sane(GaFormat format);
+
 /** Retrieves the frame size (in bytes) of a specified format.
  *
  *  \ingroup GaFormat

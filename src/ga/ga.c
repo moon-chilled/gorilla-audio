@@ -24,6 +24,14 @@ static void *gaX_get_buffer_nozerocopy(GaDevice *dev) { return dev->buffer; }
 static ga_result dummy_queue(GaDevice *dev, void *buffer) { return GA_ERR_MIS_UNSUP; }
 static ga_result dummy_register_queuer(GaDevice *dev, GaCbDeviceQueuer queuer, void *ctx) { return GA_ERR_MIS_UNSUP; }
 
+bool ga_format_sane(GaFormat fmt) {
+	return fmt.num_channels > 0
+	    && (fmt.sample_fmt == GaSampleFormat_U8
+	     || fmt.sample_fmt == GaSampleFormat_S16
+	     || fmt.sample_fmt == GaSampleFormat_S32
+	     || fmt.sample_fmt == GaSampleFormat_F32);
+}
+
 GaDeviceDescription *ga_device_enumerate(u32 *length) {
 	struct d {
 		GaDeviceType t;
