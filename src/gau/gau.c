@@ -94,18 +94,23 @@ GauManager *gau_manager_create_ext(GaDeviceType *dev_type,
 		return NULL;
 	}
 
-	u32 l;
-	GaDeviceDescription *descr = ga_device_enumerate(&l);
-	if (!l) return NULL;
-	GaDeviceDescription *d = descr;
-	for (u32 i = 0; i < l; i++) {
-		if (descr[i].type == *dev_type) {
-			d = descr + i;
-			break;
+	GaDevice *device;
+	if (*dev_type == GaDeviceType_Dummy) {
+		device = ga_device_open(&(GaDeviceDescription){.type = GaDeviceType_Dummy, .format = (GaFormat){.frame_rate = 48000, .num_channels = 2, .sample_fmt = GaSampleFormat_S16}}, NULL, num_buffers, num_frames, NULL);
+	} else {
+		u32 l;
+		GaDeviceDescription *descr = ga_device_enumerate(&l);
+		if (!l) return NULL;
+		GaDeviceDescription *d = descr;
+		for (u32 i = 0; i < l; i++) {
+			if (descr[i].type == *dev_type) {
+				d = descr + i;
+				break;
+			}
 		}
+		device = ga_device_open(d, NULL, num_buffers, num_frames, NULL);
+		ga_free(descr);
 	}
-	GaDevice *device = ga_device_open(d, NULL, num_buffers, num_frames, NULL);
-	ga_free(descr);
 	if (!device) return NULL;
 
 	GauManager *ret = gau_manager_create_from_device(device, thread_policy, *num_buffers, *num_frames);

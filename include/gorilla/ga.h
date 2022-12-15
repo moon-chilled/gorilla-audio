@@ -319,6 +319,13 @@ typedef struct {
  * ga_free(d);                            //free
  * ga_device_open(&the_one_i_want, ...);  //use
  *
+ *  You should instead do this:
+ *
+ * GaDeviceDescription *d = ga_device_enumerate(&len);
+ * GaDeviceDescription the_one_i_want = d[...];
+ * ga_device_open(d[...], ...);     //use
+ * ga_free(d);                      //free
+ *
  *  (This is why the interfaces take a pointer, to make such erroneous code at
  *   least _slightly_ more cumbersome than it would otherwise be.)
  */
