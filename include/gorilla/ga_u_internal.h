@@ -32,6 +32,7 @@ typedef struct {
 typedef _Atomic bool atomic_bool;
 typedef _Atomic u8  atomic_u8;
 typedef _Atomic u32 atomic_u32;
+typedef _Atomic u64 atomic_u64;
 typedef _Atomic usz atomic_usz;
 typedef _Atomic ssz atomic_ssz;
 
