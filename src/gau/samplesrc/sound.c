@@ -60,11 +60,11 @@ GaSampleSource *gau_sample_source_create_sound(GaSound *sound) {
 		.close = close,
 		.context = ctx,
 		.threadsafe = true,
+		.format = ga_sound_format(sound),
 	};
-	ga_sound_format(sound, &m.format);
 
 	ctx->sound = sound;
-	ctx->frame_size = ga_format_frame_size(&m.format);
+	ctx->frame_size = ga_format_frame_size(m.format);
 	ctx->num_frames = ga_sound_num_frames(sound);
 	ctx->pos = 0;
 

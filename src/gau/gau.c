@@ -144,9 +144,9 @@ GauManager *gau_manager_create_from_device(GaDevice *dev,
 	if (!ret) return NULL;
 
 	ret->device = dev;
-	ga_device_format(ret->device, &ret->format);
+	ret->format = ga_device_format(ret->device);
 
-	ret->mixer = ga_mixer_create(&ret->format, num_frames);
+	ret->mixer = ga_mixer_create(ret->format, num_frames);
 	if (!ret->mixer) goto fail;
 	ret->stream_mgr = ga_stream_manager_create();
 	if (!ret->stream_mgr) goto fail;

@@ -128,6 +128,7 @@ int main(int argc, char **argv) {
 		for (ga_uint32 i = 0; i < len; i++) {
 			printf("%*u:\t", width, i);
 			const char *n = strchr(desc[i].name, '\n');
+			printf("[%s]\n\t", desc[i].private);
 			if (n) {
 				fwrite(desc[i].name, 1, n - desc[i].name, stdout);
 				printf("\n\t%s\n\n", n+1);
@@ -169,16 +170,14 @@ int main(int argc, char **argv) {
 
 	ga_handle_play(handle);
 
-	GaFormat hfmt, dfmt;
-	ga_handle_format(handle, &hfmt);
-	ga_device_format(dev, &dfmt);
+	GaFormat hfmt = ga_handle_format(handle), dfmt = ga_device_format(dev);
 	printf("gaplay [%s %iHz %ich -> %s (%s %iHz %ich), %s] %s\n", sampleformatname(hfmt.sample_fmt), hfmt.frame_rate, hfmt.num_channels, devicetypename(ga_device_type(dev)), sampleformatname(dfmt.sample_fmt), dfmt.frame_rate, dfmt.num_channels, deviceclassname(ga_device_class(dev)), argv[1]);
 
 	ga_usize cur, dur, sdur;
 	assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
-	cur = ga_format_to_seconds(&dfmt, cur);
+	cur = ga_format_to_seconds(dfmt, cur);
 	if (ga_isok(ga_handle_tell(handle, GaTellParam_Total, &sdur))) {
-		dur = ga_format_to_seconds(&hfmt, sdur);
+		dur = ga_format_to_seconds(hfmt, sdur);
 	} else {
 		dur = sdur = -1;
 	}
@@ -195,7 +194,7 @@ int main(int argc, char **argv) {
 	while (!ga_handle_finished(handle)) {
 		gau_manager_update(mgr);
 		assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
-		cur = ga_format_to_seconds(&hfmt, cur);
+		cur = ga_format_to_seconds(hfmt, cur);
 
 		if (kbhit()) {
 			switch (getch()) {
@@ -217,11 +216,11 @@ int main(int argc, char **argv) {
 						default: goto cont;
 					}
 
-					int frame = clamp(ga_format_to_frames(&hfmt, cur + delta), 0, sdur - 1);
+					int frame = clamp(ga_format_to_frames(hfmt, cur + delta), 0, sdur - 1);
 					ga_handle_seek(handle, frame);
 
 					assert(ga_isok(ga_handle_tell(handle, GaTellParam_Current, &cur)));
-					cur = ga_format_to_seconds(&hfmt, cur);
+					cur = ga_format_to_seconds(hfmt, cur);
 					break;
 			}
 		}

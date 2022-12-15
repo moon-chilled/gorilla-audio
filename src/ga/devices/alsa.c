@@ -133,7 +133,7 @@ static ga_result gaX_open(GaDevice *dev, const GaDeviceDescription *descr) {
         acheck(snd_pcm_hw_params_set_format(dev->impl->interface, params, fmt));
 
         acheck(snd_pcm_hw_params_set_channels(dev->impl->interface, params, dev->format.num_channels));
-        acheck(snd_pcm_hw_params_set_buffer_size(dev->impl->interface, params, dev->num_frames * ga_format_frame_size(&dev->format)));
+        acheck(snd_pcm_hw_params_set_buffer_size(dev->impl->interface, params, dev->num_frames * ga_format_frame_size(dev->format)));
 	awarn(snd_pcm_hw_params_set_rate_near(dev->impl->interface, params, &dev->format.frame_rate, NULL));
 	acheck(snd_pcm_hw_params(dev->impl->interface, params));
 
@@ -215,7 +215,7 @@ static void *gaX_get_buffer_async(GaDevice *dev) {
 		goto fail;
 	}
 
-	if (areas->step != ga_format_frame_size(&dev->format) * 8) {
+	if (areas->step != ga_format_frame_size(dev->format) * 8) {
 		ga_err("can't handle alsa buffer with step of '%u' bits (!= %u * 8)", areas->step, ga_format_sample_size(dev->format.sample_fmt));
 	}
 
@@ -224,7 +224,7 @@ static void *gaX_get_buffer_async(GaDevice *dev) {
 		goto fail;
 	}
 
-	return (char*)areas->addr + areas->first/8 + dev->impl->last_offset*ga_format_frame_size(&dev->format);
+	return (char*)areas->addr + areas->first/8 + dev->impl->last_offset*ga_format_frame_size(dev->format);
 
 fail:;
 	snd_pcm_sframes_t t = snd_pcm_mmap_commit(dev->impl->interface, dev->impl->last_offset, 0);

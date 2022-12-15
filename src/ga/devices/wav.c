@@ -23,7 +23,7 @@ static GaDeviceDescription *gaX_enumerate(u32 *num, u32 *len_bytes) {
 #define ciwrite4(fp, number) cbwrite(fp, &(s32){ga_endian_tole4(number)}, 4)
 static ga_result gaX_open(GaDevice *dev, const GaDeviceDescription *descr) {
 	dev->class = GaDeviceClass_AsyncPush;
-	if (dev->format.sample_fmt < 0) return GA_ERR_MIS_UNSUP;
+	if (ga_sample_format_floats(dev->format.sample_fmt)) return GA_ERR_MIS_UNSUP;
 
 	FILE *fp = fopen("gorilla-out.wav", "w");;
 	if (!fp) return GA_ERR_SYS_IO;
@@ -37,8 +37,8 @@ static ga_result gaX_open(GaDevice *dev, const GaDeviceDescription *descr) {
 	ciwrite2(fp, 1); //pcm
 	ciwrite2(fp, dev->format.num_channels);
 	ciwrite4(fp, dev->format.frame_rate);
-	ciwrite4(fp, ga_format_frame_size(&dev->format) * dev->format.frame_rate);
-	ciwrite2(fp, ga_format_frame_size(&dev->format));
+	ciwrite4(fp, ga_format_frame_size(dev->format) * dev->format.frame_rate);
+	ciwrite2(fp, ga_format_frame_size(dev->format));
 	ciwrite2(fp, dev->format.sample_fmt << 3);
 
 	cbwrite(fp, "data", 4);
@@ -76,7 +76,7 @@ static ga_result gaX_check(GaDevice *dev, u32 *num_buffers) {
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
 	//todo bswap on be
-	if (fwrite(buf, ga_format_frame_size(&dev->format), dev->num_frames, (FILE*)dev->impl) != dev->num_frames) return GA_ERR_SYS_IO;
+	if (fwrite(buf, ga_format_frame_size(dev->format), dev->num_frames, (FILE*)dev->impl) != dev->num_frames) return GA_ERR_SYS_IO;
 	return GA_OK;
 }
 

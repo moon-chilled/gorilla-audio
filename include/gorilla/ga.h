@@ -154,17 +154,24 @@ typedef enum {
  *  \defgroup GaFormat Format
  */
 
+#ifdef __clang__ //or c23, but that is nyi
+#define GAX_ENUM(name, base, ...) typedef enum: base { __VA_ARGS__ } name
+#else
+#define GAX_ENUM(name, base, ...) enum { __VA_ARGS__ }; typedef base name
+#endif
+
 /** Format enumeration for an individual sample [\ref POD].
  *
  *  These are all native endian to facilitate easier processing.  Conversions
  *  happen at the edges
  */
-typedef enum {
+
+GAX_ENUM(GaSampleFormat, ga_uint16,
 	GaSampleFormat_U8  =  1,
 	GaSampleFormat_S16 =  2,
 	GaSampleFormat_S32 =  4,
-	GaSampleFormat_F32 = -4,
-} GaSampleFormat;
+	GaSampleFormat_F32 =  4|16,
+);
 
 /** Audio format data structure [\ref POD].
  *
@@ -175,8 +182,8 @@ typedef enum {
  *  \ingroup GaFormat
  */
 typedef struct {
-	ga_uint32 num_channels;
 	ga_uint32 frame_rate;
+	ga_uint16 num_channels;
 	GaSampleFormat sample_fmt;
 } GaFormat;
 
@@ -186,7 +193,13 @@ typedef struct {
  *  \param format Format of the PCM data
  *  \return Sample size (in bytes) of the specified format
  */
-ga_pure ga_uint32 ga_format_sample_size(GaSampleFormat format);
+static inline ga_pure ga_uint32 ga_format_sample_size(GaSampleFormat format) {
+	return format & 15;
+}
+
+static inline ga_pure ga_bool ga_sample_format_floats(GaSampleFormat format) {
+	return format == GaSampleFormat_F32;
+}
 
 /** Retrieves the frame size (in bytes) of a specified format.
  *
@@ -194,7 +207,9 @@ ga_pure ga_uint32 ga_format_sample_size(GaSampleFormat format);
  *  \param format Format of the PCM data
  *  \return Frame size (in bytes) of the specified format
  */
-ga_pure ga_uint32 ga_format_frame_size(const GaFormat *format);
+static inline ga_pure ga_uint32 ga_format_frame_size(GaFormat format) {
+	return ga_format_sample_size(format.sample_fmt) * format.num_channels;
+}
 
 /** Converts a discrete number of PCM frames into the duration (in seconds) it
  *  will take to play back.
@@ -204,7 +219,9 @@ ga_pure ga_uint32 ga_format_frame_size(const GaFormat *format);
  *  \param frames Number of PCM frames
  *  \return Duration (in seconds) it will take to play back
  */
-ga_pure ga_float32 ga_format_to_seconds(const GaFormat *format, ga_usize frames);
+static inline ga_pure ga_float32 ga_format_to_seconds(GaFormat format, ga_usize frames) {
+	return frames / (ga_float32)format.frame_rate;
+}
 
 /** Converts a duration (in seconds) into the discrete number of PCM frames it
  *  will take to play for that long.
@@ -214,7 +231,9 @@ ga_pure ga_float32 ga_format_to_seconds(const GaFormat *format, ga_usize frames)
  *  \param seconds Duration (in seconds)
  *  \return Number of PCM frames it will take to play back for the given time
  */
-ga_pure ga_sint32 ga_format_to_frames(const GaFormat *format, ga_float32 seconds);
+static inline ga_pure ga_sint32 ga_format_to_frames(GaFormat format, ga_float32 seconds) {
+	return seconds * format.frame_rate;
+}
 
 
 /************/
@@ -227,7 +246,7 @@ ga_pure ga_sint32 ga_format_to_frames(const GaFormat *format, ga_float32 seconds
  */
 
 typedef enum {
-	GaDeviceClass_AsyncPush,  /**< we push buffers to the device, asynchronously; ga_device_check _must_ used for synchronization */
+	GaDeviceClass_AsyncPush,  /**< we push buffers to the device, asynchronously; ga_device_check _must_ be used for synchronization */
 	GaDeviceClass_SyncPipe,   /**< we push buffers to the device, but it handles synchronization.  ga_device_check can safely be ignored
 	                               ga_device_queue() will block; ga_device_get_buffer() will not */
 	GaDeviceClass_SyncShared, /**< same, except that ga_device_get_buffer() blocks and ga_device_queue() does not */
@@ -292,7 +311,7 @@ typedef struct {
  *  it, you may ignore length.
  *
  *  Warning: do not persist an element of the returned array after freeing it.
- *  The following code is WRONG and will BREAK do to the helpfully-indicated
+ *  The following code is WRONG and will BREAK due to the helpfully-indicated
  *  USE AFTER FREE:
  *
  * GaDeviceDescription *d = ga_device_enumerate(&len);
@@ -394,7 +413,7 @@ ga_shoulduse ga_result ga_device_close(GaDevice *device);
 /** Gets the native audio format of a device
  *
  */
-void ga_device_format(GaDevice *device, GaFormat *format);
+GaFormat ga_device_format(GaDevice *device);
 
 /*****************/
 /*  Data Source  */
@@ -712,11 +731,9 @@ ga_pure GaDataAccessFlags ga_sample_source_flags(GaSampleSource *sample_src);
  *
  *  \ingroup GaSampleSource
  *  \param sample_src Sample source whose format should should be retrieved.
- *  \param format This value will be set to the same format
- *                as PCM data in the sample source. Output parameter.
- *  \todo Either return a copy of the format, or make it a const* return value.
+ *  \return The format of the PCM data in the sample source.
  */
-void ga_sample_source_format(GaSampleSource *sample_src, GaFormat *format);
+GaFormat ga_sample_source_format(GaSampleSource *sample_src);
 
 /** Acquires a reference for a sample source.
  *
@@ -866,7 +883,7 @@ typedef struct GaSound GaSound;
  *  \param format Format of the raw PCM data contained by memory.
  *  \return Newly-allocated sound object.
  */
-ga_mustuse GaSound *ga_sound_create(GaMemory *memory, GaFormat *format);
+ga_mustuse GaSound *ga_sound_create(GaMemory *memory, GaFormat format);
 
 /** Create a shared memory object from the full contents of a sample source.
  *
@@ -910,11 +927,9 @@ ga_pure ga_usize ga_sound_num_frames(GaSound *sound);
  *
  *  \ingroup GaSound
  *  \param sound Sound whose format should should be retrieved.
- *  \param format This value will be set to the same sample format
- *                    as samples in the sound. Output parameter.
- *  \todo Either return a copy of the format, or make it a const* return value.
+ *  \return The format of the frames in the sound.
  */
-void ga_sound_format(GaSound *sound, GaFormat *format);
+GaFormat ga_sound_format(GaSound *sound);
 
 /** Acquires a reference for a sound object.
  *
@@ -970,7 +985,7 @@ typedef struct GaMixer GaMixer;
  *  \warning The number of frames must be a power-of-two.
  *  \todo Remove the requirement that the buffer be a power-of-two in size.
  */
-ga_mustuse GaMixer *ga_mixer_create(const GaFormat *format, ga_uint32 num_frames);
+ga_mustuse GaMixer *ga_mixer_create(GaFormat format, ga_uint32 num_frames);
 
 /** Suspends the mixer, preventing it from consuming any of its inputs.  If you
  ** attempt to mix from it in this state, it will produce all zeroes
@@ -995,9 +1010,9 @@ ga_canuse ga_result ga_mixer_unsuspend(GaMixer *mixer);
  *
  *  \ingroup GaMixer
  *  \param mixer Mixer whose format should should be retrieved.
- *  \param fmt Location where the resultant format will be stored.
+ *  \return The format of the data mixed by the mixer.
  */
-void ga_mixer_format(GaMixer *mixer, GaFormat *fmt);
+GaFormat ga_mixer_format(GaMixer *mixer);
 
 /** Retrieve the number of frames in a mixer object's mix buffer.
  *
@@ -1367,11 +1382,9 @@ ga_semipure ga_bool ga_handle_ready(GaHandle *handle, ga_usize num_frames);
  *
  *  \ingroup GaHandle
  *  \param handle Handle whose format should should be retrieved.
- *  \param format This value will be set to the same sample format
- *                    as samples streamed by the handle. Output parameter.
- *  \todo Either return a copy of the format, or make it a const* return value.
+ *  \return The format of the samples streamed by the handle.
  */
-void ga_handle_format(GaHandle *handle, GaFormat *format);
+GaFormat ga_handle_format(GaHandle *handle);
 
 
 /*****************************/
@@ -1551,7 +1564,7 @@ void ga_stream_release(GaBufferedStream *stream);
 
 typedef struct GaResamplingState GaResamplingState;
 
-ga_mustuse GaResamplingState *ga_trans_resample_setup(ga_uint32 drate, GaFormat fmt);
+ga_mustuse GaResamplingState *ga_trans_resample_setup(ga_uint32 drate, GaFormat format);
 void ga_trans_resample_teardown(GaResamplingState *rs);
 // lengths are in frames, not bytes or samples
 void ga_trans_resample_point(GaResamplingState *rs, void *dst, ga_usize dlen, void *src, ga_usize slen);
@@ -1584,7 +1597,8 @@ static inline ga_pure ga_sint32 ga_trans_s32_of_s16(ga_sint16 s) {
 	return s << 16;
 }
 static inline ga_pure ga_sint32 ga_trans_s32_of_f32(ga_float32 f) {
-	return f * (2147483647.f + (f < 0));
+	// 2³¹-1 can't be represented (2³¹ can), but you can't tell the difference soo
+	return f * 2147483648.f;
 }
 
 static inline ga_pure ga_float32 ga_trans_f32_of_u8(ga_uint8 u) {
@@ -1594,7 +1608,8 @@ static inline ga_pure ga_float32 ga_trans_f32_of_s16(ga_sint16 s) {
 	return s / (32767.f + (s < 0));
 }
 static inline ga_pure ga_float32 ga_trans_f32_of_s32(ga_sint32 s) {
-	return s / (2147483647.f + (s < 0));
+	// same as s32_of_f32
+	return s / 2147483647.f;
 }
 
 typedef enum {

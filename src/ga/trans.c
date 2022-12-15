@@ -147,7 +147,7 @@ usz ga_trans_resample_howmany(GaResamplingState *rs, usz out) {
 
 GaResamplingState *ga_trans_resample_setup(u32 drate, GaFormat fmt) {
 	u32 nch = fmt.num_channels;
-	GaResamplingState *ret = ga_alloc(sizeof(GaResamplingState) + WINDOWSIZE * ga_format_frame_size(&fmt));
+	GaResamplingState *ret = ga_alloc(sizeof(GaResamplingState) + WINDOWSIZE * ga_format_frame_size(fmt));
 	if (!ret) return NULL;
 
 	u32 srate = fmt.frame_rate;

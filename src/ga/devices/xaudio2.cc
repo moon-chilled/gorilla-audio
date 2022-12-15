@@ -30,7 +30,7 @@ static ga_result gaX_open(GaDevice *dev) {
 	WAVEFORMATEX fmt;
 	dev->impl = (GaXDeviceImpl*)ga_alloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_SYS_MEM;
-	dev->impl->frame_size = ga_format_frame_size(&dev->format);
+	dev->impl->frame_size = ga_format_frame_size(dev->format);
 	dev->impl->next_buffer = 0;
 	dev->impl->xa = 0;
 	dev->impl->master = 0;

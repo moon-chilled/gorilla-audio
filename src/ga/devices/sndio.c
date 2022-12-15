@@ -10,7 +10,7 @@ struct GaXDeviceImpl {
 static ga_result gaX_open(GaDevice *dev) {
 	dev->class = GaDeviceClass_PushSync;
 
-	if (dev->format.sample_fmt < 0) return GA_ERR_MIS_UNSUP;
+	if (ga_sample_format_floats(dev->format.sample_fmt)) return GA_ERR_MIS_UNSUP;
 
 	dev->impl = ga_alloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_SYS_MEM;
@@ -64,7 +64,7 @@ static ga_result gaX_check(GaDevice *dev, u32 *num_buffers) {
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
-	if (sio_write(dev->impl->hdl, buf, ga_format_frame_size(&dev->format) * dev->num_frames) != ga_format_frame_size(&dev->format) * dev->num_frames) return GA_ERR_SYS_LIB;
+	if (sio_write(dev->impl->hdl, buf, ga_format_frame_size(dev->format) * dev->num_frames) != ga_format_frame_size(dev->format) * dev->num_frames) return GA_ERR_SYS_LIB;
 	return GA_OK;
 }
 

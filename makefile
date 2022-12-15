@@ -21,6 +21,8 @@ endif
 
 MODE ?= debug
 
+PREFIX ?= /usr/local
+
 CFLAGS := -Iext/libflac/include -Iext/libogg/include -Iext/libopus/include -Iext/opusfile/include -Iext/libvorbis/include -Iext/dr_libs -Iext/stb
 CFLAGS_release :=
 CFLAGS_debug :=
@@ -228,6 +230,10 @@ o/$(MODE)/libgorilla.$(LIBEXT): $(OBJ)
 o/$(MODE)/libgorilla.a: $(OBJ)
 	@mkdir -p o/$(MODE)
 	ar rcs o/$(MODE)/libgorilla.a $(OBJ)
+
+install: default
+	install o/$(MODE)/libgorilla.$(LIBEXT) $(PREFIX)/lib
+	cp -r include/gorilla $(PREFIX)/include
 
 clean:
 	rm -rf o/*/src

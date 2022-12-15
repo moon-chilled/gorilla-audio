@@ -36,27 +36,51 @@ static ga_result gaX_open(GaDevice *dev) {
 	if (ioctl(fd, SNDCTL_DSP_POLICY, &(int){3}) == -1) goto cleanup;
 #endif
 
-	if (ioctl(fd, SNDCTL_DSP_SPEED, &(int){dev->format.frame_rate}) == -1) goto cleanup;
-	if (ioctl(fd, SNDCTL_DSP_CHANNELS, &(int){dev->format.num_channels}) == -1) goto cleanup;
+	if (ioctl(fd, SNDCTL_DSP_SPEED, &dev->format.frame_rate) == -1) goto cleanup;
+	if (ioctl(fd, SNDCTL_DSP_CHANNELS, &dev->format.num_channels) == -1) goto cleanup;
 	int fmt;
+	// checks are ordered by priority st e.g. if s32 was requested, AFMT_S32_NE is not defined, but AFMT_S16_NE is, we will use that
+	// (in particular, the common case of f32 request but AFMT_FLOAT undefined will be handled with aplomb)
 	switch (dev->format.sample_fmt) {
-#ifdef AFMT_U8
-		case GaSampleFormat_U8:  fmt = AFMT_U8;     break;
+		case GaSampleFormat_F32:
+#ifdef AFMT_FLOAT
+			fmt = AFMT_FLOAT; break;
 #endif
-#ifdef AFMT_S16_NE
-		case GaSampleFormat_S16: fmt = AFMT_S16_NE; break;
-#endif
+		case GaSampleFormat_S32:
 #ifdef AFMT_S32_NE
-		case GaSampleFormat_S32: fmt = AFMT_S32_NE; break;
+			fmt = AFMT_S32_NE; break;
+#endif
+		case GaSampleFormat_S16:
+#ifdef AFMT_S16_NE
+			fmt = AFMT_S16_NE; break;
+#endif
+		case GaSampleFormat_U8:
+#ifdef AFMT_U8
+			fmt = AFMT_U8;     break;
 #endif
 		default: goto cleanup;
 	}
-	if (ioctl(fd, SNDCTL_DSP_SETFMT, &(int){fmt}) == -1) goto cleanup;
+	if (ioctl(fd, SNDCTL_DSP_SETFMT, &fmt) == -1) goto cleanup;
+	switch (fmt) {
+#ifdef AFMT_U8
+		case AFMT_U8:     fmt = GaSampleFormat_U8;  break;
+#endif
+#ifdef AFMT_S16_NE
+		case AFMT_S16_NE: fmt = GaSampleFormat_S16; break;
+#endif
+#ifdef AFMT_S32_NE
+		case AFMT_S32_NE: fmt = GaSampleFormat_S32; break;
+#endif
+#ifdef AFMT_FLOAT
+		case AFMT_FLOAT:  fmt = GaSampleFormat_F32; break;
+#endif
+		default: goto cleanup;
+	}
 
 	audio_buf_info info;
 	if (ioctl(fd, SNDCTL_DSP_GETOSPACE, &info) == -1) goto cleanup;
 	dev->num_buffers = info.fragstotal;
-	dev->num_frames = info.fragsize / ga_format_frame_size(&dev->format);
+	dev->num_frames = info.fragsize / ga_format_frame_size(dev->format);
 	if (dev->num_buffers < 2) goto cleanup;
 
 	dev->impl = (void*)(usz)fd;
@@ -83,7 +107,7 @@ static ga_result gaX_check(GaDevice *dev, u32 *num_buffers) {
 }
 
 static ga_result gaX_queue(GaDevice *dev, void *buf) {
-	ssz sz = dev->num_frames * ga_format_frame_size(&dev->format);
+	ssz sz = dev->num_frames * ga_format_frame_size(dev->format);
 	ssz written = write((int)(usz)dev->impl, buf, sz);
 	return sz==written ? GA_OK : GA_ERR_SYS_IO;
 }

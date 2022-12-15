@@ -29,10 +29,10 @@ GaSampleSource *gau_sample_source_create_stream(GaStreamManager *mgr, GaSampleSo
 		.tell = tell,
 		.close = close,
 		.threadsafe = true,
+		.format = ga_sample_source_format(sample_src),
 	};
-	ga_sample_source_format(sample_src, &m.format);
 
-	GaBufferedStream *stream = ga_stream_create(mgr, sample_src, buffer_frames * ga_format_frame_size(&m.format));
+	GaBufferedStream *stream = ga_stream_create(mgr, sample_src, buffer_frames * ga_format_frame_size(m.format));
 	if (!stream) return NULL;
 	if (ga_stream_flags(stream) & GaDataAccessFlag_Seekable) m.seek = seek;
 

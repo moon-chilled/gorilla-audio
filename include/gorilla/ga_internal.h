@@ -29,16 +29,27 @@
  *  \warning don't call into these directly.  Call the wrappers (ga_device_*)
  *           instead
  */
-typedef struct {
-	GaDeviceDescription *(*enumerate)(u32 *num, u32 *len_bytes);
-	ga_result (*open)(GaDevice *dev, const GaDeviceDescription *descr);
 
-	ga_result (*check)(GaDevice *dev, u32 *num_buffers); //if 'push'
-	void *(*get_buffer)(GaDevice *dev); //optional
-	ga_result (*queue)(GaDevice *dev, void *buffer); //iff 'push'
-	ga_result (*register_queuer)(GaDevice *dev, GaCbDeviceQueuer queuer, void *ctx); //iff 'pull'
-	ga_result (*close)(GaDevice *device);
+typedef GaDeviceDescription *(*GaXCbDeviceEnumerate)(u32 *num, u32 *len_bytes);
+typedef ga_result (*GaXCbDeviceOpen)(GaDevice *dev, const GaDeviceDescription *descr);
+typedef ga_result (*GaXCbDeviceCheck)(GaDevice *dev, u32 *num_buffers);
+typedef void *(*GaXCbDeviceGetBuffer)(GaDevice *dev);
+typedef ga_result (*GaXCbDeviceQueue)(GaDevice *dev, void *buffer);
+typedef ga_result (*GaXCbDeviceRegisterQueuer)(GaDevice *dev, GaCbDeviceQueuer queuer, void *ctx);
+typedef ga_result (*GaXCbDeviceClose)(GaDevice *device);
+
+typedef struct {
+	GaXCbDeviceEnumerate enumerate;
+	GaXCbDeviceOpen open;
+
+	GaXCbDeviceCheck check; //if 'push'
+	GaXCbDeviceGetBuffer get_buffer; //optional
+	GaXCbDeviceQueue queue; //iff 'push'
+	GaXCbDeviceRegisterQueuer register_queuer; //iff 'pull'
+	GaXCbDeviceClose close;
 } GaXDeviceProcs;
+
+//#define GAX_DEVICE(
 
 extern GaXDeviceProcs gaX_deviceprocs_dummy;
 extern GaXDeviceProcs gaX_deviceprocs_WAV;

@@ -112,15 +112,15 @@ GauSampleSourceLoop *gau_sample_source_create_loop(GaSampleSource *src) {
 		.close = close,
 		.context = ctx,
 		.threadsafe = true,
+		.format = ga_sample_source_format(src),
 	};
-	ga_sample_source_format(src, &m.format);
 
 	ctx->trigger_frame = -1;
 	ctx->target_frame = 0;
 	ctx->loop_enable = true;
 	ctx->loop_count = 0;
 	ctx->inner_src = src;
-	ctx->frame_size = ga_format_frame_size(&m.format);
+	ctx->frame_size = ga_format_frame_size(m.format);
 
 	ret->sample_src = ga_sample_source_create(&m);
 	if (!ret->sample_src) {

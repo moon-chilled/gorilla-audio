@@ -38,12 +38,19 @@ static s32 AUDIO_ERROR = 0;
 	} \
 } while (0)
 
-static ga_result gaX_open(GaDevice *dev) {
+static GaDeviceDescription *gaX_enumerate(u32 *num, u32 *len_bytes) {
+	GaDeviceDescription *ret = ga_zalloc(sizeof(GaDeviceDescription));
+	*ret = (GaDeviceDescription){.type=GaDeviceType_OpenAL, .name="OpenAL default audio device", .format=(GaFormat){.sample_fmt=GaSampleFormat_S16, .num_channels=1, .frame_rate=48000}, .private=0}; //format is a reasonable guess
+	*num = 1; *len_bytes = sizeof(GaDeviceDescription);
+	return ret;
+}
+
+static ga_result gaX_open(GaDevice *dev, const GaDeviceDescription *descr) {
 	ga_result ret;
 	dev->impl = ga_zalloc(sizeof(GaXDeviceImpl));
 	if (!dev->impl) return GA_ERR_SYS_MEM;
 
-	dev->class = GaDeviceClass_PushAsync;
+	dev->class = GaDeviceClass_AsyncPush;
 
 	dev->impl->next_buffer = 0;
 	dev->impl->empty_buffers = dev->num_buffers;
@@ -114,7 +121,7 @@ static ga_result gaX_queue(GaDevice *dev, void *in_buffer) {
 		formatOal = sf == GaSampleFormat_S16 ? AL_FORMAT_STEREO16 : AL_FORMAT_STEREO8;
 
 	alBufferData(dev->impl->hw_buffers[dev->impl->next_buffer], formatOal, in_buffer,
-			(ALsizei)dev->num_frames * ga_format_frame_size(&dev->format), dev->format.frame_rate);
+			(ALsizei)dev->num_frames * ga_format_frame_size(dev->format), dev->format.frame_rate);
 	CHECK_AL_ERROR(goto done);
 
 	alSourceQueueBuffers(dev->impl->hw_source, 1, &dev->impl->hw_buffers[dev->impl->next_buffer]);
@@ -136,4 +143,4 @@ done:
 	return ret;
 }
 
-GaXDeviceProcs gaX_deviceprocs_OpenAL = { .open=gaX_open, .check=gaX_check, .queue=gaX_queue, .close=gaX_close };
+GaXDeviceProcs gaX_deviceprocs_OpenAL = { .enumerate=gaX_enumerate, .open=gaX_open, .check=gaX_check, .queue=gaX_queue, .close=gaX_close };
